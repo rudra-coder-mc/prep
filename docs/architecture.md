@@ -69,6 +69,41 @@ update by hand, no seed script to rerun. The loader walks `content/` at build
 time and validates every file against a Zod schema, so a malformed question
 fails the build rather than the session.
 
+## The interface
+
+Everything behind auth lives in the `(app)` route group, whose layout renders
+the top bar. The bar is the only navigation: brand, Dashboard, Topics, Review
+with a due-count badge, the streak, and sign out. It never unmounts, so moving
+around replaces content and nothing else.
+
+```
+src/app/
+  (app)/                  the signed-in shell: top bar, progress bar
+    page.tsx              dashboard
+    topics/               list, then [technology]/[topic]/ with its own layout
+    review/               the daily queue
+  login/                  outside the shell, no chrome
+  not-found.tsx
+
+src/components/
+  chrome/                 top bar, links, breadcrumb and tabs, route progress
+  ui/                     Button, Card, ProgressBar, StatusBadge, Skeleton, PageShell
+  motion/                 the Rise entrance and the reduced-motion hook
+  visuals/                the lesson animation library
+
+src/actions/              server actions, outside the routing tree
+```
+
+A topic's lesson, questions and exercises share a layout, so the breadcrumb and
+the tabs stay fixed while the view under them changes. Internal links route
+through `AppLink`, which feeds Next's per-link pending state into the global
+progress bar, and every route has a `loading.tsx` skeleton, so a slow page shows
+its frame rather than nothing.
+
+Motion is one primitive (`<Rise>`) with shared easing, and every animated
+component checks `prefers-reduced-motion` before it moves. See
+`docs/decisions/0009-app-shell-and-motion.md`.
+
 ## The visual layer
 
 Animation is the expensive part of this project, so it is built as a finite,
