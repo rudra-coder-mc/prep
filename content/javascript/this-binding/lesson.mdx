@@ -1,0 +1,153 @@
+## Why this matters
+
+`this` is the feature people work around rather than learn, usually by
+scattering arrow functions until the errors stop. That works until it doesn't,
+and it never survives an interview follow-up.
+
+The whole topic collapses into one sentence: **for a regular function, `this` is
+decided by how the function is called, not by where it was written.** Everything
+else follows from that.
+
+## The four call forms
+
+There is a precedence order, and knowing it answers almost every question.
+
+1. **`new Thing()`** sets `this` to the newly created object.
+2. **`fn.call(obj)`, `fn.apply(obj)`, `fn.bind(obj)`** set it explicitly.
+3. **`obj.fn()`** sets it to `obj`, the thing left of the dot.
+4. **`fn()`** leaves it `undefined` in modules and strict mode, `globalThis`
+   otherwise.
+
+Arrow functions sit outside this list entirely. They have no `this`, so the name
+resolves lexically like any other variable, walking outward through the scope
+chain. Nothing at the call site can change it, not even `call`.
+
+## Losing it
+
+The commonest bug in the topic is not exotic. It is taking a method out of its
+object.
+
+<CodeWalkthrough
+  title="Where the binding goes"
+  code={`const counter = {
+  count: 0,
+  increment() {
+    this.count += 1
+    return this.count
+  },
+}
+
+console.log(counter.increment())
+
+const inc = counter.increment
+console.log(inc())`}
+steps={[
+{
+lines: [9],
+note: 'Called as a method. counter is left of the dot, so this is counter.',
+variables: { this: 'counter', 'counter.count': '1' },
+output: ['1'],
+},
+{
+lines: [11],
+note: 'This copies the function only. Nothing about the object comes with it; there is no hidden link back to counter.',
+variables: { inc: 'the same function object', this: 'not decided yet' },
+},
+{
+lines: [12],
+note: 'Called plainly, with nothing left of the dot. In a module this is undefined, so reading this.count throws.',
+variables: { this: 'undefined' },
+output: ['1', 'TypeError: Cannot read properties of undefined'],
+},
+]}
+/>
+
+The same thing happens every time a method is passed somewhere: to
+`setTimeout`, to `array.map`, to `addEventListener`. The host calls your function
+plainly, and the binding you assumed is gone.
+
+## Arrows close over `this`
+
+An arrow has no `this` of its own, so the lookup continues outward exactly like a
+closure over any other variable. That is why an arrow _inside_ a method works,
+and an arrow _as_ a method does not.
+
+<ScopeChain
+  title="Resolving this from inside a callback"
+  steps={[
+    {
+      note: 'A regular callback passed to setInterval gets its own this, set by the host to something unhelpful. It never reaches the timer object.',
+      scopes: [
+        { name: 'module', bindings: { this: 'undefined' } },
+        { name: 'start (method)', bindings: { this: 'timer' } },
+        { name: 'callback (regular function)', bindings: { this: 'globalThis' } },
+      ],
+      lookup: { name: 'this', foundIn: 'callback (regular function)' },
+    },
+    {
+      note: 'An arrow callback declares no this at all, so the lookup walks outward and finds the method’s this, which is the object you wanted.',
+      scopes: [
+        { name: 'module', bindings: { this: 'undefined' } },
+        { name: 'start (method)', bindings: { this: 'timer' } },
+        { name: 'callback (arrow)', bindings: {} },
+      ],
+      lookup: { name: 'this', foundIn: 'start (method)' },
+    },
+    {
+      note: 'An arrow written as a method has no method scope above it, so it lands on the module’s this instead. This is why arrows make bad methods.',
+      scopes: [
+        { name: 'module', bindings: { this: 'undefined' } },
+        { name: 'arrow property', bindings: {} },
+      ],
+      lookup: { name: 'this', foundIn: 'module' },
+    },
+  ]}
+/>
+
+## `call`, `apply`, `bind`
+
+- `fn.call(obj, a, b)` invokes now, arguments listed individually.
+- `fn.apply(obj, [a, b])` invokes now, arguments as an array.
+- `fn.bind(obj, a)` does not invoke. It returns a new function with `this` fixed
+  and `a` prepended to whatever comes later.
+
+`bind` is the odd one out because it is lazy, and because it is **permanent**:
+
+```js
+const bound = whoAmI.bind(a)
+bound.call(b) // still a
+bound.bind(b)() // still a
+```
+
+The only thing that overrides a bound `this` is `new`.
+
+Spread has largely retired `apply`: `fn.call(obj, ...args)` does the same job
+and reads better.
+
+## The interview angle
+
+> **"What is `this`?"** For a regular function, whatever the call site says:
+> `new`, then explicit binding, then the object left of the dot, then nothing.
+> Arrow functions have no `this` and close over the surrounding one.
+
+Expect these follow-ups:
+
+- Fix a method that loses `this` when passed to `setTimeout`, three ways.
+- Implement `call` or `bind` yourself.
+- "Why not just make every method an arrow-function class field?"
+
+That last one is the good question. It works, but each instance gets its own
+function instead of sharing one on the prototype, and the method is no longer on
+the prototype at all, so subclass overriding and `super` stop working normally.
+
+## Traps
+
+- **An object literal does not create a scope for `this`.** An arrow defined in
+  one closes over the _surrounding_ `this`, not the object.
+- **`bind` cannot be undone.** Rebinding silently does nothing, which makes it
+  an easy bug to stare past.
+- **Class methods are not bound.** Passing `this.handleClick` to an event
+  listener loses the binding exactly like a plain object method.
+- **`this` in a plain function differs by mode.** `undefined` in modules and
+  strict mode, `globalThis` in sloppy scripts, so the same code fails loudly in
+  one place and silently corrupts a global in another.
