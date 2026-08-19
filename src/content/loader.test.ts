@@ -22,7 +22,11 @@ describe('content discovery', () => {
     const topic = await getTopic('javascript', 'closures')
     expect(topic?.questions.length).toBeGreaterThan(0)
     expect(topic?.exercises.length).toBeGreaterThan(0)
-    expect(topic?.questions.every((q) => q.expectedAnswer.length > 0)).toBe(true)
+    expect(
+      topic?.questions.every((q) =>
+        q.type === 'mcq' ? (q.options?.length ?? 0) >= 2 : (q.expectedAnswer?.length ?? 0) > 0,
+      ),
+    ).toBe(true)
   })
 
   it('orders topics by their declared order', async () => {

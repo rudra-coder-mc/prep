@@ -16,30 +16,7 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1. Multiple choice questions
-
-The fastest form of recall, and the one that pairs with audio: hear the
-question, hear four options, answer, move on. Nothing in the content schema can
-express one today.
-
-Add an `mcq` question type carrying `options` and the index of the correct one.
-It grades itself: no expected answer to reveal, no self assessment. A correct
-answer records a `passed` attempt, a wrong one records `failed`, and both feed
-the existing interval ladder unchanged.
-
-Open question to settle when this is picked up: whether an MCQ still asks for a
-confidence rating. Speed is the point of this mode, so the assumption is no,
-with a fixed confidence written to the attempt. If that turns out to distort the
-recall schedule, revisit before writing more MCQs.
-
-Touches `src/content/schema.ts`, `src/components/question-session.tsx`,
-`src/actions/session.ts`, and `scripts/check-content.ts`. Needs an ADR.
-
-Done when a topic can declare MCQs, answering one records an attempt without a
-self grade, and the content check rejects an MCQ whose correct index is out of
-range or whose options are not unique.
-
-## 2. Output questions that check the answer
+## 1. Output questions that check the answer
 
 The `output` question type already exists and is already used, but it is graded
 by eye like everything else. Reading the expected answer and then marking
@@ -60,7 +37,7 @@ grading it, the comparison has unit tests covering whitespace, quotes and
 multiline output, and questions without an `expectedOutput` still behave exactly
 as they do now.
 
-## 3. Spoken narration: choosing and wiring the engine
+## 2. Spoken narration: choosing and wiring the engine
 
 Every topic gets a button that explains it aloud. The voice has to be good
 enough to listen to for ten minutes, and this is a local only project, so the
@@ -82,7 +59,7 @@ Done when a narration script can be turned into playable audio on a clean
 checkout with no manual setup step, the second request for the same script is
 served from cache, and the choice is written down with its alternatives.
 
-## 4. Spoken narration: the scripts and the topic reader
+## 3. Spoken narration: the scripts and the topic reader
 
 A lesson read verbatim sounds like a document being read, because it is one.
 The narration is separate text, written the way you would explain the topic to
@@ -104,20 +81,20 @@ Done when all five topics play end to end, the section controls work, speed
 persists across topics, and the content check rejects a narration script whose
 sections are empty.
 
-## 5. Spoken narration in the question session
+## 4. Spoken narration in the question session
 
 The point of audio on questions is answering without reading. A play button on
 a question reads the prompt and then each option in turn, so an MCQ can be
 answered by ear.
 
-Depends on 1 and 3.
+Depends on 2.
 
 Touches `question-session.tsx` and the speech library.
 
 Done when playing an MCQ reads the prompt and all four options in order, and
 moving to the next question stops the previous audio rather than overlapping it.
 
-## 6. The JavaScript interview surface
+## 5. The JavaScript interview surface
 
 Five topics is not interview coverage. The goal is that anything reasonably
 asked in a JavaScript interview has a topic, and that each topic carries both

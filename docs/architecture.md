@@ -186,13 +186,26 @@ so replacing it with real spaced repetition later needs no schema change.
 
 ## Evaluation
 
-Self-evaluation only. You type an answer, reveal the expected one, then mark
-Pass / Weak / Failed and rate confidence 1-5. Free-text answers are stored so
-you can see how your own explanations changed over time.
+Which mechanism a question uses depends on whether its answer is exact.
 
-No auto-grading and no AI tutor. Grading free-text technical answers reliably is
-harder than everything else here combined, and the honest self-assessment that
-active recall depends on does not need a machine.
+**Written questions are self-evaluated.** You type an answer, reveal the
+expected one, then mark Pass / Weak / Failed and rate confidence 1-5. Free-text
+answers are stored so you can see how your own explanations changed over time.
+There is no auto-grading and no AI tutor here: grading free-text technical
+answers reliably is harder than everything else combined, and the honest
+self-assessment that active recall depends on does not need a machine.
+
+**Multiple choice questions grade themselves.** There is nothing to assess when
+there is one right answer, and the ceremony of revealing and self-grading is
+what makes drilling slow. Choosing an option submits it; the server grades it,
+records the attempt and returns the explanation in one round trip. The correct
+option is never sent to the browser beforehand, exactly as an expected answer is
+not. A correct answer records a fixed confidence of 3 rather than asking, since
+recognising an answer is weaker evidence than recalling it. See
+`docs/decisions/0011-multiple-choice-grades-itself.md`.
+
+Both write the same `attempts` row, so the ladder, the streak and the dashboard
+did not change to accommodate the second form.
 
 ## Not in V1
 

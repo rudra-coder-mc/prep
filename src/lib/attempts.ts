@@ -3,8 +3,9 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { attempts, reviewSchedule, topicProgress } from '@/db/schema'
 import { getTopic } from '@/content/loader'
-import { questionKey, type Question } from '@/content/schema'
+import { questionKey } from '@/content/schema'
 import { nextDueDate, nextStep, type Confidence, type Result } from '@/lib/interval-ladder'
+import { gradeMcq } from '@/lib/mcq'
 
 export type AttemptInput = {
   topicSlug: string
@@ -22,6 +23,13 @@ function splitSlug(topicSlug: string): [string, string] {
   return [technology, directory]
 }
 
+async function loadQuestion(topicSlug: string, questionId: string) {
+  const topic = await getTopic(...splitSlug(topicSlug))
+  const question = topic?.questions.find((candidate) => candidate.id === questionId)
+  if (!question) throw new Error(`No such question: ${topicSlug}#${questionId}`)
+  return question
+}
+
 /**
  * Loads a question's answer on demand. The session never sends it to the
  * browser up front, so there is nothing to peek at before submitting.
@@ -29,12 +37,52 @@ function splitSlug(topicSlug: string): [string, string] {
 export async function revealQuestion(
   topicSlug: string,
   questionId: string,
-): Promise<Pick<Question, 'expectedAnswer' | 'explanation'>> {
-  const topic = await getTopic(...splitSlug(topicSlug))
-  const question = topic?.questions.find((candidate) => candidate.id === questionId)
-  if (!question) throw new Error(`No such question: ${topicSlug}#${questionId}`)
+): Promise<{ expectedAnswer: string; explanation: string }> {
+  const question = await loadQuestion(topicSlug, questionId)
+
+  if (question.expectedAnswer === undefined) {
+    throw new Error(
+      `Question ${topicSlug}#${questionId} is answered by choosing an option, not by revealing text`,
+    )
+  }
 
   return { expectedAnswer: question.expectedAnswer, explanation: question.explanation }
+}
+
+/**
+ * Grades a multiple choice answer on the server and records it in one step.
+ * The correct option is never sent to the browser beforehand, so submitting is
+ * the only way to find out, and there is nothing to self assess afterwards.
+ */
+export async function answerMultipleChoice(
+  userId: string,
+  topicSlug: string,
+  questionId: string,
+  chosen: number,
+  now = new Date(),
+) {
+  const question = await loadQuestion(topicSlug, questionId)
+  const verdict = gradeMcq(question, chosen)
+
+  await recordAttempt(
+    userId,
+    {
+      topicSlug,
+      questionId,
+      answer: verdict.answer,
+      result: verdict.result,
+      confidence: verdict.confidence,
+      hintsUsed: 0,
+    },
+    now,
+  )
+
+  return {
+    correct: verdict.correct,
+    correctOption: verdict.correctOption,
+    explanation: question.explanation,
+    result: verdict.result,
+  }
 }
 
 /**

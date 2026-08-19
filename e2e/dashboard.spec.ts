@@ -36,7 +36,7 @@ test('question counts reflect attempts that were actually recorded', async ({ pa
   await page.getByRole('radio', { name: /^4 —/ }).check()
   await page.getByRole('button', { name: 'Submit and reveal answer' }).click()
   await page.getByRole('button', { name: 'Passed' }).click()
-  await expect(page.getByText('2 of 8')).toBeVisible()
+  await expect(page.getByText(/^2 of \d+$/)).toBeVisible()
 
   await page.goto('/')
   const questions = page.locator('[data-panel="Questions"]')
