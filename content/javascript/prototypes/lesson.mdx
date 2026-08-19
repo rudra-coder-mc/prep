@@ -1,0 +1,178 @@
+## Why this matters
+
+You can write JavaScript for years using `class` and never think about
+prototypes. Then something inherited shows up in a `for...in` loop, or a deleted
+property comes back with an old value, or an interviewer asks what `class`
+actually compiles to, and the abstraction stops holding.
+
+There is one mechanism underneath all of it, and it is simpler than the syntax
+suggests.
+
+## The chain
+
+Every object has a hidden link to another object, or to `null`. Reading a
+property checks the object itself, then follows the link, then follows the next
+one, until it finds the property or runs out of chain.
+
+<PrototypeChain
+  title="Looking up a property"
+  steps={[
+    {
+      note: 'name is an own property, so the lookup stops immediately. Nothing else is consulted.',
+      chain: [
+        { id: 'dog', label: 'dog (the instance)', properties: ['name'] },
+        { id: 'Dog.prototype', label: 'Dog.prototype', properties: ['bark', 'constructor'] },
+        { id: 'Animal.prototype', label: 'Animal.prototype', properties: ['speak', 'constructor'] },
+        {
+          id: 'Object.prototype',
+          label: 'Object.prototype',
+          properties: ['toString', 'hasOwnProperty'],
+        },
+      ],
+      lookup: { property: 'name', foundIn: 'dog' },
+    },
+    {
+      note: 'bark is not on the instance. Methods never are: they live on the prototype and are found by lookup at call time.',
+      chain: [
+        { id: 'dog', label: 'dog (the instance)', properties: ['name'] },
+        { id: 'Dog.prototype', label: 'Dog.prototype', properties: ['bark', 'constructor'] },
+        { id: 'Animal.prototype', label: 'Animal.prototype', properties: ['speak', 'constructor'] },
+        {
+          id: 'Object.prototype',
+          label: 'Object.prototype',
+          properties: ['toString', 'hasOwnProperty'],
+        },
+      ],
+      lookup: { property: 'bark', foundIn: 'Dog.prototype' },
+    },
+    {
+      note: 'speak is inherited from further up. Two links were followed and missed before it was found.',
+      chain: [
+        { id: 'dog', label: 'dog (the instance)', properties: ['name'] },
+        { id: 'Dog.prototype', label: 'Dog.prototype', properties: ['bark', 'constructor'] },
+        { id: 'Animal.prototype', label: 'Animal.prototype', properties: ['speak', 'constructor'] },
+        {
+          id: 'Object.prototype',
+          label: 'Object.prototype',
+          properties: ['toString', 'hasOwnProperty'],
+        },
+      ],
+      lookup: { property: 'speak', foundIn: 'Animal.prototype' },
+    },
+    {
+      note: 'A property nobody defines walks the entire chain and falls off the end at null, which is why the result is undefined rather than an error.',
+      chain: [
+        { id: 'dog', label: 'dog (the instance)', properties: ['name'] },
+        { id: 'Dog.prototype', label: 'Dog.prototype', properties: ['bark', 'constructor'] },
+        { id: 'Animal.prototype', label: 'Animal.prototype', properties: ['speak', 'constructor'] },
+        {
+          id: 'Object.prototype',
+          label: 'Object.prototype',
+          properties: ['toString', 'hasOwnProperty'],
+        },
+      ],
+      lookup: { property: 'fly' },
+    },
+  ]}
+/>
+
+## Reading walks, writing does not
+
+This asymmetry is the single most useful thing to know, because it explains
+several behaviours that otherwise look arbitrary.
+
+<MemoryModel
+  title="Shadowing an inherited property"
+  steps={[
+    {
+      note: 'child has no own properties. Reading greeting follows the link to parent.',
+      stack: [
+        { name: 'parent', ref: '#p' },
+        { name: 'child', ref: '#c' },
+      ],
+      heap: [
+        { id: '#p', label: 'parent', fields: { greeting: "'hello'" } },
+        { id: '#c', label: 'child', fields: { '[[proto]]': '#p' } },
+      ],
+      highlight: ['#p'],
+    },
+    {
+      note: 'Assigning does not follow the link. It creates an own property on child, shadowing the inherited one. parent is untouched.',
+      stack: [
+        { name: 'parent', ref: '#p' },
+        { name: 'child', ref: '#c' },
+      ],
+      heap: [
+        { id: '#p', label: 'parent', fields: { greeting: "'hello'" } },
+        { id: '#c', label: 'child', fields: { greeting: "'hi'", '[[proto]]': '#p' } },
+      ],
+      highlight: ['#c'],
+    },
+    {
+      note: 'Deleting the own property removes only the shadow, so the inherited value becomes visible again. This is why delete can appear to restore an old value.',
+      stack: [
+        { name: 'parent', ref: '#p' },
+        { name: 'child', ref: '#c' },
+      ],
+      heap: [
+        { id: '#p', label: 'parent', fields: { greeting: "'hello'" } },
+        { id: '#c', label: 'child', fields: { '[[proto]]': '#p' } },
+      ],
+      highlight: ['#c'],
+    },
+  ]}
+/>
+
+## `prototype` versus `__proto__`
+
+The naming is genuinely bad. State it as an equation and it stops being
+confusing:
+
+```js
+const d = new Dog()
+Object.getPrototypeOf(d) === Dog.prototype // true
+d.prototype // undefined
+```
+
+`prototype` is a property **on the constructor function**: the object its
+instances will link to. `__proto__` is **the link itself**, on every object.
+`Dog.prototype` is not Dog's prototype; it is the prototype Dog hands out.
+
+Prefer `Object.getPrototypeOf` and `Object.setPrototypeOf` in real code.
+
+## What `class` really is
+
+Mostly the same mechanism with better syntax. Methods go on the prototype,
+`extends` links the two prototypes, `super` reaches up the chain.
+
+But "just sugar" is the answer that gets probed, and it is not quite true:
+
+- Class bodies are always strict mode.
+- A class cannot be called without `new`.
+- Class declarations sit in the temporal dead zone rather than hoisting usefully.
+- Class methods are non-enumerable, so `for...in` skips them.
+- `#private` fields are genuinely inaccessible, not a naming convention.
+
+## The interview angle
+
+> **"What happens when you read `obj.foo`?"** The engine checks `obj`'s own
+> properties, then walks the prototype chain, and yields `undefined` if it
+> reaches `null` without a match. Writing never walks: it creates an own
+> property that shadows.
+
+Expect follow-ups on `hasOwnProperty` versus `for...in`, on implementing
+`instanceof`, and on when `Object.create(null)` is worth it.
+
+## Traps
+
+- **`for...in` includes inherited enumerable keys.** Use `Object.keys`, or guard
+  with `Object.hasOwn`.
+- **`obj.hasOwnProperty(key)` is not safe.** It breaks on objects with no
+  prototype and on objects carrying their own `hasOwnProperty` from parsed JSON.
+  `Object.hasOwn` exists for exactly this.
+- **Mutating an inherited object is shared; assigning is not.**
+  `child.list.push(1)` changes the parent's array. `child.list = []` does not.
+- **`instanceof` fails across realms.** An array from an iframe is not
+  `instanceof Array` in the parent document. Use `Array.isArray`.
+- **Changing a prototype after objects exist is slow.** `Object.setPrototypeOf`
+  deoptimises every object involved. Build the chain up front.
