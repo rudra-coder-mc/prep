@@ -1,5 +1,6 @@
 'use server'
 
+import { recordReview } from '@/lib/activity'
 import { recordAttempt, revealQuestion, type AttemptInput } from '@/lib/attempts'
 import { isConfidence } from '@/lib/interval-ladder'
 import { requireSession } from '@/lib/session'
@@ -14,5 +15,9 @@ export async function recordAttemptAction(input: AttemptInput) {
   if (!isConfidence(input.confidence)) throw new Error('Confidence must be between 1 and 5')
 
   const { dueAt } = await recordAttempt(session.user.id, input)
-  return { dueAt: dueAt.toISOString() }
+  // Activity is written after the schedule moves, so "cleared" reflects the
+  // queue as it stands once this answer is counted.
+  const { cleared } = await recordReview(session.user.id)
+
+  return { dueAt: dueAt.toISOString(), queueCleared: cleared }
 }

@@ -38,3 +38,11 @@ test('a reviewed question leaves the queue for the rest of the day', async ({ pa
   const nowFirst = await page.locator('h2').first().textContent()
   expect(nowFirst).not.toBe(first)
 })
+
+test('reviewing a question starts the streak', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByText(/day streak/)).toBeVisible()
+
+  const streak = await page.locator('[data-streak]').getAttribute('data-streak')
+  expect(Number(streak)).toBeGreaterThan(0)
+})
