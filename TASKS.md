@@ -8,20 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 11. Dashboard
-
-The landing page after login. Topic counts by status, question counts by result,
-weak topics, current streak, and the actions: continue learning, review weak
-topics, practise questions. Information over decoration.
-
-Topic status is computed here from recent attempts — implement that derivation as
-a tested pure function, not inline query logic.
-
-**Done when:** counts match a seeded fixture of attempts, and the status
-derivation has unit tests at each threshold.
-
----
-
 ## 12. Practical exercises
 
 Exercise list per topic with prompt and requirements, marked complete manually
