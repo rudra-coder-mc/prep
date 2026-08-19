@@ -8,22 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 9. Recall scheduler and daily queue
-
-The interval ladder from `docs/decisions/0005-recall-interval-ladder.md`.
-Confidence sets the next due date, a failed result resets to the bottom. The
-daily queue is capped and fills in priority order: overdue, then due today, then
-weakest topics.
-
-Pure scheduling functions, separated from persistence, so they are testable
-without a database. Test the boundaries: same-day rescheduling, a failed answer
-at confidence 5, an empty queue, a queue larger than the cap.
-
-**Done when:** unit tests cover every ladder transition and an integration test
-shows a question answered at each confidence level reappearing on the right day.
-
----
-
 ## 10. Streak and daily activity
 
 `daily_activity` written as reviews happen. Streak derived from it, never stored.
@@ -32,8 +16,6 @@ an empty queue.
 
 Decide and document the timezone rule — a "day" needs one definition, and it
 must not shift when travelling.
-
-Depends on task 9.
 
 **Done when:** unit tests cover a continuous streak, a broken streak, an
 empty-queue day, and a day spanning a timezone change.

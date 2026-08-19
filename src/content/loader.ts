@@ -78,3 +78,33 @@ export async function getAllTopics(): Promise<Topic[]> {
 export function listTechnologies(): string[] {
   return directoriesIn(CONTENT_ROOT)
 }
+
+/**
+ * Resolves scheduled question keys back to their content. Keys that no longer
+ * exist are dropped rather than throwing, because deleting a topic leaves
+ * schedule rows behind by design.
+ */
+export async function getQuestionsByKeys(
+  keys: string[],
+): Promise<{ topic: Topic; question: Question }[]> {
+  const topicSlugs = [...new Set(keys.map((key) => key.split('#')[0] ?? ''))].filter(Boolean)
+
+  const topics = await Promise.all(
+    topicSlugs.map(async (slug) => {
+      const [technology, directory] = slug.split('/')
+      if (!technology || !directory) return null
+      return getTopic(technology, directory)
+    }),
+  )
+
+  const bySlug = new Map(
+    topics.filter((topic) => topic !== null).map((topic) => [topic.slug, topic]),
+  )
+
+  return keys.flatMap((key) => {
+    const [slug, questionId] = key.split('#')
+    const topic = slug ? bySlug.get(slug) : undefined
+    const question = topic?.questions.find((candidate) => candidate.id === questionId)
+    return topic && question ? [{ topic, question }] : []
+  })
+}
