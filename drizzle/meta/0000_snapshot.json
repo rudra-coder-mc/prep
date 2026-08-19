@@ -1,5 +1,5 @@
 {
-  "id": "ec92b54c-d87c-407a-ac63-b3ca2f3ec77d",
+  "id": "a49ff3fe-7719-4364-b9b3-aa63cd1d6f00",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -22,6 +22,12 @@
         },
         "provider_id": {
           "name": "provider_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "issuer": {
+          "name": "issuer",
           "type": "text",
           "primaryKey": false,
           "notNull": true
