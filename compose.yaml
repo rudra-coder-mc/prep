@@ -1,0 +1,40 @@
+name: prep
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-prep}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prep}
+      POSTGRES_DB: ${POSTGRES_DB:-prep}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-prep} -d ${POSTGRES_DB:-prep}']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  app:
+    # Named explicitly so the development profile cannot reuse this image.
+    image: prep-app
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-prep}:${POSTGRES_PASSWORD:-prep}@db:5432/${POSTGRES_DB:-prep}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-insecure-development-secret-change-me}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-dev@local}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-dev}
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

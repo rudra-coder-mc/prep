@@ -8,22 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 2. Docker Compose stack
-
-Postgres with a named volume and healthcheck, app container gated on it,
-multi-stage Dockerfile using Next.js standalone output. Entrypoint applies
-migrations and seeds the user idempotently. Working defaults in the compose file;
-`.env` overrides. `compose.dev.yaml` overlay bind-mounts `content/` and `src/`
-with hot reload.
-
-See `docs/decisions/0006-zero-setup-compose.md`.
-
-**Done when:** `docker compose up` on a machine with no Node and no Postgres
-serves the app; `docker compose down && docker compose up` preserves data; the
-dev overlay reflects an edited file without a rebuild.
-
----
-
 ## 3. Database schema and migrations
 
 Drizzle schema for the six tables in `docs/architecture.md`, plus whatever
@@ -31,8 +15,6 @@ better-auth owns. `userId` on every progress row. Indexes on the queries that
 matter: due questions per user, attempts per question, activity per user per day.
 
 Note the deliberate absences — topic status and streak are computed, not stored.
-
-Depends on task 2 (migrations run in the entrypoint).
 
 **Done when:** migrations apply from empty on `compose up`, are reversible, and
 integration tests cover each table's constraints against a real Postgres.
