@@ -26,14 +26,25 @@ Then open http://localhost:3000 and log in with the seeded credentials
 Nothing else to install. Postgres, migrations and the seed user are handled
 inside the stack.
 
-## Writing content
+## Writing content or changing the app
 
 ```bash
-docker compose -f compose.yaml -f compose.dev.yaml up
+npm run dev:docker
 ```
 
-Same stack with `content/` and `src/` bind-mounted and hot reload enabled, so
-editing a topic shows up immediately without rebuilding the image.
+Short for `docker compose -f compose.yaml -f compose.dev.yaml up`. Same stack
+with `content/`, `src/` and `public/` bind-mounted and hot reload on, so editing
+a lesson or a component shows up immediately.
+
+Plain `docker compose up` runs the built image and does not pick up edits. Use
+this profile while working, that one to just use the platform.
+
+Anything outside those three directories is baked into the image, so changing
+`package.json`, `next.config.ts` or the Dockerfile needs `--build`:
+
+```bash
+npm run dev:docker -- --build
+```
 
 ## How it fits together
 
