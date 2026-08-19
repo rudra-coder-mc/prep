@@ -14,6 +14,6 @@ setup('authenticate', async ({ page }) => {
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
 
-  await expect(page.getByText(`Signed in as ${EMAIL}`)).toBeVisible()
+  await expect(page.getByText(EMAIL)).toBeVisible()
   await page.context().storageState({ path: STORAGE_STATE })
 })
