@@ -8,22 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 5. Content pipeline
-
-The loader that turns `content/` into typed data at build time. Directory
-convention `content/<technology>/<topic>/` with `meta.ts`, `lesson.mdx`,
-`questions.ts`, `exercises.ts`. Zod schemas for every content type, validated at
-build so a malformed question fails the build rather than a study session. MDX
-configured to render the visual components inline.
-
-See `docs/decisions/0002-content-in-git.md`.
-
-**Done when:** a fixture topic is discovered, validated and rendered without any
-registry edit, and an invalid fixture fails the build with a message naming the
-file and field.
-
----
-
 ## 6. Visual component library
 
 The seven components in `docs/architecture.md`: `CodeWalkthrough`, `CallStack`,
@@ -54,7 +38,7 @@ Ship Closures as the proving content in this task — a real topic end to end is
 the only way to know the pipeline and the visual library actually work before
 writing four more.
 
-Depends on tasks 5 and 6.
+Depends on task 6.
 
 **Done when:** an e2e test reads the Closures topic, marks it learned, and the
 questions appear in the recall queue.
@@ -131,8 +115,6 @@ derivation has unit tests at each threshold.
 
 Exercise list per topic with prompt and requirements, marked complete manually
 with notes. Solved locally in VS Code — no execution sandbox in V1.
-
-Depends on task 5.
 
 **Done when:** an exercise can be marked complete with notes, survives a restart,
 and appears in the dashboard's practical counts.
