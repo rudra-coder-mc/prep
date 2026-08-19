@@ -53,12 +53,20 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
           Marking it learned puts its {topic.questions.length} questions into your recall queue,
           starting today.
         </p>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-4">
           <MarkLearnedButton
             technology={technology}
             directory={directory}
             learnedAt={progress?.learnedAt ?? null}
           />
+          <Link
+            href={
+              `/topics/${technology}/${directory}/practice` as Parameters<typeof Link>[0]['href']
+            }
+            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm hover:border-[var(--color-accent)]"
+          >
+            Practise now
+          </Link>
         </div>
       </section>
     </main>
