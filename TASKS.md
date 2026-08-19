@@ -8,16 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 12. Practical exercises
-
-Exercise list per topic with prompt and requirements, marked complete manually
-with notes. Solved locally in VS Code — no execution sandbox in V1.
-
-**Done when:** an exercise can be marked complete with notes, survives a restart,
-and appears in the dashboard's practical counts.
-
----
-
 ## 13. Content: the remaining four topics
 
 Event loop and micro/macrotasks · `this` and call/apply/bind · Prototypes and the
