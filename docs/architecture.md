@@ -204,8 +204,21 @@ not. A correct answer records a fixed confidence of 3 rather than asking, since
 recognising an answer is weaker evidence than recalling it. See
 `docs/decisions/0011-multiple-choice-grades-itself.md`.
 
-Both write the same `attempts` row, so the ladder, the streak and the dashboard
-did not change to accommodate the second form.
+**Output questions are checked against what the program prints.** An `output`
+question carrying an `expectedOutput` is compared to the typed answer after
+normalising the things that are not the answer: indentation, runs of spaces,
+line endings and which quote character was used. Case is left alone, because
+JavaScript is case-sensitive. A correct answer records a fixed confidence of 4,
+above a recognised answer and below explaining the thing. An `output` question
+with an `expectedAnswer` instead is still graded by eye, so the two never
+disagree about which value is authoritative.
+
+This is string comparison against an authored value, not code execution.
+Running the code is planned separately as browser-side WASM runners, in
+`docs/decisions/0007-execution-runners.md`.
+
+All three forms write the same `attempts` row, so the ladder, the streak and the
+dashboard did not change to accommodate any of them.
 
 ## Not in V1
 

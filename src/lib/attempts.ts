@@ -6,6 +6,7 @@ import { getTopic } from '@/content/loader'
 import { questionKey } from '@/content/schema'
 import { nextDueDate, nextStep, type Confidence, type Result } from '@/lib/interval-ladder'
 import { gradeMcq } from '@/lib/mcq'
+import { matchesExpectedOutput, OUTPUT_CONFIDENCE } from '@/lib/output-answer'
 
 export type AttemptInput = {
   topicSlug: string
@@ -144,5 +145,49 @@ export async function countAttempts(userId: string, topicSlug: string) {
     passed: rows.filter((r) => r.result === 'passed').length,
     weak: rows.filter((r) => r.result === 'weak').length,
     failed: rows.filter((r) => r.result === 'failed').length,
+  }
+}
+
+/**
+ * Checks a typed output against what the program actually prints, and records
+ * the attempt. Nothing is self graded here: the answer is exact, so reading the
+ * expected value and then marking yourself correct is the weakest possible way
+ * to find out whether you were.
+ */
+export async function answerOutputQuestion(
+  userId: string,
+  topicSlug: string,
+  questionId: string,
+  answer: string,
+  hintsUsed: number,
+  now = new Date(),
+) {
+  const question = await loadQuestion(topicSlug, questionId)
+
+  if (question.expectedOutput === undefined) {
+    throw new Error(`Question ${topicSlug}#${questionId} is not checked against printed output`)
+  }
+
+  const correct = matchesExpectedOutput(answer, question.expectedOutput)
+  const result: Result = correct ? 'passed' : 'failed'
+
+  await recordAttempt(
+    userId,
+    {
+      topicSlug,
+      questionId,
+      answer,
+      result,
+      confidence: OUTPUT_CONFIDENCE,
+      hintsUsed,
+    },
+    now,
+  )
+
+  return {
+    correct,
+    expectedOutput: question.expectedOutput,
+    explanation: question.explanation,
+    result,
   }
 }

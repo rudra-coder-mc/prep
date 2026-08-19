@@ -33,7 +33,7 @@ const a = makeCounter()
 const b = makeCounter()
 
 console.log(a(), a(), b())`,
-    expectedAnswer: '1 2 1',
+    expectedOutput: '1 2 1',
     explanation: `Each call to makeCounter creates a new execution context with its own count binding, so a and b close over different variables. a increments its own count twice, reaching 2, while b starts fresh at 1.
 
 If they had shared a count, the answer would be 1 2 3 - which is what you get if count is declared outside makeCounter.`,
@@ -104,7 +104,7 @@ for (let i = 0; i < 3; i++) {
   fns.push(() => i)
 }
 console.log(fns.map((f) => f()))`,
-    expectedAnswer: '[0, 1, 2]',
+    expectedOutput: '[0, 1, 2]',
     explanation: `let gives each iteration its own binding of i, so each arrow function closes over a different variable. Replacing let with var would print [3, 3, 3], because all three would close over the one shared binding.`,
     hints: [],
     tags: ['closure', 'scope'],
@@ -159,7 +159,7 @@ m.increment()
 m.increment()
 const { read } = m
 console.log(read())`,
-    expectedAnswer: '2',
+    expectedOutput: '2',
     explanation: `Both functions close over the same value binding, so increment and read stay in sync. Destructuring read off the object does not break anything, because a closure captures its scope rather than its this. That is the practical difference between closure-based privacy and methods that depend on this - the latter would break here.`,
     hints: ['Does pulling read out of the object change what it can see?'],
     tags: ['closure', 'objects'],

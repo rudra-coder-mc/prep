@@ -28,7 +28,7 @@ child.greeting = 'hi'
 console.log(child.greeting, parent.greeting)
 delete child.greeting
 console.log(child.greeting)`,
-    expectedAnswer: `hello
+    expectedOutput: `hello
 hi hello
 hello`,
     explanation: `The assignment does not reach up the chain. It creates an own property on child that shadows the inherited one, leaving parent untouched. Deleting the own property removes the shadow, so the inherited value becomes visible again.
@@ -127,7 +127,7 @@ delete Dog.prototype.speak
 console.log(d.speak())
 
 console.log(Object.hasOwn(d, 'speak'))`,
-    expectedAnswer: `woof
+    expectedOutput: `woof
 generic noise
 false`,
     explanation: `The instance has no speak of its own. The lookup finds Dog.prototype.speak first, and once that is deleted it continues to Animal.prototype.speak. Nothing about the instance changed at any point, which is why hasOwn is false throughout.
