@@ -55,8 +55,8 @@ export default async function Dashboard() {
     <PageShell>
       <Rise>
         <PageHeader
-          eyebrow="Track"
-          title="JavaScript"
+          eyebrow="Interview prep"
+          title="Dashboard"
           description={`${started} of ${total} topics started. Keep the queue clear and the streak takes care of itself.`}
           actions={
             <p className="text-left sm:text-right" data-streak={dashboard.streak.current}>
@@ -93,6 +93,34 @@ export default async function Dashboard() {
             </AppLink>
           </div>
         </Card>
+      </Rise>
+
+      <Rise delay={0.08}>
+        <section className="mt-8">
+          <SectionLabel>Tracks</SectionLabel>
+          <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
+            {dashboard.tracks.map((track) => (
+              <li key={track.id}>
+                <AppLink
+                  href="/topics"
+                  className="group block rounded-card border border-border bg-surface p-4 transition-colors hover:border-edge hover:bg-raised"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="font-medium">{track.label}</span>
+                    <span className="text-xs text-faint tabular-nums">
+                      {track.started} of {track.total} started
+                    </span>
+                  </div>
+                  <ProgressBar
+                    value={track.progress}
+                    className="mt-2.5"
+                    label={`${track.label} progress`}
+                  />
+                </AppLink>
+              </li>
+            ))}
+          </ul>
+        </section>
       </Rise>
 
       <Rise delay={0.1}>

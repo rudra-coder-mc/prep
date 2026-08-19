@@ -3,11 +3,15 @@ import { expect, test } from '@playwright/test'
 test('the dashboard summarises topics, questions and exercises', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByRole('heading', { name: 'JavaScript', level: 1 })).toBeVisible()
+  // The dashboard is deliberately not headed by a technology; tracks are data.
+  await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'JavaScript', level: 1 })).toHaveCount(0)
 
-  for (const panel of ['Topics', 'Questions', 'Practical']) {
+  for (const panel of ['Tracks', 'Topics', 'Questions', 'Practical']) {
     await expect(page.getByRole('heading', { name: panel })).toBeVisible()
   }
+
+  await expect(page.getByRole('link', { name: /JavaScript/ })).toBeVisible()
 
   const topics = page.locator('[data-panel="Topics"]')
   for (const status of ['Mastered', 'Understood', 'Learning', 'Weak', 'Not started']) {

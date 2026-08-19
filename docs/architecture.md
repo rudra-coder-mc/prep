@@ -100,6 +100,13 @@ through `AppLink`, which feeds Next's per-link pending state into the global
 progress bar, and every route has a `loading.tsx` skeleton, so a slow page shows
 its frame rather than nothing.
 
+No page names a technology. The dashboard aggregates every topic under
+`content/` and lists tracks as data, and the topic list groups by technology, so
+adding a track stays what it is at the data layer: adding a directory.
+`src/content/technologies.ts` holds the display spellings and title-cases
+anything it has not been told about, so a new track is readable before anyone
+names it. See `docs/decisions/0010-interview-prep-focus.md`.
+
 Motion is one primitive (`<Rise>`) with shared easing, and every animated
 component checks `prefers-reduced-motion` before it moves. See
 `docs/decisions/0009-app-shell-and-motion.md`.
