@@ -30,6 +30,7 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-prep}:${POSTGRES_PASSWORD:-prep}@db:5432/${POSTGRES_DB:-prep}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:-insecure-development-secret-change-me}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      APP_TIMEZONE: ${APP_TIMEZONE:-UTC}
       SEED_USER_EMAIL: ${SEED_USER_EMAIL:-dev@prep.test}
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-dev}
     ports:

@@ -8,20 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 10. Streak and daily activity
-
-`daily_activity` written as reviews happen. Streak derived from it, never stored.
-A day counts when the queue is cleared, or when any review happens on a day with
-an empty queue.
-
-Decide and document the timezone rule — a "day" needs one definition, and it
-must not shift when travelling.
-
-**Done when:** unit tests cover a continuous streak, a broken streak, an
-empty-queue day, and a day spanning a timezone change.
-
----
-
 ## 11. Dashboard
 
 The landing page after login. Topic counts by status, question counts by result,
@@ -30,8 +16,6 @@ topics, practise questions. Information over decoration.
 
 Topic status is computed here from recent attempts — implement that derivation as
 a tested pure function, not inline query logic.
-
-Depends on task 10.
 
 **Done when:** counts match a seeded fixture of attempts, and the status
 derivation has unit tests at each threshold.

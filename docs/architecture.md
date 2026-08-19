@@ -111,6 +111,10 @@ Two things are computed rather than stored:
 - **The streak** is derived from `daily_activity`. A stored counter can drift
   out of sync with what actually happened; a derived one cannot.
 
+A "day" is a calendar day in one configured timezone, `APP_TIMEZONE`, rather than
+the device's. Travelling must not shift when a streak rolls over, and two devices
+must agree on what today is.
+
 ## Recall scheduling
 
 Confidence drives the next interval:
