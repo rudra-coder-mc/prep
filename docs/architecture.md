@@ -72,9 +72,15 @@ fails the build rather than the session.
 ## The interface
 
 Everything behind auth lives in the `(app)` route group, whose layout renders
-the top bar. The bar is the only navigation: brand, Dashboard, Topics, Review
-with a due-count badge, the streak, and sign out. It never unmounts, so moving
-around replaces content and nothing else.
+the top bar. The bar is the only navigation: brand, the mode switch, Dashboard,
+Topics, Review with a due-count badge, the streak, and sign out. It never
+unmounts, so moving around replaces content and nothing else.
+
+The mode switch picks between interview preparation and learning. Which mode is
+active is derived from the pathname rather than stored, so it survives a reload,
+cannot disagree with the page under it, and needs no state. Learning is a
+placeholder page, and the interview navigation is hidden while it is open
+because none of it applies there.
 
 ```
 src/app/
@@ -82,6 +88,7 @@ src/app/
     page.tsx              dashboard
     topics/               list, then [technology]/[topic]/ with its own layout
     review/               the daily queue
+    learn/                the declared, unbuilt learning mode
   login/                  outside the shell, no chrome
   not-found.tsx
 

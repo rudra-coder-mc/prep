@@ -6,6 +6,8 @@ import { usePrefersReducedMotion } from '@/components/motion/reduced-motion'
 import { FlameIcon } from '@/components/ui/icons'
 import { cx } from '@/lib/cx'
 import { AppLink } from './app-link'
+import { ModeSwitch } from './mode-switch'
+import { activeMode } from './modes'
 import { isNavItemActive, NAV_ITEMS } from './nav-items'
 import { SignOutButton } from './sign-out-button'
 
@@ -54,13 +56,19 @@ export function TopBar({
 }) {
   const pathname = usePathname()
   const reducedMotion = usePrefersReducedMotion()
+  // Learning is a placeholder, so the interview navigation would only mislead.
+  const interview = activeMode(pathname) === 'interview'
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-1 px-4 sm:gap-3 sm:px-6">
         <Brand />
+        <ModeSwitch />
 
-        <nav aria-label="Main" className="ml-1 flex items-center gap-0.5 sm:ml-4">
+        <nav
+          aria-label="Main"
+          className={cx('ml-1 items-center gap-0.5 sm:ml-2', interview ? 'flex' : 'hidden')}
+        >
           {NAV_ITEMS.map((item) => {
             const active = isNavItemActive(pathname, item.href)
 

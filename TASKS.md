@@ -16,24 +16,7 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1. Interview and Learning modes
-
-Prep is an interview preparation tool first. Reading a topic end to end is a
-different activity from drilling questions before an interview, and mixing them
-makes both worse. Split them explicitly so the interview path is the default
-and the learning path is visibly planned rather than missing.
-
-A mode toggle in the top bar with two states. Interview is the whole current
-app. Learning is a placeholder page saying what it will be, reachable but
-obviously unbuilt.
-
-Touches `src/components/chrome/`, a new `src/app/(app)/learn/` route, and
-`docs/architecture.md`.
-
-Done when the toggle persists across navigation, Learning renders a coming soon
-page rather than a 404, and Interview is what you land on signed in.
-
-## 2. Multiple choice questions
+## 1. Multiple choice questions
 
 The fastest form of recall, and the one that pairs with audio: hear the
 question, hear four options, answer, move on. Nothing in the content schema can
@@ -56,7 +39,7 @@ Done when a topic can declare MCQs, answering one records an attempt without a
 self grade, and the content check rejects an MCQ whose correct index is out of
 range or whose options are not unique.
 
-## 3. Output questions that check the answer
+## 2. Output questions that check the answer
 
 The `output` question type already exists and is already used, but it is graded
 by eye like everything else. Reading the expected answer and then marking
@@ -77,7 +60,7 @@ grading it, the comparison has unit tests covering whitespace, quotes and
 multiline output, and questions without an `expectedOutput` still behave exactly
 as they do now.
 
-## 4. Spoken narration: choosing and wiring the engine
+## 3. Spoken narration: choosing and wiring the engine
 
 Every topic gets a button that explains it aloud. The voice has to be good
 enough to listen to for ten minutes, and this is a local only project, so the
@@ -99,7 +82,7 @@ Done when a narration script can be turned into playable audio on a clean
 checkout with no manual setup step, the second request for the same script is
 served from cache, and the choice is written down with its alternatives.
 
-## 5. Spoken narration: the scripts and the topic reader
+## 4. Spoken narration: the scripts and the topic reader
 
 A lesson read verbatim sounds like a document being read, because it is one.
 The narration is separate text, written the way you would explain the topic to
@@ -121,20 +104,20 @@ Done when all five topics play end to end, the section controls work, speed
 persists across topics, and the content check rejects a narration script whose
 sections are empty.
 
-## 6. Spoken narration in the question session
+## 5. Spoken narration in the question session
 
 The point of audio on questions is answering without reading. A play button on
 a question reads the prompt and then each option in turn, so an MCQ can be
 answered by ear.
 
-Depends on 2 and 4.
+Depends on 1 and 3.
 
 Touches `question-session.tsx` and the speech library.
 
 Done when playing an MCQ reads the prompt and all four options in order, and
 moving to the next question stops the previous audio rather than overlapping it.
 
-## 7. The JavaScript interview surface
+## 6. The JavaScript interview surface
 
 Five topics is not interview coverage. The goal is that anything reasonably
 asked in a JavaScript interview has a topic, and that each topic carries both
