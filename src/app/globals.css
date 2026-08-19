@@ -1,22 +1,108 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-bg: oklch(0.18 0.012 260);
-  --color-surface: oklch(0.23 0.014 260);
-  --color-border: oklch(0.32 0.016 260);
-  --color-fg: oklch(0.94 0.006 260);
-  --color-muted: oklch(0.68 0.014 260);
-  --color-accent: oklch(0.72 0.15 250);
-  --color-pass: oklch(0.72 0.16 150);
-  --color-weak: oklch(0.78 0.15 80);
-  --color-fail: oklch(0.68 0.18 25);
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --color-bg: oklch(0.165 0.014 264);
+  --color-surface: oklch(0.215 0.016 264);
+  --color-raised: oklch(0.255 0.018 264);
+  --color-border: oklch(0.31 0.018 264);
+  --color-edge: oklch(0.42 0.022 264);
+  --color-fg: oklch(0.96 0.005 264);
+  --color-muted: oklch(0.72 0.016 264);
+  --color-faint: oklch(0.56 0.016 264);
+
+  --color-accent: oklch(0.74 0.148 252);
+  --color-accent-fg: oklch(0.18 0.03 252);
+  --color-accent-dim: oklch(0.74 0.148 252 / 0.16);
+
+  --color-pass: oklch(0.75 0.16 152);
+  --color-weak: oklch(0.81 0.15 82);
+  --color-fail: oklch(0.7 0.18 25);
+
+  --radius-card: 0.875rem;
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-html {
-  color-scheme: dark;
+@layer base {
+  html {
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+  }
+
+  /* One rule gives every control a visible, consistent keyboard focus. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--color-accent) 40%, transparent);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border: 2px solid var(--color-bg);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-edge);
+  }
 }
 
-body {
-  background: var(--color-bg);
-  color: var(--color-fg);
+@layer components {
+  /* Skeletons breathe rather than blink, so a slow page reads as loading. */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--color-surface) 0%,
+      var(--color-raised) 50%,
+      var(--color-surface) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s var(--ease-soft) infinite;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/*
+ * The system preference wins over everything. Components also check it in JS,
+ * but this catches any transition they do not own.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

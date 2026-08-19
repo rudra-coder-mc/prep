@@ -12,6 +12,10 @@ test('an empty queue says so rather than showing a broken session', async ({ pag
 test('marking a topic learned puts its questions into the review queue', async ({ page }) => {
   await page.goto('/topics/javascript/closures')
 
+  // The page streams in behind a loading state, so wait for the card that owns
+  // the button before asking whether the button is there.
+  await expect(page.getByRole('heading', { name: 'Ready to be tested on this?' })).toBeVisible()
+
   const markButton = page.getByRole('button', { name: 'Mark as learned' })
   if (await markButton.isVisible()) await markButton.click()
   await expect(page.getByText(/Marked learned/)).toBeVisible()

@@ -1,6 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { usePrefersReducedMotion } from '@/components/motion/reduced-motion'
+
+// Re-exported so every visual keeps importing its motion helpers from one place.
+export { usePrefersReducedMotion }
 
 export type StepPlayer = {
   index: number
@@ -15,22 +19,6 @@ export type StepPlayer = {
   previous: () => void
   reset: () => void
   goTo: (index: number) => void
-}
-
-const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)'
-
-function subscribeToReducedMotion(onChange: () => void) {
-  const query = window.matchMedia(REDUCED_MOTION_QUERY)
-  query.addEventListener('change', onChange)
-  return () => query.removeEventListener('change', onChange)
-}
-
-export function usePrefersReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribeToReducedMotion,
-    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
-    () => false,
-  )
 }
 
 /**

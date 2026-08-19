@@ -24,8 +24,11 @@ test('a lesson renders with its animated visuals', async ({ page }) => {
 test('marking a topic learned enrols its questions into recall', async ({ page }) => {
   await page.goto('/topics/javascript/closures')
 
-  // Another spec may already have marked it, so the click is conditional. The
-  // assertions below hold either way.
+  // The page streams in behind a loading state, so wait for the card that owns
+  // the button. Another spec may already have marked the topic, so the click is
+  // conditional; the assertions below hold either way.
+  await expect(page.getByRole('heading', { name: 'Ready to be tested on this?' })).toBeVisible()
+
   const markButton = page.getByRole('button', { name: 'Mark as learned' })
   if (await markButton.isVisible()) await markButton.click()
 

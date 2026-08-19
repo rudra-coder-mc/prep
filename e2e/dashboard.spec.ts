@@ -18,11 +18,11 @@ test('the dashboard summarises topics, questions and exercises', async ({ page }
 test('the actions lead to review and to the topic list', async ({ page }) => {
   await page.goto('/')
 
-  await page.getByRole('link', { name: 'Continue learning' }).click()
+  await page.getByRole('link', { name: 'Browse topics' }).click()
   await expect(page).toHaveURL(/\/topics$/)
 
   await page.goto('/')
-  await page.getByRole('link', { name: 'Review weak topics' }).click()
+  await page.getByRole('link', { name: 'Start review' }).click()
   await expect(page).toHaveURL(/\/review$/)
 })
 

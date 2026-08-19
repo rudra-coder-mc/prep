@@ -40,6 +40,9 @@ editing a topic shows up immediately without rebuilding the image.
 - `content/<technology>/<topic>/` — the curriculum. MDX lesson plus colocated
   questions and exercises. Version-controlled, not in the database.
 - `src/components/visuals/` — the reusable animation library the lessons import.
+- `src/app/(app)/` — everything behind the login, under one persistent top bar.
+- `src/components/{chrome,ui,motion}/` — the shell, the UI primitives, and the
+  single entrance animation the whole app uses.
 - `src/db/` — Drizzle schema and migrations. Stores users and their progress only.
 
 See `docs/architecture.md` for the full picture and `docs/decisions/` for why
