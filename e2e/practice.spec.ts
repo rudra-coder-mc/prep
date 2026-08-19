@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { answerCurrent, optionsList } from './answering'
+import { answerCurrent, checkButton, optionsList, walkToForm } from './answering'
 
 test('the expected answer is not in the page before submitting', async ({ page }) => {
   await page.goto('/topics/javascript/closures/practice')
@@ -44,11 +44,7 @@ test('a multiple choice question grades itself, without a self assessment', asyn
   await page.goto('/topics/javascript/closures/practice')
 
   // Written questions come first in this topic, so walk to the first choice.
-  for (let i = 0; i < 20 && !(await optionsList(page).isVisible()); i++) {
-    await answerCurrent(page, i)
-  }
-
-  await expect(optionsList(page)).toBeVisible()
+  await walkToForm(page, 'choice')
 
   // Nothing about grading yourself belongs on a question with one right answer.
   await expect(page.getByLabel('Your answer')).toHaveCount(0)
@@ -77,4 +73,33 @@ test('the session reports completion after the last question', async ({ page }) 
 
   await expect(page.getByText('Session complete')).toBeVisible()
   await expect(page.getByText(`${total} questions recorded.`)).toBeVisible()
+})
+
+test('an output question is checked rather than self graded', async ({ page }) => {
+  await page.goto('/topics/javascript/closures/practice')
+
+  await walkToForm(page, 'output')
+
+  // Nothing here asks how you did, because the answer is exact.
+  await expect(page.getByRole('radio', { name: /^3 —/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Passed' })).toHaveCount(0)
+  await expect(checkButton(page)).toBeDisabled()
+
+  await page.getByLabel('Your answer').fill('9 9 9')
+  await checkButton(page).click()
+
+  await expect(page.getByText('Not this time')).toBeVisible()
+  await expect(page.getByText('Expected output')).toBeVisible()
+})
+
+test('an output answer matches despite spacing the writer did not intend', async ({ page }) => {
+  await page.goto('/topics/javascript/closures/practice')
+
+  await walkToForm(page, 'output')
+
+  // The first checked output question in this topic prints 1 2 1.
+  await page.getByLabel('Your answer').fill('  1   2  1  ')
+  await checkButton(page).click()
+
+  await expect(page.getByText('Correct')).toBeVisible()
 })

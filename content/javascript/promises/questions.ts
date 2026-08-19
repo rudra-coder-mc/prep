@@ -68,7 +68,7 @@ Promise.all([ok(), bad(), ok()])
 Promise.allSettled([ok(), bad(), ok()]).then((r) =>
   console.log('settled:', r.map((x) => x.status).join(',')),
 )`,
-    expectedAnswer: `all failed: bad
+    expectedOutput: `all failed: bad
 settled: fulfilled,rejected,fulfilled`,
     explanation: `Promise.all rejects at the first rejection, so its then never runs and the catch receives the error. allSettled waits for everything and reports each outcome, so it always fulfils.
 

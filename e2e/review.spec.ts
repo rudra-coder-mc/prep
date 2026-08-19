@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { answerCurrent, answerable } from './answering'
+import { answerable } from './answering'
 
 test('an empty queue says so rather than showing a broken session', async ({ page }) => {
   await page.goto('/review')
@@ -29,20 +29,25 @@ test('marking a topic learned puts its questions into the review queue', async (
   await expect(answerable(page)).toBeVisible()
 })
 
-test('a reviewed question leaves the queue for the rest of the day', async ({ page }) => {
-  await page.goto('/review')
-
+test('a passed question leaves the queue for the rest of the day', async ({ page }) => {
+  // Practice writes the same attempts the review queue reads, and its order is
+  // the content order, so this passes a known written question on purpose. Only
+  // a pass is promised to be gone for the day: a failed answer is meant to come
+  // back within hours, and the queue is shared with whatever other specs did.
+  await page.goto('/topics/javascript/closures/practice')
   await expect(answerable(page)).toBeVisible()
-  const first = await page.locator('h2').first().textContent()
+  const prompt = await page.locator('h2').first().textContent()
+  expect(prompt).toBeTruthy()
 
-  await answerCurrent(page)
-  // Wait for the next question to be answerable, which means the previous
-  // attempt has already been recorded.
+  await page.getByLabel('Your answer').fill('answer')
+  await page.getByRole('radio', { name: /^5 —/ }).check()
+  await page.getByRole('button', { name: 'Submit and reveal answer' }).click()
+  await expect(page.getByText('Expected answer')).toBeVisible()
+  await page.getByRole('button', { name: 'Passed' }).click()
   await expect(answerable(page)).toBeVisible()
 
   await page.goto('/review')
-  const nowFirst = await page.locator('h2').first().textContent()
-  expect(nowFirst).not.toBe(first)
+  await expect(page.getByText(prompt ?? '')).toHaveCount(0)
 })
 
 test('reviewing a question starts the streak', async ({ page }) => {

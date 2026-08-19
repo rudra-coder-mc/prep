@@ -3,7 +3,12 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { answerMcqAction, recordAttemptAction, revealAnswerAction } from '@/actions/session'
+import {
+  answerMcqAction,
+  answerOutputAction,
+  recordAttemptAction,
+  revealAnswerAction,
+} from '@/actions/session'
 import {
   DURATION_FAST,
   EASE_SOFT,
@@ -35,6 +40,8 @@ export type SessionQuestion = {
   code?: string
   hints: string[]
   options?: string[]
+  /** Whether this question is checked against printed output rather than self graded. */
+  checksOutput?: boolean
 }
 
 type Revealed = { expectedAnswer: string; explanation: string }
@@ -300,6 +307,109 @@ function WrittenQuestion({
   )
 }
 
+type OutputVerdict = { correct: boolean; expectedOutput: string; explanation: string }
+
+/**
+ * The output form: type what the program prints and have it checked. The answer
+ * is exact, so reading the expected value and then marking yourself correct is
+ * the weakest possible way to find out whether you were.
+ */
+function OutputQuestion({
+  question,
+  onGraded,
+  reducedMotion,
+}: {
+  question: SessionQuestion
+  onGraded: (result: Result) => Promise<void>
+  reducedMotion: boolean
+}) {
+  const [answer, setAnswer] = useState('')
+  const [hintsShown, setHintsShown] = useState(0)
+  const [verdict, setVerdict] = useState<OutputVerdict | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function check() {
+    if (answer.trim().length === 0) return
+    setBusy(true)
+    try {
+      setVerdict(await answerOutputAction(question.topicSlug, question.id, answer, hintsShown))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      {!verdict ? (
+        <Hints
+          hints={question.hints}
+          shown={hintsShown}
+          onShow={() => setHintsShown(hintsShown + 1)}
+          reducedMotion={reducedMotion}
+        />
+      ) : null}
+
+      <label className="mt-6 block">
+        <span className="text-sm text-muted">Your answer</span>
+        <textarea
+          value={answer}
+          onChange={(event) => setAnswer(event.target.value)}
+          disabled={verdict !== null}
+          rows={4}
+          placeholder="Exactly what it prints, one line per line of output."
+          className="mt-1.5 w-full rounded-card border border-border bg-surface p-3.5 font-mono text-sm leading-6 transition-colors outline-none placeholder:text-faint/70 focus:border-accent disabled:opacity-60"
+        />
+      </label>
+
+      {!verdict ? (
+        <Button
+          variant="primary"
+          onClick={check}
+          disabled={answer.trim().length === 0 || busy}
+          className="mt-5"
+        >
+          {busy ? 'Checking...' : 'Check answer'}
+        </Button>
+      ) : (
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
+        >
+          <Card className="mt-5">
+            <p className={cx('font-medium', verdict.correct ? 'text-pass' : 'text-fail')}>
+              {verdict.correct ? 'Correct' : 'Not this time'}
+            </p>
+
+            <div className="mt-4 border-t border-border pt-4">
+              <SectionLabel>Expected output</SectionLabel>
+              <pre className="mt-2 overflow-x-auto rounded-lg border border-border bg-bg p-3 font-mono text-sm leading-6">
+                {verdict.expectedOutput}
+              </pre>
+            </div>
+
+            <div className="mt-5 border-t border-border pt-4">
+              <SectionLabel>Explanation</SectionLabel>
+              <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted">
+                {verdict.explanation}
+              </p>
+            </div>
+          </Card>
+
+          <Button
+            variant="primary"
+            className="mt-5"
+            disabled={busy}
+            onClick={() => onGraded(verdict.correct ? 'passed' : 'failed')}
+          >
+            Next question
+          </Button>
+        </motion.div>
+      )}
+    </>
+  )
+}
+
 type ChoiceVerdict = { correct: boolean; correctOption: number; explanation: string }
 
 /**
@@ -509,6 +619,8 @@ export function QuestionSession({
               onGraded={advance}
               reducedMotion={reducedMotion}
             />
+          ) : question.checksOutput ? (
+            <OutputQuestion question={question} onGraded={advance} reducedMotion={reducedMotion} />
           ) : (
             <WrittenQuestion question={question} onGraded={advance} reducedMotion={reducedMotion} />
           )}

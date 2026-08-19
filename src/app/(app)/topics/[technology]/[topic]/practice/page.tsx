@@ -27,6 +27,7 @@ export default async function PracticePage({ params }: { params: Promise<Params>
     code: question.code,
     hints: question.hints,
     options: question.options,
+    checksOutput: question.expectedOutput !== undefined,
   }))
 
   return (

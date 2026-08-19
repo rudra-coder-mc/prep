@@ -51,6 +51,13 @@ export const questionSchema = z
       .min(1)
       .optional()
       .describe('Revealed after answering. Absent on multiple choice, which grades itself.'),
+    expectedOutput: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        'Exactly what the program prints. Present means the answer is checked, not self graded.',
+      ),
     explanation: z.string().min(1),
     hints: z.array(z.string()).default([]),
     tags: z.array(z.string()).default([]),
@@ -94,10 +101,10 @@ export const questionSchema = z
         })
       }
 
-      if (question.expectedAnswer !== undefined) {
+      if (question.expectedAnswer !== undefined || question.expectedOutput !== undefined) {
         ctx.addIssue({
           code: 'custom',
-          path: ['expectedAnswer'],
+          path: question.expectedAnswer !== undefined ? ['expectedAnswer'] : ['expectedOutput'],
           message: 'the correct option is the answer, so this would only drift out of step with it',
         })
       }
@@ -105,19 +112,50 @@ export const questionSchema = z
       return
     }
 
-    if (question.expectedAnswer === undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['expectedAnswer'],
-        message: 'required for every question that is not multiple choice',
-      })
-    }
-
     if (question.options !== undefined || question.correctOption !== undefined) {
       ctx.addIssue({
         code: 'custom',
         path: ['options'],
         message: `only a multiple choice question has options, and this one is "${question.type}"`,
+      })
+    }
+
+    if (question.type === 'output') {
+      // An output question is either checked against what the program prints or
+      // graded by eye against a written answer. Carrying both would mean two
+      // answers to keep in step, and no way to say which one is authoritative.
+      if (question.expectedAnswer !== undefined && question.expectedOutput !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['expectedOutput'],
+          message: 'give either expectedOutput or expectedAnswer, not both',
+        })
+      }
+
+      if (question.expectedAnswer === undefined && question.expectedOutput === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['expectedOutput'],
+          message: 'an output question needs expectedOutput, or expectedAnswer to grade by eye',
+        })
+      }
+
+      return
+    }
+
+    if (question.expectedOutput !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['expectedOutput'],
+        message: `only an output question is checked against printed output, and this one is "${question.type}"`,
+      })
+    }
+
+    if (question.expectedAnswer === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['expectedAnswer'],
+        message: 'required for every question that is not multiple choice',
       })
     }
   })

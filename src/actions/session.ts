@@ -3,6 +3,7 @@
 import { recordReview } from '@/lib/activity'
 import {
   answerMultipleChoice,
+  answerOutputQuestion,
   recordAttempt,
   revealQuestion,
   type AttemptInput,
@@ -31,6 +32,26 @@ export async function answerMcqAction(topicSlug: string, questionId: string, cho
   const session = await requireSession()
 
   const verdict = await answerMultipleChoice(session.user.id, topicSlug, questionId, chosen)
+  await recordReview(session.user.id)
+
+  return verdict
+}
+
+export async function answerOutputAction(
+  topicSlug: string,
+  questionId: string,
+  answer: string,
+  hintsUsed: number,
+) {
+  const session = await requireSession()
+
+  const verdict = await answerOutputQuestion(
+    session.user.id,
+    topicSlug,
+    questionId,
+    answer,
+    hintsUsed,
+  )
   await recordReview(session.user.id)
 
   return verdict

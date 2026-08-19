@@ -16,28 +16,7 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1. Output questions that check the answer
-
-The `output` question type already exists and is already used, but it is graded
-by eye like everything else. Reading the expected answer and then marking
-yourself correct is exactly where self assessment is weakest, because the answer
-is short and unambiguous. A machine should do it.
-
-Compare the typed answer to the expected output after normalising whitespace and
-quote style, then say pass or fail before revealing the explanation. This is
-string comparison against an authored expected value, not code execution.
-Running the code is a separate, larger piece of work already recorded under
-`docs/decisions/0007-execution-runners.md`, and this task must not start it.
-
-Touches `src/content/schema.ts` for an explicit `expectedOutput`,
-`src/lib/` for the comparison and its tests, and `question-session.tsx`.
-
-Done when submitting a wrong output is told it is wrong without the user
-grading it, the comparison has unit tests covering whitespace, quotes and
-multiline output, and questions without an `expectedOutput` still behave exactly
-as they do now.
-
-## 2. Spoken narration: choosing and wiring the engine
+## 1. Spoken narration: choosing and wiring the engine
 
 Every topic gets a button that explains it aloud. The voice has to be good
 enough to listen to for ten minutes, and this is a local only project, so the
@@ -59,7 +38,7 @@ Done when a narration script can be turned into playable audio on a clean
 checkout with no manual setup step, the second request for the same script is
 served from cache, and the choice is written down with its alternatives.
 
-## 3. Spoken narration: the scripts and the topic reader
+## 2. Spoken narration: the scripts and the topic reader
 
 A lesson read verbatim sounds like a document being read, because it is one.
 The narration is separate text, written the way you would explain the topic to
@@ -81,20 +60,20 @@ Done when all five topics play end to end, the section controls work, speed
 persists across topics, and the content check rejects a narration script whose
 sections are empty.
 
-## 4. Spoken narration in the question session
+## 3. Spoken narration in the question session
 
 The point of audio on questions is answering without reading. A play button on
 a question reads the prompt and then each option in turn, so an MCQ can be
 answered by ear.
 
-Depends on 2.
+Depends on 1.
 
 Touches `question-session.tsx` and the speech library.
 
 Done when playing an MCQ reads the prompt and all four options in order, and
 moving to the next question stops the previous audio rather than overlapping it.
 
-## 5. The JavaScript interview surface
+## 4. The JavaScript interview surface
 
 Five topics is not interview coverage. The goal is that anything reasonably
 asked in a JavaScript interview has a topic, and that each topic carries both

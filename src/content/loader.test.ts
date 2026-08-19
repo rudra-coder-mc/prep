@@ -22,10 +22,12 @@ describe('content discovery', () => {
     const topic = await getTopic('javascript', 'closures')
     expect(topic?.questions.length).toBeGreaterThan(0)
     expect(topic?.exercises.length).toBeGreaterThan(0)
+    // Every question carries an answer, in whichever form its type uses.
     expect(
-      topic?.questions.every((q) =>
-        q.type === 'mcq' ? (q.options?.length ?? 0) >= 2 : (q.expectedAnswer?.length ?? 0) > 0,
-      ),
+      topic?.questions.every((q) => {
+        if (q.type === 'mcq') return (q.options?.length ?? 0) >= 2
+        return (q.expectedAnswer?.length ?? 0) > 0 || (q.expectedOutput?.length ?? 0) > 0
+      }),
     ).toBe(true)
   })
 

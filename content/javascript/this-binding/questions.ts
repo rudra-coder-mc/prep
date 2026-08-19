@@ -121,7 +121,7 @@ const bound = whoAmI.bind(a)
 const reBound = bound.bind(b)
 
 console.log(bound(), reBound(), bound.call(b))`,
-    expectedAnswer: `'a', 'a', 'a'`,
+    expectedOutput: `'a', 'a', 'a'`,
     explanation: `bind is permanent. The function it returns ignores every later attempt to change this, whether by binding again or by call and apply. Rebinding produces a wrapper whose own this is irrelevant, because the inner bound function already fixed it.
 
 The one exception is new: calling a bound function with new uses the new instance as this and discards the bound value.`,

@@ -54,7 +54,7 @@ console.log('script start')
 a()
 Promise.resolve().then(() => console.log('promise'))
 console.log('script end')`,
-    expectedAnswer: `script start
+    expectedOutput: `script start
 a start
 b
 script end
@@ -102,7 +102,7 @@ Promise.resolve().then(() => {
   console.log('micro 1')
   Promise.resolve().then(() => console.log('micro 2'))
 })`,
-    expectedAnswer: `micro 1, micro 2, timeout`,
+    expectedOutput: `micro 1, micro 2, timeout`,
     explanation: `A microtask queued from inside a microtask joins the same drain, so micro 2 runs before the loop moves on. The queue is emptied, not merely visited once. This is exactly why an unbounded chain of microtasks can lock a page while a timer chain cannot.`,
     hints: ['Is the microtask queue drained once, or repeatedly until empty?'],
     tags: ['event-loop', 'async'],
