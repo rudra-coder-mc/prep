@@ -155,4 +155,56 @@ In modern browsers scheduler.yield() is the purpose-built version of this.`,
     hints: ['What kind of task do you have to yield with for the browser to paint?'],
     tags: ['event-loop', 'performance', 'async'],
   },
+  {
+    id: 'log-order-mcq',
+    type: 'mcq',
+    difficulty: 'medium',
+    prompt: 'In what order do these print?',
+    code: `console.log('a')
+setTimeout(() => console.log('b'), 0)
+Promise.resolve().then(() => console.log('c'))
+console.log('d')`,
+    options: ['a d c b', 'a d b c', 'a b c d', 'a c d b'],
+    correctOption: 0,
+    explanation:
+      'Synchronous code first, so a and d. The stack then empties, the microtask queue is drained, which runs c. Only then does the loop take a macrotask, running b. A zero millisecond timeout is still a macrotask and still loses to any pending microtask.',
+    hints: [],
+    tags: ['event-loop', 'microtasks'],
+  },
+  {
+    id: 'microtask-drain-mcq',
+    type: 'mcq',
+    difficulty: 'medium',
+    prompt: 'How much of the microtask queue runs between two macrotasks?',
+    options: [
+      'All of it, including microtasks queued by other microtasks',
+      'Exactly one microtask',
+      'As many as were queued when the macrotask started',
+      'None, microtasks only run when the call stack is idle',
+    ],
+    correctOption: 0,
+    explanation:
+      'The queue is drained completely, and anything a microtask queues while running is drained in the same pass. That is why an endlessly self queueing microtask starves the loop and freezes the page, while an endlessly self queueing setTimeout does not.',
+    hints: [],
+    tags: ['event-loop', 'microtasks'],
+  },
+  {
+    id: 'queue-microtask-vs-timeout-mcq',
+    type: 'mcq',
+    difficulty: 'easy',
+    prompt: 'Which callback runs first?',
+    code: `setTimeout(() => console.log('timeout'), 0)
+queueMicrotask(() => console.log('microtask'))`,
+    options: [
+      'microtask, because the microtask queue is drained first',
+      'timeout, because it was scheduled first',
+      'Whichever the engine happens to pick, it is not specified',
+      'They run at the same time, in parallel',
+    ],
+    correctOption: 0,
+    explanation:
+      'Scheduling order between the two queues does not matter. Once the stack empties, microtasks are drained before the loop takes its next macrotask, so the microtask always wins regardless of which line came first.',
+    hints: [],
+    tags: ['event-loop', 'microtasks'],
+  },
 ]

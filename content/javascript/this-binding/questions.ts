@@ -171,4 +171,64 @@ Using a Symbol rather than a string key avoids clobbering an existing property, 
     ],
     tags: ['this', 'functions', 'objects'],
   },
+  {
+    id: 'arrow-this-mcq',
+    type: 'mcq',
+    difficulty: 'easy',
+    prompt: 'What determines `this` inside an arrow function?',
+    options: [
+      'The scope it was defined in, lexically',
+      'The object it is called on',
+      'Whatever was passed to call or apply',
+      'It is always undefined',
+    ],
+    correctOption: 0,
+    explanation:
+      'An arrow function has no `this` of its own, so the name resolves outward through the scope chain like any other variable. That also means call, apply and bind cannot change it, which is exactly why arrows are the fix for a callback that loses its receiver.',
+    hints: [],
+    tags: ['this', 'arrow-functions'],
+  },
+  {
+    id: 'detached-method-mcq',
+    type: 'mcq',
+    difficulty: 'medium',
+    prompt: 'What is `this` when the extracted function runs, in a module?',
+    code: `const counter = {
+  count: 0,
+  increment() {
+    return ++this.count
+  },
+}
+
+const increment = counter.increment
+increment()`,
+    options: [
+      'undefined, so the call throws a TypeError',
+      'counter, because that is where the method was defined',
+      'The global object, so it silently creates a global count',
+      'An empty object created for the call',
+    ],
+    correctOption: 0,
+    explanation:
+      '`this` is set by how a function is called, not where it was written. Called plainly, with no receiver, it is undefined in strict mode, and module code is always strict. Reading this.count then throws. Outside strict mode it would be the global object, which fails silently instead.',
+    hints: [],
+    tags: ['this', 'binding'],
+  },
+  {
+    id: 'bind-vs-call-mcq',
+    type: 'mcq',
+    difficulty: 'easy',
+    prompt: 'What does bind do that call does not?',
+    options: [
+      'Returns a new function instead of invoking it',
+      'Allows arguments to be passed alongside the receiver',
+      'Works on arrow functions',
+      'Changes the original function permanently',
+    ],
+    correctOption: 0,
+    explanation:
+      'call and apply invoke immediately; bind returns a new function with the receiver fixed, to be called later. It is the one you want when handing a method to something that will call it back, since the binding travels with the function.',
+    hints: [],
+    tags: ['this', 'binding'],
+  },
 ]

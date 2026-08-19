@@ -49,3 +49,78 @@ describe('validation', () => {
     expect(parsed.tags).toEqual([])
   })
 })
+
+describe('multiple choice validation', () => {
+  const mcq = {
+    id: 'typeof-null',
+    type: 'mcq',
+    difficulty: 'easy',
+    prompt: 'What does typeof null return?',
+    options: ["'object'", "'null'", "'undefined'", "'number'"],
+    correctOption: 0,
+    explanation: 'A bug kept for compatibility.',
+  }
+
+  it('accepts a complete multiple choice question', () => {
+    expect(questionSchema.safeParse(mcq).success).toBe(true)
+  })
+
+  it('rejects a correct option that indexes past the end of the list', () => {
+    const result = questionSchema.safeParse({ ...mcq, correctOption: 4 })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['correctOption'])
+  })
+
+  it('rejects duplicated options, which would make two answers correct', () => {
+    const result = questionSchema.safeParse({
+      ...mcq,
+      options: ["'object'", "'object'", "'undefined'", "'number'"],
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['options'])
+  })
+
+  it('rejects a single option, which is not a choice', () => {
+    const result = questionSchema.safeParse({ ...mcq, options: ["'object'"], correctOption: 0 })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['options'])
+  })
+
+  it('rejects an expected answer alongside options, which could drift apart', () => {
+    const result = questionSchema.safeParse({ ...mcq, expectedAnswer: "'object'" })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['expectedAnswer'])
+  })
+
+  it('still requires an expected answer on a written question', () => {
+    const result = questionSchema.safeParse({
+      id: 'q1',
+      type: 'concept',
+      difficulty: 'easy',
+      prompt: 'x',
+      explanation: 'z',
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['expectedAnswer'])
+  })
+
+  it('refuses options on a question that is not multiple choice', () => {
+    const result = questionSchema.safeParse({
+      id: 'q1',
+      type: 'concept',
+      difficulty: 'easy',
+      prompt: 'x',
+      expectedAnswer: 'y',
+      explanation: 'z',
+      options: ['a', 'b'],
+    })
+
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['options'])
+  })
+})

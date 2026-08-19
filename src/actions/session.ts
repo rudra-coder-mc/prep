@@ -1,7 +1,12 @@
 'use server'
 
 import { recordReview } from '@/lib/activity'
-import { recordAttempt, revealQuestion, type AttemptInput } from '@/lib/attempts'
+import {
+  answerMultipleChoice,
+  recordAttempt,
+  revealQuestion,
+  type AttemptInput,
+} from '@/lib/attempts'
 import { isConfidence } from '@/lib/interval-ladder'
 import { requireSession } from '@/lib/session'
 
@@ -20,4 +25,13 @@ export async function recordAttemptAction(input: AttemptInput) {
   const { cleared } = await recordReview(session.user.id)
 
   return { dueAt: dueAt.toISOString(), queueCleared: cleared }
+}
+
+export async function answerMcqAction(topicSlug: string, questionId: string, chosen: number) {
+  const session = await requireSession()
+
+  const verdict = await answerMultipleChoice(session.user.id, topicSlug, questionId, chosen)
+  await recordReview(session.user.id)
+
+  return verdict
 }

@@ -52,6 +52,7 @@ export async function getDailyQueue(userId: string, now = new Date()): Promise<D
     prompt: question.prompt,
     code: question.code,
     hints: question.hints,
+    options: question.options,
   }))
 
   return { questions, reasons, dueToday: countDueToday(schedule, now), cap: DAILY_QUEUE_CAP }

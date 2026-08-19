@@ -179,4 +179,55 @@ The primitive guard at the top matters: primitives have prototypes conceptually 
     hints: ['What is instanceof actually comparing?', 'What should it do for a primitive?'],
     tags: ['objects', 'prototype'],
   },
+  {
+    id: 'class-methods-live-mcq',
+    type: 'mcq',
+    difficulty: 'easy',
+    prompt: 'Where does a method declared in a class body actually live?',
+    options: [
+      'On the constructor prototype, shared by every instance',
+      'On each instance, copied in by the constructor',
+      'On the constructor function itself',
+      'In a private table the engine keeps separately',
+    ],
+    correctOption: 0,
+    explanation:
+      'class is syntax over prototypes. Methods go on Constructor.prototype and are found by lookup through the chain, which is why a thousand instances cost one copy of each method. Fields declared in the class body are the exception: those are per instance.',
+    hints: [],
+    tags: ['prototypes', 'classes'],
+  },
+  {
+    id: 'object-create-null-mcq',
+    type: 'mcq',
+    difficulty: 'medium',
+    prompt: 'What is different about an object made with Object.create(null)?',
+    options: [
+      'It has no prototype, so it inherits nothing, not even toString',
+      'It is frozen and cannot take new properties',
+      'It is the same as {} but faster to create',
+      'Its prototype is Object.prototype, set explicitly',
+    ],
+    correctOption: 0,
+    explanation:
+      'Its chain terminates immediately. That makes it the honest choice for a dictionary keyed by arbitrary strings, because no key can collide with an inherited member, and a check like map.hasOwnProperty(key) has to become Object.prototype.hasOwnProperty.call(map, key).',
+    hints: [],
+    tags: ['prototypes'],
+  },
+  {
+    id: 'instanceof-mcq',
+    type: 'mcq',
+    difficulty: 'medium',
+    prompt: 'What does `a instanceof B` actually test?',
+    options: [
+      'Whether B.prototype appears anywhere in the prototype chain of a',
+      'Whether a was created by calling B',
+      'Whether a and B have the same constructor property',
+      'Whether a has every property that B.prototype has',
+    ],
+    correctOption: 0,
+    explanation:
+      'It walks the chain looking for that one object. Nothing records which constructor made a value, which is why reassigning a prototype changes instanceof retroactively, and why the check fails across realms such as an iframe where Array.prototype is a different object.',
+    hints: [],
+    tags: ['prototypes'],
+  },
 ]

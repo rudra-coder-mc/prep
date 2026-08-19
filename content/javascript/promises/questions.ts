@@ -157,4 +157,53 @@ The runtime checks for handlers once the microtask queue has drained. The catch 
     hints: ['When does the runtime decide a rejection was unhandled?'],
     tags: ['promise', 'async', 'event-loop'],
   },
+  {
+    id: 'then-returns-value-mcq',
+    type: 'mcq',
+    difficulty: 'easy',
+    prompt: 'What does the second then receive?',
+    code: `Promise.resolve(1)
+  .then((n) => n + 1)
+  .then((n) => console.log(n))`,
+    options: ['2', '1', 'A promise for 2', 'undefined'],
+    correctOption: 0,
+    explanation:
+      'then returns a new promise resolved with whatever the callback returned. A plain value is used as is; a returned promise is adopted and waited for, which is what makes chains flatten instead of nesting.',
+    hints: [],
+    tags: ['promises'],
+  },
+  {
+    id: 'async-return-type-mcq',
+    type: 'mcq',
+    difficulty: 'easy',
+    prompt: 'What does an async function return?',
+    options: [
+      'Always a promise, whatever the body returns',
+      'The value returned by the body',
+      'A promise, unless the body returns a plain value',
+      'undefined, unless it is awaited',
+    ],
+    correctOption: 0,
+    explanation:
+      'Always a promise. A returned value resolves it, a thrown error rejects it. This is why a forgotten await gives you a pending promise where you expected a number, and why throwing inside an async function never produces a synchronous exception at the call site.',
+    hints: [],
+    tags: ['promises', 'async-await'],
+  },
+  {
+    id: 'promise-all-rejection-mcq',
+    type: 'mcq',
+    difficulty: 'medium',
+    prompt: 'One of four promises passed to Promise.all rejects. What happens?',
+    options: [
+      'It rejects immediately with that reason, and the others keep running',
+      'It waits for all four, then rejects with an array of reasons',
+      'It resolves with the three that succeeded',
+      'It retries the rejected one before giving up',
+    ],
+    correctOption: 0,
+    explanation:
+      'Promise.all rejects on the first rejection without waiting. The others are not cancelled, because a promise cannot be cancelled, so their work continues and their results are discarded. Promise.allSettled is the one that waits for every outcome.',
+    hints: [],
+    tags: ['promises'],
+  },
 ]

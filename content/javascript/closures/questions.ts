@@ -164,4 +164,53 @@ console.log(read())`,
     hints: ['Does pulling read out of the object change what it can see?'],
     tags: ['closure', 'objects'],
   },
+  {
+    id: 'what-a-closure-captures-mcq',
+    type: 'mcq',
+    difficulty: 'easy',
+    prompt: 'What does a closure actually capture?',
+    options: [
+      'The variable binding itself, so a later change to it is visible',
+      'A copy of the value, taken when the function was defined',
+      'A copy of the value, taken the first time the function runs',
+      'A deep clone of every variable in the enclosing scope',
+    ],
+    correctOption: 0,
+    explanation:
+      'The binding, not the value. This is the single fact that explains almost every closure interview question: if the outer variable is reassigned, every closure over it sees the new value, because they all point at the same binding rather than at snapshots of it.',
+    hints: [],
+    tags: ['closure', 'scope'],
+  },
+  {
+    id: 'var-loop-output-mcq',
+    type: 'mcq',
+    difficulty: 'medium',
+    prompt: 'What does this print?',
+    code: `for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 0)
+}`,
+    options: ['3 3 3', '0 1 2', '0 0 0', 'Nothing, it throws a ReferenceError'],
+    correctOption: 0,
+    explanation:
+      'var is function scoped, so all three callbacks close over one shared i. The loop finishes before any timeout runs, leaving i at 3. Swapping var for let creates a fresh binding per iteration and prints 0 1 2.',
+    hints: [],
+    tags: ['closure', 'scope'],
+  },
+  {
+    id: 'when-closure-created-mcq',
+    type: 'mcq',
+    difficulty: 'medium',
+    prompt: 'When is a closure created?',
+    options: [
+      'When the function is defined',
+      'When the function is first called',
+      'When the enclosing function returns',
+      'Only when the inner function reads an outer variable',
+    ],
+    correctOption: 0,
+    explanation:
+      'At definition time. Every function keeps a reference to the scope it was created in, whether or not it ever uses it. The scope surviving after the outer function returns is a consequence of that reference, not the moment the closure comes into being.',
+    hints: [],
+    tags: ['closure'],
+  },
 ]

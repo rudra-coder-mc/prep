@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { answerCurrent, optionsList } from './answering'
 
 test('the expected answer is not in the page before submitting', async ({ page }) => {
   await page.goto('/topics/javascript/closures/practice')
@@ -14,7 +15,7 @@ test('the expected answer is not in the page before submitting', async ({ page }
 test('a full question records an attempt and moves to the next one', async ({ page }) => {
   await page.goto('/topics/javascript/closures/practice')
 
-  await expect(page.getByText('1 of 8')).toBeVisible()
+  await expect(page.getByText(/^1 of \d+$/)).toBeVisible()
 
   await expect(page.getByRole('button', { name: 'Submit and reveal answer' })).toBeDisabled()
 
@@ -28,7 +29,7 @@ test('a full question records an attempt and moves to the next one', async ({ pa
   await expect(page.getByText('Explanation')).toBeVisible()
 
   await page.getByRole('button', { name: 'Passed' }).click()
-  await expect(page.getByText('2 of 8')).toBeVisible()
+  await expect(page.getByText(/^2 of \d+$/)).toBeVisible()
 })
 
 test('hints are opt-in and revealed one at a time', async ({ page }) => {
@@ -39,17 +40,41 @@ test('hints are opt-in and revealed one at a time', async ({ page }) => {
   await expect(page.getByText(/^Hint 1:/)).toBeVisible()
 })
 
+test('a multiple choice question grades itself, without a self assessment', async ({ page }) => {
+  await page.goto('/topics/javascript/closures/practice')
+
+  // Written questions come first in this topic, so walk to the first choice.
+  for (let i = 0; i < 20 && !(await optionsList(page).isVisible()); i++) {
+    await answerCurrent(page, i)
+  }
+
+  await expect(optionsList(page)).toBeVisible()
+
+  // Nothing about grading yourself belongs on a question with one right answer.
+  await expect(page.getByLabel('Your answer')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Passed' })).toHaveCount(0)
+
+  // The correct option is first in every closures choice question, so this is wrong.
+  await optionsList(page).getByRole('button').last().click()
+
+  await expect(page.getByText('Not this time')).toBeVisible()
+  await expect(page.getByText('Explanation')).toBeVisible()
+
+  // Answering is final: the options stop responding once a choice is recorded.
+  await expect(optionsList(page).getByRole('button').first()).toBeDisabled()
+
+  await page.getByRole('button', { name: 'Next question' }).click()
+})
+
 test('the session reports completion after the last question', async ({ page }) => {
   await page.goto('/topics/javascript/closures/practice')
 
-  for (let i = 0; i < 8; i++) {
-    await page.getByLabel('Your answer').fill(`answer ${i}`)
-    await page.getByRole('radio', { name: /^3 —/ }).check()
-    await page.getByRole('button', { name: 'Submit and reveal answer' }).click()
-    await expect(page.getByText('Expected answer')).toBeVisible()
-    await page.getByRole('button', { name: 'Weak' }).click()
-  }
+  const counter = page.getByText(/^\d+ of \d+$/)
+  const total = Number((await counter.textContent())?.split(' of ')[1])
+  expect(total).toBeGreaterThan(0)
+
+  for (let i = 0; i < total; i++) await answerCurrent(page, i)
 
   await expect(page.getByText('Session complete')).toBeVisible()
-  await expect(page.getByText('8 questions recorded.')).toBeVisible()
+  await expect(page.getByText(`${total} questions recorded.`)).toBeVisible()
 })
