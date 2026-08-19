@@ -16,7 +16,7 @@ docker compose up
 ```
 
 Then open http://localhost:3000 and log in with the seeded credentials
-(`dev@local` / `dev`, overridable in `.env`).
+(`dev@prep.test` / `dev`, overridable in `.env`).
 
 Nothing else to install. Postgres, migrations and the seed user are handled
 inside the stack.

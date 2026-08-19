@@ -8,19 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 4. Authentication
-
-better-auth with email and password, Drizzle adapter, one user seeded from env at
-startup. No public signup. Middleware protects every route except the login page.
-Startup warns when default credentials are still in use.
-
-See `docs/decisions/0004-self-hosted-auth.md`.
-
-**Done when:** an e2e test logs in, reaches a protected page, logs out, and is
-redirected when hitting a protected route unauthenticated.
-
----
-
 ## 5. Content pipeline
 
 The loader that turns `content/` into typed data at build time. Directory
