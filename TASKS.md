@@ -8,26 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 6. Visual component library
-
-The seven components in `docs/architecture.md`: `CodeWalkthrough`, `CallStack`,
-`EventLoop`, `MemoryModel`, `ScopeChain`, `PrototypeChain`, `PromiseTimeline`.
-
-All data-driven — a lesson passes a description of steps, never imperative
-animation code. Each needs play/pause/step controls, a keyboard-accessible
-timeline, and a static fallback under `prefers-reduced-motion`.
-
-This is the largest task in V1 and the one that determines whether the rest of
-the curriculum is cheap to write. If it grows past one branch, split it per component
-before continuing.
-
-Consider splitting: `CodeWalkthrough` first, since most topics rely on it.
-
-**Done when:** each component renders from a fixture, steps forward and backward
-without visual glitches, and has unit tests over its step-state machine.
-
----
-
 ## 7. Topic page and mark-as-learned
 
 The lesson route: why it matters, explanation, animation, step-through example,
@@ -37,8 +17,6 @@ enrols the topic's questions into `review_schedule` at the bottom of the ladder.
 Ship Closures as the proving content in this task — a real topic end to end is
 the only way to know the pipeline and the visual library actually work before
 writing four more.
-
-Depends on task 6.
 
 **Done when:** an e2e test reads the Closures topic, marks it learned, and the
 questions appear in the recall queue.
