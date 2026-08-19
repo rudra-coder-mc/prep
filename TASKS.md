@@ -8,25 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 1. Project scaffold and quality gates
-
-Stand up the repository so no later task has to argue about tooling.
-
-Next.js (App Router, TypeScript, strict), Tailwind, ESLint + Prettier enforced,
-Vitest for unit and integration, Playwright for e2e.
-
-There is no CI, because this repository has no remote (see `CLAUDE.md`), so the
-git hooks are the entire safety net. Pre-commit runs lint, format, typecheck and
-unit tests. A single `npm run verify` runs the full suite including integration,
-e2e and build, and must pass before anything merges into `main`.
-
-Touches: repository root, `.husky/`, `package.json` scripts.
-
-**Done when:** a deliberately broken commit is rejected by the pre-commit hook,
-and `npm run verify` runs every gate in one command.
-
----
-
 ## 2. Docker Compose stack
 
 Postgres with a named volume and healthcheck, app container gated on it,
@@ -35,7 +16,7 @@ migrations and seeds the user idempotently. Working defaults in the compose file
 `.env` overrides. `compose.dev.yaml` overlay bind-mounts `content/` and `src/`
 with hot reload.
 
-Depends on task 1. See `docs/decisions/0006-zero-setup-compose.md`.
+See `docs/decisions/0006-zero-setup-compose.md`.
 
 **Done when:** `docker compose up` on a machine with no Node and no Postgres
 serves the app; `docker compose down && docker compose up` preserves data; the
@@ -79,7 +60,7 @@ convention `content/<technology>/<topic>/` with `meta.ts`, `lesson.mdx`,
 build so a malformed question fails the build rather than a study session. MDX
 configured to render the visual components inline.
 
-Depends on task 1. See `docs/decisions/0002-content-in-git.md`.
+See `docs/decisions/0002-content-in-git.md`.
 
 **Done when:** a fixture topic is discovered, validated and rendered without any
 registry edit, and an invalid fixture fails the build with a message naming the
@@ -100,8 +81,7 @@ This is the largest task in V1 and the one that determines whether the rest of
 the curriculum is cheap to write. If it grows past one branch, split it per component
 before continuing.
 
-Depends on task 1. Consider splitting: `CodeWalkthrough` first, since most topics
-rely on it.
+Consider splitting: `CodeWalkthrough` first, since most topics rely on it.
 
 **Done when:** each component renders from a fixture, steps forward and backward
 without visual glitches, and has unit tests over its step-state machine.

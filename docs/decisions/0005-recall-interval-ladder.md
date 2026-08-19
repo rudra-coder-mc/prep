@@ -12,16 +12,16 @@ list.
 
 Self-rated confidence sets the next interval directly:
 
-| Confidence | Next due |
-|---|---|
-| 1 | later today |
-| 2 | 1 day |
-| 3 | 3 days |
-| 4 | 7 days |
-| 5 | 14 days |
+| Confidence | Next due    |
+| ---------- | ----------- |
+| 1          | later today |
+| 2          | 1 day       |
+| 3          | 3 days      |
+| 4          | 7 days      |
+| 5          | 14 days     |
 
 A `failed` result resets to the bottom of the ladder regardless of the confidence
-rating. `review_schedule` stores the ladder *step* alongside the due date. The
+rating. `review_schedule` stores the ladder _step_ alongside the due date. The
 daily queue is capped and fills in priority order: overdue, then due today, then
 weakest topics.
 

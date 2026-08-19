@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: oklch(0.18 0.012 260);
+  --color-surface: oklch(0.23 0.014 260);
+  --color-border: oklch(0.32 0.016 260);
+  --color-fg: oklch(0.94 0.006 260);
+  --color-muted: oklch(0.68 0.014 260);
+  --color-accent: oklch(0.72 0.15 250);
+  --color-pass: oklch(0.72 0.16 150);
+  --color-weak: oklch(0.78 0.15 80);
+  --color-fail: oklch(0.68 0.18 25);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}

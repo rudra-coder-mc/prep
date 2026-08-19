@@ -74,15 +74,15 @@ fails the build rather than the session.
 Animation is the expensive part of this project, so it is built as a finite,
 reusable library rather than per-topic one-offs:
 
-| Component | Shows |
-|---|---|
+| Component           | Shows                                                                 |
+| ------------------- | --------------------------------------------------------------------- |
 | `<CodeWalkthrough>` | Generic line-by-line player with variable state. Carries most topics. |
-| `<CallStack>` | Frames pushing and popping. |
-| `<EventLoop>` | Call stack, microtask queue, macrotask queue, render step. |
-| `<MemoryModel>` | Stack vs heap, references, mutation and copying. |
-| `<ScopeChain>` | Nested environments and identifier resolution. |
-| `<PrototypeChain>` | `__proto__` links and property lookup. |
-| `<PromiseTimeline>` | Pending, settlement, and resolution order over time. |
+| `<CallStack>`       | Frames pushing and popping.                                           |
+| `<EventLoop>`       | Call stack, microtask queue, macrotask queue, render step.            |
+| `<MemoryModel>`     | Stack vs heap, references, mutation and copying.                      |
+| `<ScopeChain>`      | Nested environments and identifier resolution.                        |
+| `<PrototypeChain>`  | `__proto__` links and property lookup.                                |
+| `<PromiseTimeline>` | Pending, settlement, and resolution order over time.                  |
 
 All are data-driven: a lesson passes a description of the steps, not imperative
 animation code. Building these against the five hardest topics first is
@@ -94,14 +94,14 @@ engineering work.
 
 Six tables. Deliberately small.
 
-| Table | Holds |
-|---|---|
-| `users` | Identity. Managed by better-auth, which also owns its session tables. |
-| `topic_progress` | Per user per topic: status, when learned, when last reviewed. |
-| `attempts` | Full history. Never overwritten — every attempt is a new row. |
-| `review_schedule` | Per user per question: when it is next due, and where it sits on the interval ladder. |
-| `exercise_progress` | Practical exercises: status, notes, completion. |
-| `daily_activity` | One row per user per day: how much was reviewed, whether the queue was cleared. |
+| Table               | Holds                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `users`             | Identity. Managed by better-auth, which also owns its session tables.                 |
+| `topic_progress`    | Per user per topic: status, when learned, when last reviewed.                         |
+| `attempts`          | Full history. Never overwritten — every attempt is a new row.                         |
+| `review_schedule`   | Per user per question: when it is next due, and where it sits on the interval ladder. |
+| `exercise_progress` | Practical exercises: status, notes, completion.                                       |
+| `daily_activity`    | One row per user per day: how much was reviewed, whether the queue was cleared.       |
 
 Two things are computed rather than stored:
 
@@ -115,20 +115,20 @@ Two things are computed rather than stored:
 
 Confidence drives the next interval:
 
-| Confidence | Next due |
-|---|---|
-| 1 — don't understand it | later today |
-| 2 — partly understand it | 1 day |
-| 3 — can explain with help | 3 days |
-| 4 — understand it | 7 days |
-| 5 — can explain and apply it | 14 days |
+| Confidence                   | Next due    |
+| ---------------------------- | ----------- |
+| 1 — don't understand it      | later today |
+| 2 — partly understand it     | 1 day       |
+| 3 — can explain with help    | 3 days      |
+| 4 — understand it            | 7 days      |
+| 5 — can explain and apply it | 14 days     |
 
 A `failed` result resets to the bottom of the ladder regardless of confidence.
 The daily queue is capped so it is never a wall, and fills in priority order:
 overdue, then due today, then weakest topics.
 
 This is intentionally not SM-2. It is predictable, explainable when it
-misbehaves, and stores an interval *step* rather than a computed date delta —
+misbehaves, and stores an interval _step_ rather than a computed date delta —
 so replacing it with real spaced repetition later needs no schema change.
 
 ## Evaluation
