@@ -1,0 +1,181 @@
+## Why this matters
+
+JavaScript runs your code on one thread. Everything you have ever heard about it
+being "non-blocking" is a statement about how work is _scheduled_, not about
+work happening in parallel. Understanding the schedule is what lets you answer
+why a `setTimeout(fn, 0)` fires after a promise, why a spinner never appears
+before a long loop, and why "just make it async" sometimes fixes nothing at all.
+
+This is also the topic where confident-sounding wrong answers are most common in
+interviews, which makes a precise one worth having.
+
+## The model
+
+There is one call stack. While anything is on it, nothing else can run: no
+timers, no promise callbacks, no clicks, no rendering.
+
+When the stack empties, the loop does the same three things forever:
+
+1. Take **one** macrotask and run it to completion.
+2. Drain the **whole** microtask queue, including microtasks queued by
+   microtasks.
+3. Render, if the browser thinks a frame is due.
+
+The asymmetry in steps 1 and 2 is the entire topic. One macrotask per turn, but
+microtasks until there are none left.
+
+<EventLoop
+  title="One turn of the loop"
+  steps={[
+    {
+      note: 'Synchronous code holds the stack. Both queues have work waiting, and neither can touch it.',
+      stack: ['main', 'console.log'],
+      microtasks: ['then: log 3'],
+      macrotasks: ['timeout: log 2'],
+      active: 'stack',
+      output: ['1', '4'],
+    },
+    {
+      note: 'The stack empties. Before taking anything from the macrotask queue, the loop drains microtasks completely.',
+      stack: [],
+      microtasks: ['then: log 3'],
+      macrotasks: ['timeout: log 2'],
+      active: 'microtasks',
+      output: ['1', '4'],
+    },
+    {
+      note: 'A microtask that queues another microtask joins the same drain. The loop does not move on until the queue is empty.',
+      stack: ['then callback'],
+      microtasks: ['then: log 3b'],
+      macrotasks: ['timeout: log 2'],
+      active: 'microtasks',
+      output: ['1', '4', '3'],
+    },
+    {
+      note: 'Only now, with microtasks exhausted, does the loop take exactly one macrotask.',
+      stack: ['timeout callback'],
+      microtasks: [],
+      macrotasks: [],
+      active: 'macrotasks',
+      output: ['1', '4', '3', '3b', '2'],
+    },
+  ]}
+/>
+
+## Which is which
+
+**Macrotasks** are what the loop picks up one at a time: `setTimeout`,
+`setInterval`, I/O callbacks, and UI events like clicks.
+
+**Microtasks** are what runs at the end of the current turn: promise reactions
+(`.then`, `.catch`, `.finally`), `queueMicrotask`, and everything after an
+`await`.
+
+> `setTimeout(fn, 0)` does not mean "as soon as possible". It means "on a future
+> turn of the loop, no sooner than now". A promise callback queued much later
+> still runs first.
+
+## Where `await` splits a function
+
+`await` is the part people get wrong under pressure. An async function runs
+synchronously up to its first `await`. Everything after it is a microtask.
+
+<CodeWalkthrough
+  title="Following await through the queue"
+  code={`async function a() {
+  console.log('a start')
+  await b()
+  console.log('a end')
+}
+
+async function b() {
+console.log('b')
+}
+
+console.log('script start')
+a()
+Promise.resolve().then(() => console.log('promise'))
+console.log('script end')`}
+steps={[
+{
+lines: [10],
+note: 'Plain synchronous code, nothing scheduled yet.',
+output: ['script start'],
+},
+{
+lines: [11, 2],
+note: 'Calling a() runs its body synchronously until the await is reached.',
+output: ['script start', 'a start'],
+},
+{
+lines: [3, 7, 8],
+note: 'b() also runs synchronously and returns a resolved promise.',
+output: ['script start', 'a start', 'b'],
+},
+{
+lines: [3],
+note: 'The await suspends a(). Its continuation goes into the microtask queue now, which is what puts it ahead of everything queued later.',
+variables: { microtasks: '[resume a]' },
+output: ['script start', 'a start', 'b'],
+},
+{
+lines: [12],
+note: 'This .then queues second, behind a’s continuation.',
+variables: { microtasks: '[resume a, log promise]' },
+output: ['script start', 'a start', 'b'],
+},
+{
+lines: [13],
+note: 'The synchronous script finishes. Only now does the stack empty.',
+output: ['script start', 'a start', 'b', 'script end'],
+},
+{
+lines: [4, 12],
+note: 'The microtask queue drains in order: a resumes first, then the promise callback.',
+variables: { microtasks: '[]' },
+output: ['script start', 'a start', 'b', 'script end', 'a end', 'promise'],
+},
+]}
+/>
+
+## Rendering is in the loop, not above it
+
+A DOM change does not paint. It marks the page as needing work, which the
+browser does when it next gets the thread, between macrotasks. So this never
+shows a spinner:
+
+```js
+spinner.hidden = false
+doTwoSecondsOfWork()
+spinner.hidden = true
+```
+
+The thread is never released, so no frame is ever produced. This is the single
+most common performance bug in the topic, and the fix is either to yield or to
+move the work to a Web Worker.
+
+## The interview angle
+
+Two questions carry most of the weight:
+
+> **"What prints first, a resolved promise or `setTimeout(fn, 0)`?"**
+> The promise, always, because the whole microtask queue drains before the loop
+> takes another macrotask.
+
+> **"Does `setTimeout(fn, 1000)` run in exactly one second?"**
+> No. That is a minimum. It becomes eligible after a second and runs when the
+> stack is empty and the loop reaches it. Nested timers are clamped to about
+> 4ms, and background tabs throttle them heavily.
+
+## Traps
+
+- **Wrapping work in a promise does not move it off the thread.**
+  `Promise.resolve().then(expensiveWork)` still blocks, just slightly later.
+  Only a Web Worker actually runs elsewhere.
+- **Yield with a macrotask, not a microtask.** Awaiting `Promise.resolve()` in a
+  chunking loop keeps you inside the same drain, so the page still never paints.
+- **Microtasks can starve everything.** A microtask that queues another
+  microtask forever locks the page. The same loop written with `setTimeout`
+  leaves it responsive.
+- **`async` on a function does not make its body asynchronous.** It only makes
+  the function return a promise and allows `await` inside.

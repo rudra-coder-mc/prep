@@ -39,3 +39,17 @@ test('marking a topic learned enrols its questions into recall', async ({ page }
   await page.goto('/review')
   await expect(page.getByText('Nothing due')).toHaveCount(0)
 })
+
+test('the event loop lesson renders its queue visual', async ({ page }) => {
+  await page.goto('/topics/javascript/event-loop')
+
+  await expect(page.getByRole('heading', { name: 'Event loop and microtasks' })).toBeVisible()
+
+  const loop = page.locator('figure', { hasText: 'One turn of the loop' })
+  await expect(loop).toBeVisible()
+  await expect(loop.getByText('Microtasks')).toBeVisible()
+  await expect(loop.getByText('Macrotasks')).toBeVisible()
+
+  await loop.getByLabel('Next step').click()
+  await expect(loop.getByText('2/4')).toBeVisible()
+})
