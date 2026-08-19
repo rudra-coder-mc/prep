@@ -1,0 +1,18 @@
+# Authoring profile. Overlays compose.yaml with hot reload so editing a lesson
+# or a component does not require rebuilding the image.
+#
+#   docker compose -f compose.yaml -f compose.dev.yaml up
+
+services:
+  app:
+    image: prep-app-dev
+    build:
+      target: dev
+    command: ['npm', 'run', 'dev', '--', '--hostname', '0.0.0.0']
+    environment:
+      NODE_ENV: development
+      WATCHPACK_POLLING: 'true'
+    volumes:
+      - ./src:/app/src
+      - ./content:/app/content
+      - ./public:/app/public
