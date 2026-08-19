@@ -6,8 +6,13 @@ It is not a course. It is a loop: read a short animated explanation of one topic
 mark it learned, and from then on answer active-recall questions about it on a
 schedule until you can explain and apply it without help.
 
-V1 covers JavaScript only. The architecture supports adding TypeScript, React,
-Next.js, Node, Express, NestJS, MongoDB and PostgreSQL later without schema changes.
+V1 covers five JavaScript topics: closures, the event loop and microtasks,
+`this` and binding, prototypes, and promises with async/await. Each has an
+animated lesson, eight questions and two practical exercises.
+
+The architecture supports adding TypeScript, React, Next.js, Node, Express,
+NestJS, MongoDB and PostgreSQL later without schema changes. Adding a topic is
+adding a directory under `content/`.
 
 ## Running it
 
