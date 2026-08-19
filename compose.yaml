@@ -8,6 +8,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-prep}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-prep}
       POSTGRES_DB: ${POSTGRES_DB:-prep}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:

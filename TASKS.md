@@ -8,26 +8,13 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 3. Database schema and migrations
-
-Drizzle schema for the six tables in `docs/architecture.md`, plus whatever
-better-auth owns. `userId` on every progress row. Indexes on the queries that
-matter: due questions per user, attempts per question, activity per user per day.
-
-Note the deliberate absences — topic status and streak are computed, not stored.
-
-**Done when:** migrations apply from empty on `compose up`, are reversible, and
-integration tests cover each table's constraints against a real Postgres.
-
----
-
 ## 4. Authentication
 
 better-auth with email and password, Drizzle adapter, one user seeded from env at
 startup. No public signup. Middleware protects every route except the login page.
 Startup warns when default credentials are still in use.
 
-Depends on task 3. See `docs/decisions/0004-self-hosted-auth.md`.
+See `docs/decisions/0004-self-hosted-auth.md`.
 
 **Done when:** an e2e test logs in, reaches a protected page, logs out, and is
 redirected when hitting a protected route unauthenticated.
