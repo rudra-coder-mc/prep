@@ -8,20 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 8. Question session engine
-
-The session flow: show prompt → user types an answer → select confidence →
-reveal expected answer and explanation → mark Pass / Weak / Failed → save attempt
-→ next. The answer must not be revealable before submitting.
-
-Every attempt is a new row. Hints are revealable and recorded as used.
-
-**Done when:** a full session persists one attempt per question with answer text,
-result and confidence, and an e2e test confirms the expected answer is not in the
-DOM before submission.
-
----
-
 ## 9. Recall scheduler and daily queue
 
 The interval ladder from `docs/decisions/0005-recall-interval-ladder.md`.
@@ -32,8 +18,6 @@ weakest topics.
 Pure scheduling functions, separated from persistence, so they are testable
 without a database. Test the boundaries: same-day rescheduling, a failed answer
 at confidence 5, an empty queue, a queue larger than the cap.
-
-Depends on task 8.
 
 **Done when:** unit tests cover every ladder transition and an integration test
 shows a question answered at each confidence level reappearing on the right day.
