@@ -8,21 +8,6 @@ loop. See `docs/architecture.md` for the design these tasks implement.
 
 ---
 
-## 7. Topic page and mark-as-learned
-
-The lesson route: why it matters, explanation, animation, step-through example,
-interview angle, traps. A mark-as-learned action that writes `topic_progress` and
-enrols the topic's questions into `review_schedule` at the bottom of the ladder.
-
-Ship Closures as the proving content in this task — a real topic end to end is
-the only way to know the pipeline and the visual library actually work before
-writing four more.
-
-**Done when:** an e2e test reads the Closures topic, marks it learned, and the
-questions appear in the recall queue.
-
----
-
 ## 8. Question session engine
 
 The session flow: show prompt → user types an answer → select confidence →
@@ -30,8 +15,6 @@ reveal expected answer and explanation → mark Pass / Weak / Failed → save at
 → next. The answer must not be revealable before submitting.
 
 Every attempt is a new row. Hints are revealable and recorded as used.
-
-Depends on task 7.
 
 **Done when:** a full session persists one attempt per question with answer text,
 result and confidence, and an e2e test confirms the expected answer is not in the
@@ -110,8 +93,6 @@ concept, output, debugging and interview types, and two exercises.
 Write one topic per branch. If a topic needs a visual the library cannot express,
 that is a new task against task 6 — not an ad-hoc component in the content
 directory.
-
-Depends on task 7.
 
 **Done when:** all five V1 topics are complete and a full loop — learn, recall
 over several days, weak topic resurfacing — has been used for real.

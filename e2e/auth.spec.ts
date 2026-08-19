@@ -1,4 +1,7 @@
 import { expect, test } from '@playwright/test'
+import { SIGNED_OUT_STATE } from './constants'
+
+test.use({ storageState: SIGNED_OUT_STATE })
 
 const EMAIL = process.env.SEED_USER_EMAIL ?? 'e2e@prep.test'
 const PASSWORD = process.env.SEED_USER_PASSWORD ?? 'e2e-password'

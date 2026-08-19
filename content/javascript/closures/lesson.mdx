@@ -1,0 +1,177 @@
+## Why this matters
+
+Closures are not an advanced feature you reach for occasionally. They are how
+every callback, every event handler, every module and every hook in React keeps
+hold of the data it needs. If you have ever wondered why a `setTimeout` inside a
+loop prints the wrong number, or why a React effect sees a stale value, the
+answer is the same one both times.
+
+Interviewers use closures because a shallow answer and a real one look very
+different, and the difference shows up in one sentence.
+
+## The idea
+
+Every function carries a hidden reference to the scope it was **defined** in,
+not the scope it is called from. When the outer function returns, its local
+variables would normally be unreachable, but if an inner function survives, so
+does the scope it points at.
+
+The crucial word is **variable**, not value. A closure captures the binding
+itself, so if that variable later changes, every closure over it sees the new
+value.
+
+<ScopeChain
+  title="Resolving a name through the chain"
+  steps={[
+    {
+      note: 'increment does not declare count of its own, so the engine looks outward along the chain it captured when it was defined.',
+      scopes: [
+        { name: 'global', bindings: { makeCounter: 'function' } },
+        { name: 'makeCounter', bindings: { count: '0' } },
+        { name: 'increment', bindings: {} },
+      ],
+      lookup: { name: 'count', foundIn: 'makeCounter' },
+    },
+    {
+      note: 'makeCounter has already returned, but its scope is still reachable because increment holds a reference to it. Nothing has been copied.',
+      scopes: [
+        { name: 'global', bindings: { counter: 'function' } },
+        { name: 'makeCounter', bindings: { count: '1' } },
+        { name: 'increment', bindings: {} },
+      ],
+      lookup: { name: 'count', foundIn: 'makeCounter' },
+    },
+    {
+      note: 'A name nobody declares walks the whole chain and falls off the end, which is a ReferenceError rather than undefined.',
+      scopes: [
+        { name: 'global', bindings: { counter: 'function' } },
+        { name: 'makeCounter', bindings: { count: '1' } },
+        { name: 'increment', bindings: {} },
+      ],
+      lookup: { name: 'total' },
+    },
+  ]}
+/>
+
+## Watching one run
+
+<CodeWalkthrough
+  title="Two counters, two scopes"
+  code={`function makeCounter() {
+  let count = 0
+  return function () {
+    count += 1
+    return count
+  }
+}
+
+const a = makeCounter()
+const b = makeCounter()
+
+console.log(a(), a(), b())`}
+steps={[
+{
+lines: [9],
+note: 'Calling makeCounter creates a fresh scope with its own count, and returns a function that points at it.',
+variables: { 'a.[[scope]].count': '0' },
+},
+{
+lines: [10],
+note: 'A second call creates a completely separate scope. b cannot see a’s count and never will.',
+variables: { 'a.[[scope]].count': '0', 'b.[[scope]].count': '0' },
+},
+{
+lines: [4, 12],
+note: 'The first a() increments the count in a’s scope.',
+variables: { 'a.[[scope]].count': '1', 'b.[[scope]].count': '0' },
+},
+{
+lines: [4, 12],
+note: 'The second a() increments the same variable again, because it is the same binding, not a copy.',
+variables: { 'a.[[scope]].count': '2', 'b.[[scope]].count': '0' },
+},
+{
+lines: [4, 12],
+note: 'b() touches its own scope, which is still at zero, so it returns 1.',
+variables: { 'a.[[scope]].count': '2', 'b.[[scope]].count': '1' },
+output: ['1 2 1'],
+},
+]}
+/>
+
+Move `let count = 0` above `makeCounter` and the answer becomes `1 2 3`, because
+now there is one variable rather than one per call. That single change is worth
+trying by hand, because it is the whole concept.
+
+## Captured, not copied
+
+The reason `var` in a loop misbehaves is that a closure holds a variable rather
+than a snapshot. Three callbacks over one `var i` all read the same box, and by
+the time any of them runs, the loop has finished writing `3` into it.
+
+<MemoryModel
+  title="One binding, three closures"
+  steps={[
+    {
+      note: 'var i is function scoped, so the loop creates exactly one binding, and each callback captures a reference to that same one.',
+      stack: [{ name: 'i', value: '0' }],
+      heap: [
+        { id: '#cb1', label: 'callback', fields: { reads: 'i' } },
+        { id: '#cb2', label: 'callback', fields: { reads: 'i' } },
+      ],
+    },
+    {
+      note: 'The loop runs to completion before any timeout fires. i is now 3.',
+      stack: [{ name: 'i', value: '3' }],
+      heap: [
+        { id: '#cb1', label: 'callback', fields: { reads: 'i' } },
+        { id: '#cb2', label: 'callback', fields: { reads: 'i' } },
+        { id: '#cb3', label: 'callback', fields: { reads: 'i' } },
+      ],
+      highlight: ['#cb1', '#cb2', '#cb3'],
+    },
+    {
+      note: 'Only now do the callbacks run, and every one of them reads the single binding, so all three print 3.',
+      stack: [{ name: 'i', value: '3' }],
+      heap: [{ id: '#cb1', label: 'callback', fields: { printed: '3' } }],
+      highlight: ['#cb1'],
+    },
+  ]}
+/>
+
+Switching to `let` fixes it, and it is worth knowing exactly why: the
+specification creates a **new binding for each iteration** and copies the
+previous value into it. So there are three variables, and each closure gets its
+own.
+
+## The interview angle
+
+Asked "what is a closure", a weak answer stops at "a function that remembers its
+variables". A strong answer adds the consequence:
+
+> A closure is a function plus the scope it was defined in. It captures the
+> variable, not the value, so closures over the same binding stay in sync, and
+> the captured scope stays alive as long as the closure does.
+
+That last clause is the one that leads somewhere, because it explains both the
+loop puzzle and why closures can hold memory alive.
+
+Expect these follow-ups:
+
+- Rewrite the `var` loop two different ways.
+- Implement `once`, `memoize`, `debounce` or a private counter.
+- "How is this different from a private class field?"
+- "How could a closure cause a memory leak?"
+
+## Traps
+
+- **Sharing a scope couples lifetimes.** A closure keeps its whole enclosing
+  scope reachable, not only the variables it uses. A small handler defined
+  beside a large array can keep that array alive.
+- **Closures capture `this` differently.** An arrow function closes over the
+  surrounding `this`; a regular function does not, and gets `this` from the call.
+- **Loops are the classic trap, but not the only one.** Any variable reassigned
+  after a closure is created shows the same behaviour, including in React where
+  a stale value in an effect is exactly this bug.
+- **`let` per iteration is a loop feature, not a block feature.** A single
+  `let` outside the loop brings the shared-binding problem straight back.
