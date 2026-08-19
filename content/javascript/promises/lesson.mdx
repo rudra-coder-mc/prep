@@ -1,0 +1,158 @@
+## Why this matters
+
+Promises are the part of JavaScript most people use correctly by imitation and
+incorrectly under pressure. The syntax is easy; the failure modes are not. A
+missing `return` silently drops a value, an `await` in a loop turns one second
+into ten, and a `catch` that returns a default turns a real failure into a
+plausible-looking success.
+
+All of it comes back to two ideas: a promise settles once, and combining
+promises is a choice about what should happen when one of them fails.
+
+## Settling, once
+
+A promise is pending until it is either fulfilled with a value or rejected with
+a reason. That move happens **once** and cannot be undone. Later calls to
+`resolve` or `reject` do nothing at all.
+
+<PromiseTimeline
+  title="Two requests, one of which fails"
+  steps={[
+    {
+      note: 'Both start pending. Calling the functions started the work immediately; a promise is not lazy.',
+      promises: [
+        { id: 'user', label: 'fetchUser()', state: 'pending' },
+        { id: 'posts', label: 'fetchPosts()', state: 'pending' },
+      ],
+    },
+    {
+      note: 'The first settles. Nothing about the second changes, and nothing can move the first again.',
+      promises: [
+        { id: 'user', label: 'fetchUser()', state: 'fulfilled', value: 'user' },
+        { id: 'posts', label: 'fetchPosts()', state: 'pending' },
+      ],
+    },
+    {
+      note: 'The second rejects. Promise.all over these would already have rejected here, discarding the first result.',
+      promises: [
+        { id: 'user', label: 'fetchUser()', state: 'fulfilled', value: 'user' },
+        { id: 'posts', label: 'fetchPosts()', state: 'rejected', value: '500' },
+      ],
+      output: ['all: rejected with 500', 'allSettled: [fulfilled, rejected]'],
+    },
+  ]}
+/>
+
+Because settling is permanent, a promise is safe to hand to several consumers,
+and a handler attached long after it settled still runs.
+
+It also means a promise **cannot be cancelled**. There is no state to move it
+to. `AbortController` exists precisely because the promise API has no answer
+here.
+
+## Choosing a combinator
+
+| Use                  | When                                                                    |
+| -------------------- | ----------------------------------------------------------------------- |
+| `Promise.all`        | You need every result, and any failure makes the whole thing pointless. |
+| `Promise.allSettled` | You want everything attempted and reported; partial success is fine.    |
+| `Promise.race`       | First to settle wins, failure included. Timeouts.                       |
+| `Promise.any`        | First to _succeed_ wins; rejects only if all do. Redundant sources.     |
+
+> `Promise.all` rejecting does not stop the other work. Those promises keep
+> running and their results are thrown away. Side effects still happen.
+
+## Where the time goes
+
+The most common real performance bug in async code is an `await` inside a loop
+over work that has no ordering requirement.
+
+<CodeWalkthrough
+  title="Sequential by accident"
+  code={`// Three seconds: each await blocks the next iteration.
+for (const id of ids) {
+  results.push(await fetchItem(id))
+}
+
+// One second: all three start together.
+const results = await Promise.all(
+ids.map((id) => fetchItem(id)),
+)`}
+steps={[
+{
+lines: [2, 3],
+note: 'The first request starts and the loop stops until it settles. Nothing else is in flight.',
+variables: { 'in flight': '1', elapsed: '0s' },
+},
+{
+lines: [3],
+note: 'Only once it resolves does the second request begin. The waiting is stacked end to end.',
+variables: { 'in flight': '1', elapsed: '1s' },
+},
+{
+lines: [3],
+note: 'And again for the third. Total time is the sum of every request.',
+variables: { 'in flight': '1', elapsed: '2s' },
+output: ['done after 3s'],
+},
+{
+lines: [7, 8],
+note: 'map calls every function immediately, so all three are in flight before anything is awaited.',
+variables: { 'in flight': '3', elapsed: '0s' },
+},
+{
+lines: [7],
+note: 'Promise.all waits for the slowest, not for the sum. Total time is one request.',
+variables: { 'in flight': '0', elapsed: '1s' },
+output: ['done after 1s'],
+},
+]}
+/>
+
+`await` in a loop is right when each step depends on the previous one, or when
+you are deliberately limiting concurrency. Otherwise it is a bottleneck you did
+not mean to write.
+
+## The `return` that is easy to forget
+
+```js
+fetchUser(id)
+  .then((user) => {
+    fetchPosts(user.id) // no return
+  })
+  .then((posts) => console.log(posts)) // undefined
+```
+
+Without the `return`, the inner promise is never linked into the chain. The
+value is lost _and_ a rejection from it escapes the chain entirely. This single
+bug is the strongest practical argument for `async`/`await`, where the value has
+to go somewhere:
+
+```js
+const user = await fetchUser(id)
+const posts = await fetchPosts(user.id)
+```
+
+## The interview angle
+
+> **"`Promise.all` versus `allSettled`?"** `all` is all-or-nothing and rejects at
+> the first failure; `allSettled` never rejects and reports each outcome. Use
+> `all` when a partial result is useless, `allSettled` when it is not.
+
+Expect follow-ups on writing a timeout with `race`, on why `all` does not cancel
+the losers, and on implementing a promise from scratch.
+
+## Traps
+
+- **A promise is eager.** `fetchUser()` starts the moment it is called, not when
+  it is awaited. Creating promises early and awaiting them later changes the
+  concurrency, sometimes helpfully.
+- **`race` does not cancel the loser.** Your timeout fires; the request carries
+  on regardless.
+- **Handlers attached late can trigger an unhandled rejection.** The runtime
+  decides once microtasks have drained, so attaching a `catch` from a
+  `setTimeout` is already too late.
+- **A broad `try` around many awaits hides which one failed**, and swallows your
+  own bugs alongside the expected errors.
+- **`catch` returning a default is a silent failure.** It is the wrong trade
+  anywhere data correctness matters.
