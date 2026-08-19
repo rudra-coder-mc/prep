@@ -1,27 +1,11 @@
 # Tasks
 
-Pending work only, in order. Delete an entry when it is done — history lives in
-git and `docs/`.
+Pending work only. Delete an entry when it is done, since the history of what
+was done lives in git and `docs/`.
 
-V1 scope: the JavaScript track, five topics, the full learn → recall → streak
-loop. See `docs/architecture.md` for the design these tasks implement.
-
----
-
-## 13. Content: the remaining four topics
-
-Event loop and micro/macrotasks · `this` and call/apply/bind · Prototypes and the
-prototype chain · Promises and async/await.
-
-Each needs the full topic structure plus at least eight questions spanning
-concept, output, debugging and interview types, and two exercises.
-
-Write one topic per branch. If a topic needs a visual the library cannot express,
-that is a new task against task 6 — not an ad-hoc component in the content
-directory.
-
-**Done when:** all five V1 topics are complete and a full loop — learn, recall
-over several days, weak topic resurfacing — has been used for real.
+V1 is complete: the JavaScript track with five topics, and the full learn,
+recall and streak loop. See `README.md` to run it and `docs/architecture.md`
+for how it is put together.
 
 ---
 
