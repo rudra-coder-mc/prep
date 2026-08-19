@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "dev:docker": "docker compose -f compose.yaml -f compose.dev.yaml up",
     "build": "npm run content:check && next build",
     "start": "next start",
     "lint": "eslint .",
