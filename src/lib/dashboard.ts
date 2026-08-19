@@ -4,6 +4,7 @@ import { db } from '@/db'
 import { attempts, exerciseProgress, topicProgress } from '@/db/schema'
 import { getAllTopics, type Topic } from '@/content/loader'
 import { getStreaks } from './activity'
+import { summariseTracks, type TrackSummary } from './tracks'
 import {
   summariseTopic,
   type AttemptRecord,
@@ -20,6 +21,7 @@ export type TopicOverview = TopicSummary & {
 
 export type Dashboard = {
   topics: TopicOverview[]
+  tracks: TrackSummary[]
   byStatus: Record<TopicStatus, number>
   questions: { attempted: number; passed: number; weak: number; failed: number }
   exercises: { completed: number; remaining: number }
@@ -83,6 +85,7 @@ export async function getDashboard(userId: string): Promise<Dashboard> {
 
   return {
     topics: overviews,
+    tracks: summariseTracks(overviews),
     byStatus,
     questions: {
       attempted: attemptRows.length,

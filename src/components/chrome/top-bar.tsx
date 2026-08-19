@@ -11,11 +11,12 @@ import { SignOutButton } from './sign-out-button'
 
 function Brand() {
   return (
-    <AppLink href="/" className="flex items-center gap-2 rounded-lg" aria-label="prep home">
-      <span className="grid size-7 place-items-center rounded-lg bg-accent text-sm font-bold text-accent-fg">
-        p
-      </span>
-      <span className="hidden text-sm font-semibold tracking-tight sm:block">prep</span>
+    <AppLink
+      href="/"
+      className="rounded-lg px-1 text-base font-semibold tracking-tight"
+      aria-label="prep home"
+    >
+      prep
     </AppLink>
   )
 }
