@@ -26,8 +26,9 @@ docker compose up
 Then open http://localhost:3000 and log in with the seeded credentials
 (`dev@prep.test` / `dev`, overridable in `.env`).
 
-Nothing else to install. Postgres, migrations and the seed user are handled
-inside the stack.
+Nothing else to install. Postgres, migrations, the seed user and the speech
+engine are all handled inside the stack. The first build downloads a voice model
+and so takes a few minutes longer than the ones after it.
 
 ## Writing content or changing the app
 
@@ -58,6 +59,8 @@ npm run dev:docker -- --build
 - `src/components/{chrome,ui,motion}/` — the shell, the UI primitives, and the
   single entrance animation the whole app uses.
 - `src/db/` — Drizzle schema and migrations. Stores users and their progress only.
+- `src/lib/speech/` — turns a narration script into audio, cached by content.
+  `services/tts/` is the Piper container it talks to; no text leaves the machine.
 
 See `docs/architecture.md` for the full picture and `docs/decisions/` for why
 it is shaped this way.

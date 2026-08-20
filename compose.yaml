@@ -19,6 +19,36 @@ services:
       retries: 20
       start_period: 5s
 
+  # Piper neural text to speech, used to narrate a topic. The voice model is
+  # baked into the image, so this container needs no network and no setup.
+  #
+  # A cache entry is addressed by the words in the script and not by the voice,
+  # so changing PIPER_VOICE means rebuilding this image *and* discarding the
+  # speech-cache volume, or old lines keep playing in the old voice. See
+  # docs/decisions/0015-piper-narration-engine.md.
+  tts:
+    image: prep-tts
+    build:
+      context: ./services/tts
+    restart: unless-stopped
+    ports:
+      # Only the integration tests need this from the host; the app reaches the
+      # container over the compose network.
+      - '${TTS_PORT:-5001}:5000'
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/info').read()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      # The voice model loads before Flask starts serving.
+      start_period: 30s
+
   app:
     # Named explicitly so the development profile cannot reuse this image.
     image: prep-app
@@ -33,11 +63,19 @@ services:
       APP_TIMEZONE: ${APP_TIMEZONE:-UTC}
       SEED_USER_EMAIL: ${SEED_USER_EMAIL:-dev@prep.test}
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-dev}
+      SPEECH_SERVICE_URL: ${SPEECH_SERVICE_URL:-http://tts:5000}
+      SPEECH_CACHE_DIR: /cache/speech
     ports:
       - '${APP_PORT:-3000}:3000'
+    volumes:
+      - speech-cache:/cache/speech
+    # Only the database gates startup. Narration is one feature, and waiting for
+    # a voice model to load before serving the dashboard would be the wrong
+    # trade; a request that arrives too early gets a 502 and can be retried.
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   pgdata:
+  speech-cache:
