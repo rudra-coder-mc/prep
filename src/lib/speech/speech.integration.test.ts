@@ -3,7 +3,7 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { narrate } from './narrate'
-import { scriptKey } from './script'
+import { scriptKey } from './cache'
 
 /**
  * Against the real Piper container, because the thing worth proving is that the

@@ -1,6 +1,6 @@
 import { readdirSync, existsSync } from 'node:fs'
 import path from 'node:path'
-import type { Exercise, Question, TopicMeta } from './schema'
+import type { Exercise, Narration, Question, TopicMeta } from './schema'
 import { validateTopic } from './validate'
 
 const CONTENT_ROOT = path.join(process.cwd(), 'content')
@@ -13,6 +13,8 @@ export type Topic = TopicMeta & {
   directory: string
   questions: Question[]
   exercises: Exercise[]
+  /** Null when the topic has no narration.ts, in which case it shows no player. */
+  narration: Narration | null
 }
 
 export type Technology = {
@@ -28,20 +30,35 @@ function directoriesIn(dir: string): string[] {
     .sort()
 }
 
+/**
+ * Narration is optional, and asking the filesystem first is what makes it
+ * optional: importing a path the bundler has no module for rejects, where a
+ * missing file should just mean "this topic is not spoken yet".
+ */
+async function loadNarration(technology: string, directory: string): Promise<unknown> {
+  const file = path.join(CONTENT_ROOT, technology, directory, 'narration.ts')
+  if (!existsSync(file)) return undefined
+
+  const loaded = await import(`../../content/${technology}/${directory}/narration`)
+  return loaded.narration
+}
+
 async function loadTopic(technology: string, directory: string): Promise<Topic> {
   const base = `content/${technology}/${directory}`
 
-  const [metaModule, questionsModule, exercisesModule] = await Promise.all([
+  const [metaModule, questionsModule, exercisesModule, rawNarration] = await Promise.all([
     import(`../../content/${technology}/${directory}/meta`),
     import(`../../content/${technology}/${directory}/questions`),
     import(`../../content/${technology}/${directory}/exercises`),
+    loadNarration(technology, directory),
   ])
 
-  const { meta, questions, exercises } = validateTopic(
+  const { meta, questions, exercises, narration } = validateTopic(
     {
       meta: metaModule.meta,
       questions: questionsModule.questions,
       exercises: exercisesModule.exercises,
+      narration: rawNarration,
     },
     directory,
     base,
@@ -54,6 +71,7 @@ async function loadTopic(technology: string, directory: string): Promise<Topic> 
     directory,
     questions,
     exercises,
+    narration,
   }
 }
 

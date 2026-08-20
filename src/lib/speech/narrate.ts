@@ -1,13 +1,7 @@
 import type { Audio } from './audio'
-import { readCachedAudio, writeCachedAudio } from './cache'
+import { readCachedAudio, scriptKey, writeCachedAudio } from './cache'
 import { synthesise } from './piper'
-import {
-  checkScript,
-  MAX_SCRIPT_LENGTH,
-  normaliseScript,
-  scriptKey,
-  type ScriptProblem,
-} from './script'
+import { checkScript, MAX_SCRIPT_LENGTH, normaliseScript, type ScriptProblem } from './script'
 
 export class InvalidScriptError extends Error {
   readonly problem: ScriptProblem

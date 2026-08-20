@@ -16,47 +16,24 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1. Spoken narration: the scripts and the topic reader
-
-A lesson read verbatim sounds like a document being read, because it is one.
-The narration is separate text, written the way you would explain the topic to
-someone sitting in front of you: short sentences, no code read character by
-character, signposting between sections.
-
-Add `narration.ts` beside each lesson, as an ordered list of titled sections so
-playback can move between them. A section is also the unit the engine speaks in
-one request, so it has to fit inside the 3000 character cap that
-`POST /api/speech` enforces. Then the player on the topic page: play, pause,
-previous and next section, and speed from 1x to 2x, since past 2x it stops being
-worth listening to.
-
-Every existing topic needs a script written, and the count grows with every
-content group shipped under task 3. A topic without one shows no player rather
-than falling back to reading the prose.
-
-Touches `content/javascript/*/narration.ts`, `src/content/schema.ts`, a new
-player component, and the topic page.
-
-Done when every topic in `content/` plays end to end, the section controls work,
-speed persists across topics, and the content check rejects a narration script
-whose sections are empty.
-
-## 2. Spoken narration in the question session
+## 1. Spoken narration in the question session
 
 The point of audio on questions is answering without reading. A play button on
 a question reads the prompt and then each option in turn, so an MCQ can be
 answered by ear.
 
-The engine and its endpoint already exist; this is the question session calling
-them. Nothing here waits on the narration scripts, since a question carries its
-own words.
+The engine, the endpoint and a working player all exist; this is the question
+session calling them. Nothing here waits on the narration scripts, since a
+question carries its own words. Reuse `fetchNarrationAudio` and the one element
+per player rule from `src/components/speech/`, rather than writing a second way
+to play audio.
 
-Touches `question-session.tsx` and the speech library.
+Touches `question-session.tsx` and `src/components/speech/`.
 
 Done when playing an MCQ reads the prompt and all four options in order, and
 moving to the next question stops the previous audio rather than overlapping it.
 
-## 3. The JavaScript interview surface
+## 2. The JavaScript interview surface
 
 The goal is that anything reasonably asked in a JavaScript interview has a
 topic, and that each topic carries the full question mix.
@@ -74,6 +51,10 @@ The conventions the first group established, so the rest stay consistent:
 - Every topic ships a lesson with at least one visual, ten or eleven questions
   spanning concept, output, debugging, coding, scenario, interview and three
   or four multiple choice, and two exercises.
+- Every topic ships a `narration.ts` as well, in sections that follow the
+  lesson's own headings. Written to be heard, not read: no code spoken
+  character by character, and a section short enough to be one thought. See
+  `docs/decisions/0016-narration-is-written-not-read.md`.
 - Output questions carry `expectedOutput` so they grade themselves, unless the
   answer is genuinely prose, in which case they carry `expectedAnswer`.
 - The correct multiple choice option is not always first.

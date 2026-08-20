@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkScript, MAX_SCRIPT_LENGTH, normaliseScript, scriptKey } from './script'
+import { checkScript, MAX_SCRIPT_LENGTH, normaliseScript } from './script'
 
 describe('normaliseScript', () => {
   it('collapses the line breaks a script is written with', () => {
@@ -35,19 +35,5 @@ describe('checkScript', () => {
   it('measures the length after normalising, not before', () => {
     const padded = `${'a'.repeat(MAX_SCRIPT_LENGTH)}\n\n\n   `
     expect(checkScript(padded)).toBeNull()
-  })
-})
-
-describe('scriptKey', () => {
-  it('is the same for text that differs only in how it was laid out', () => {
-    expect(scriptKey('One thing.\nThen another.')).toBe(scriptKey('One thing. Then another.'))
-  })
-
-  it('changes when a word changes', () => {
-    expect(scriptKey('One thing.')).not.toBe(scriptKey('One think.'))
-  })
-
-  it('is a hex digest, so it is safe as a file name', () => {
-    expect(scriptKey('anything')).toMatch(/^[0-9a-f]{64}$/)
   })
 })

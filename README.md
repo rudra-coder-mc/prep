@@ -4,7 +4,8 @@ A personal learning platform for technical interview preparation and skill refre
 
 It is not a course. It is a loop: read a short animated explanation of one topic,
 mark it learned, and from then on answer active-recall questions about it on a
-schedule until you can explain and apply it without help.
+schedule until you can explain and apply it without help. Every topic can also be
+listened to, in a voice synthesised on the machine it runs on.
 
 The JavaScript track covers eight topics, in teaching order: types and
 coercion, scope and hoisting, values and references, closures, `this` and
@@ -61,6 +62,8 @@ npm run dev:docker -- --build
 - `src/db/` — Drizzle schema and migrations. Stores users and their progress only.
 - `src/lib/speech/` — turns a narration script into audio, cached by content.
   `services/tts/` is the Piper container it talks to; no text leaves the machine.
+- `src/components/speech/` — the player on a topic page, which reads that topic's
+  `narration.ts` aloud a section at a time.
 
 See `docs/architecture.md` for the full picture and `docs/decisions/` for why
 it is shaped this way.

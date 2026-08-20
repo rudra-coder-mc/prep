@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { cacheDirectory, readCachedAudio, writeCachedAudio } from './cache'
+import { cacheDirectory, readCachedAudio, scriptKey, writeCachedAudio } from './cache'
 
 const KEY = 'a'.repeat(64)
 const AUDIO = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 1, 2, 3])
@@ -75,5 +75,19 @@ describe('cacheDirectory', () => {
   it('falls back to a directory git ignores, for a run outside the stack', () => {
     vi.stubEnv('SPEECH_CACHE_DIR', undefined)
     expect(cacheDirectory()).toBe('.speech-cache')
+  })
+})
+
+describe('scriptKey', () => {
+  it('is the same for text that differs only in how it was laid out', () => {
+    expect(scriptKey('One thing.\nThen another.')).toBe(scriptKey('One thing. Then another.'))
+  })
+
+  it('changes when a word changes', () => {
+    expect(scriptKey('One thing.')).not.toBe(scriptKey('One think.'))
+  })
+
+  it('is a hex digest, so it is safe as a file name', () => {
+    expect(scriptKey('anything')).toMatch(/^[0-9a-f]{64}$/)
   })
 })

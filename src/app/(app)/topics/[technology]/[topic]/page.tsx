@@ -6,6 +6,7 @@ import { Rise } from '@/components/motion/rise'
 import { buttonClass } from '@/components/ui/button'
 import { Card, SectionLabel } from '@/components/ui/card'
 import { PageShell } from '@/components/ui/page'
+import { TopicReader } from '@/components/speech/topic-reader'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { getTopic } from '@/content'
 import { getTopicProgress } from '@/lib/progress'
@@ -54,6 +55,14 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
           <p className="mt-2 text-lg text-muted text-pretty">{topic.summary}</p>
         </header>
       </Rise>
+
+      {topic.narration ? (
+        <Rise delay={0.04}>
+          <div className="mt-8">
+            <TopicReader sections={topic.narration} title={topic.title} />
+          </div>
+        </Rise>
+      ) : null}
 
       <Rise delay={0.06}>
         <article className="mt-10 text-[0.975rem] leading-7">

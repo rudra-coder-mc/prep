@@ -63,6 +63,7 @@ harmless in the meantime.
 ```
 content/javascript/closures/
   lesson.mdx        the explanation, importing visual components inline
+  narration.ts      the spoken script, in titled sections. Optional
   questions.ts      typed question objects for this topic
   exercises.ts      practical exercises, solved locally in VS Code
   meta.ts           slug, title, order, difficulty, tags, prerequisites
@@ -253,10 +254,21 @@ script over 3000 characters is refused rather than left to hang. Nothing about
 the audio gates the application starting: the engine being unready is a 502 on
 one endpoint, not a stack that will not boot.
 
-What the narration scripts themselves are, and the player that moves between
-their sections, are separate work; see `TASKS.md`. See
-`docs/decisions/0015-piper-narration-engine.md` for why Piper rather than the
-browser's own `speechSynthesis` or a cloud API.
+**What it says is separate text.** A lesson read verbatim sounds like a document
+being read, because it is one: code blocks become punctuation, tables become
+fragments, and figures mean nothing. So a topic may carry a `narration.ts` beside
+its lesson — an ordered list of titled sections, written to be heard. A topic
+without one shows no player rather than falling back to the prose, and the
+content check names the topics that have no script.
+
+`src/components/speech/` is the player. One audio element whose source is
+swapped per section, because playback permission belongs to the element and a
+new one created mid-narration would be refused. It plays a topic end to end from
+one press, fetches the next section while the current one plays, and remembers
+the chosen speed across topics. See
+`docs/decisions/0015-piper-narration-engine.md` for the engine, and
+`docs/decisions/0016-narration-is-written-not-read.md` for the script and the
+player.
 
 ## Not in V1
 
