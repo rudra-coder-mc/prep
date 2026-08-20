@@ -7,7 +7,7 @@ what is in flight, and what will bite you.
 
 ## Where this stands
 
-`main` at `ad66b02`. The repository has no git remote, and no task tracker
+`main` at `2d071fe`. The repository has no git remote, and no task tracker
 either. Both are deliberate; see the hard rule in `CLAUDE.md`, which now covers
 every hosted service rather than only the company GitLab.
 
@@ -143,10 +143,11 @@ http://localhost:3000. Sign in with `dev@prep.test` / `dev`.
 
 ## In flight
 
-**Nothing is half done.** The working tree is clean at `ad66b02` apart from this
-file, which is untracked by convention. Seven branches were cut and merged during
-the rework and each was deleted on the way through, so the list below is
-unchanged from the last handoff rather than growing.
+**Nothing is half done.** The working tree is clean at `2d071fe`. This file is
+tracked from that commit on, having been deliberately untracked until then, so
+rewriting it is a commit now rather than a local edit. Seven branches were cut
+and merged during the rework and each was deleted on the way through, so the
+list below is unchanged from the last handoff rather than growing.
 
 **Seven merged branches were never deleted**, which the conventions below say
 should happen: `improvement/unslop-content`,
