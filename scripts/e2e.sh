@@ -1,15 +1,23 @@
 #!/bin/sh
-# Runs the end-to-end suite against a dedicated database, so it never touches
-# whatever is in the development one.
+# Runs the end-to-end suite against a dedicated database and a dedicated speech
+# cache, so it never touches whatever is in the development ones.
 set -e
 
 DB_NAME=${E2E_DB_NAME:-prep_e2e}
+SPEECH_CACHE_DIR=${E2E_SPEECH_CACHE_DIR:-.speech-cache-e2e}
 
-docker compose up -d db >/dev/null
+docker compose up -d db tts >/dev/null
 printf 'waiting for postgres'
 until docker compose exec -T db pg_isready -U "${POSTGRES_USER:-prep}" -d "${POSTGRES_DB:-prep}" >/dev/null 2>&1; do
   printf '.'
   sleep 1
+done
+echo ' ready'
+
+printf 'waiting for the speech engine'
+until curl -sf "http://127.0.0.1:${TTS_PORT:-5001}/info" >/dev/null 2>&1; do
+  printf '.'
+  sleep 2
 done
 echo ' ready'
 
@@ -25,6 +33,13 @@ export E2E_PORT=${E2E_PORT:-3100}
 export BETTER_AUTH_URL=${E2E_BASE_URL:-http://127.0.0.1:$E2E_PORT}
 export SEED_USER_EMAIL=${SEED_USER_EMAIL:-e2e@prep.test}
 export SEED_USER_PASSWORD=${SEED_USER_PASSWORD:-e2e-password}
+
+# Emptied rather than reused, so a spec asserting that a script had to be
+# synthesised is asserting something. The database is dropped above for the same
+# reason.
+rm -rf "$SPEECH_CACHE_DIR"
+export SPEECH_CACHE_DIR
+export SPEECH_SERVICE_URL="http://127.0.0.1:${TTS_PORT:-5001}"
 
 npm run db:migrate
 npm run db:seed
