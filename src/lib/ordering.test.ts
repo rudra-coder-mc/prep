@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Question } from '@/content/schema'
-import { CHOICE_CONFIDENCE } from './choice'
-import { gradeOrdering, ORDERING_CONFIDENCE } from './ordering'
+import { gradeOrdering } from './ordering'
 
 /** Prints one, two, three. "caught" is the distractor. */
 const question: Question = {
@@ -23,7 +22,6 @@ describe('gradeOrdering', () => {
       correct: true,
       correctOrder: [1, 3, 0],
       result: 'passed',
-      confidence: ORDERING_CONFIDENCE,
       answer: 'one, two, three',
     })
   })
@@ -46,11 +44,6 @@ describe('gradeOrdering', () => {
 
   it('reports the correct order either way, so a wrong answer can be shown it', () => {
     expect(gradeOrdering(question, [0, 1, 3]).correctOrder).toEqual([1, 3, 0])
-  })
-
-  it('is worth more than recognising one option in four', () => {
-    expect(ORDERING_CONFIDENCE).toBeGreaterThan(CHOICE_CONFIDENCE)
-    expect(ORDERING_CONFIDENCE).toBeLessThan(5)
   })
 
   /**

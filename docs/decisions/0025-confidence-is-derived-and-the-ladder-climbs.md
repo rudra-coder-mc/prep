@@ -44,10 +44,16 @@ recognised, which is what `0005` reserved the top rung for.
 
 **A graded form climbs one rung at a time.** On a choice or ordering question a
 correct answer moves the question up one rung from wherever it currently sits,
-capped at fourteen days, and a wrong answer drops it to the bottom. So a choice
-question goes four hours, one day, three, seven, fourteen as it keeps being
-answered correctly. The derived confidence sets the ceiling that form can reach
-in one step, not the rung it lands on.
+and a wrong answer drops it to the bottom. So a choice question goes four hours,
+one day, three, seven, fourteen as it keeps being answered correctly.
+
+**The derived confidence does not set the rung on a graded form.** It is
+recorded on the attempt, so the history says what kind of evidence each answer
+was, and that is all it does there. Capping a choice question at three days
+because recognising an option is weak evidence would leave 117 of them cycling
+every third day forever, which is the problem this decision exists to fix. The
+protection against a lucky guess is the reset, not a ceiling: one wrong answer
+sends a question that had climbed to a fortnight straight back to four hours.
 
 **An open question keeps the absolute rung.** A self grade of Weak on a question
 answered correctly four times is real information, and it should pull the

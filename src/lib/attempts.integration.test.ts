@@ -2,12 +2,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { createTestDatabase, insertTestUser, type TestDatabase } from '@/db/testing'
 import { attempts, reviewSchedule, topicProgress } from '@/db/schema'
-import { nextDueDate, nextStep } from '@/lib/interval-ladder'
+import { nextDueDate, nextRung, type LadderStep } from '@/lib/interval-ladder'
+import type { AnswerForm } from '@/content/schema'
 import { revealQuestion } from '@/lib/attempts'
 
 /**
  * recordAttempt writes through the shared connection, so these exercise the same
  * SQL against an isolated database rather than importing the module under test.
+ * The rung it lands on comes from the ladder itself, so the arithmetic is not
+ * duplicated here even though the writes are.
  */
 let ctx: TestDatabase
 let userId: string
@@ -15,12 +18,17 @@ let userId: string
 const TOPIC = 'javascript/closures'
 const KEY = `${TOPIC}#counter-output`
 
-async function record(
-  result: 'passed' | 'weak' | 'failed',
-  confidence: 1 | 2 | 3 | 4 | 5,
-  now: Date,
-) {
-  const step = nextStep(result, confidence)
+async function currentStep(): Promise<LadderStep> {
+  const [row] = await ctx.db
+    .select({ intervalStep: reviewSchedule.intervalStep })
+    .from(reviewSchedule)
+    .where(eq(reviewSchedule.questionId, KEY))
+
+  return (row?.intervalStep ?? 0) as LadderStep
+}
+
+async function record(form: AnswerForm, result: 'passed' | 'weak' | 'failed', now: Date) {
+  const { step, confidence } = nextRung(form, result, await currentStep())
   const dueAt = nextDueDate(step, now)
 
   await ctx.db.insert(attempts).values({
@@ -56,7 +64,7 @@ async function record(
       set: { lastReviewedAt: now },
     })
 
-  return { step, dueAt }
+  return { step, dueAt, confidence }
 }
 
 beforeAll(async () => {
@@ -76,42 +84,52 @@ beforeEach(async () => {
 
 describe('recording an attempt', () => {
   it('keeps every attempt rather than replacing the last one', async () => {
-    await record('failed', 1, new Date('2026-08-17T09:00:00Z'))
-    await record('passed', 4, new Date('2026-08-18T09:00:00Z'))
+    await record('open', 'failed', new Date('2026-08-17T09:00:00Z'))
+    await record('open', 'passed', new Date('2026-08-18T09:00:00Z'))
 
     const rows = await ctx.db.select().from(attempts).where(eq(attempts.questionId, KEY))
     expect(rows).toHaveLength(2)
   })
 
   it('leaves exactly one schedule row per question, updated in place', async () => {
-    await record('failed', 1, new Date('2026-08-17T09:00:00Z'))
-    await record('passed', 4, new Date('2026-08-18T09:00:00Z'))
+    await record('open', 'failed', new Date('2026-08-17T09:00:00Z'))
+    await record('open', 'passed', new Date('2026-08-18T09:00:00Z'))
 
     const rows = await ctx.db
       .select()
       .from(reviewSchedule)
       .where(eq(reviewSchedule.questionId, KEY))
     expect(rows).toHaveLength(1)
-    expect(rows[0]?.intervalStep).toBe(3)
+    expect(rows[0]?.intervalStep).toBe(4)
     expect(rows[0]?.lastResult).toBe('passed')
   })
 
-  it('schedules each confidence level the right number of days out', async () => {
+  it('carries a question answered right again and again out to a fortnight', async () => {
     const now = new Date('2026-08-17T09:00:00Z')
-    const expectedDays = [0, 1, 3, 7, 14]
+    const reached: number[] = []
 
-    for (let c = 1; c <= 5; c++) {
-      await ctx.db.delete(reviewSchedule)
-      const { dueAt } = await record('passed', c as 1 | 2 | 3 | 4 | 5, now)
-      const days = Math.round((dueAt.getTime() - now.getTime()) / 86_400_000)
-      expect(days).toBe(expectedDays[c - 1])
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const { dueAt } = await record('choice', 'passed', now)
+      reached.push(Math.round((dueAt.getTime() - now.getTime()) / 86_400_000))
     }
+
+    expect(reached).toEqual([1, 3, 7, 14, 14])
   })
 
-  it('sends a failed answer back to the bottom even at full confidence', async () => {
+  it('places an open question by its self grade rather than climbing', async () => {
     const now = new Date('2026-08-17T09:00:00Z')
-    await record('passed', 5, now)
-    await record('failed', 5, now)
+
+    const passed = await record('open', 'passed', now)
+    expect(Math.round((passed.dueAt.getTime() - now.getTime()) / 86_400_000)).toBe(14)
+
+    const weak = await record('open', 'weak', now)
+    expect(Math.round((weak.dueAt.getTime() - now.getTime()) / 86_400_000)).toBe(3)
+  })
+
+  it('sends a failed answer back to the bottom however far it had climbed', async () => {
+    const now = new Date('2026-08-17T09:00:00Z')
+    await record('open', 'passed', now)
+    await record('choice', 'failed', now)
 
     const [row] = await ctx.db
       .select()
@@ -121,8 +139,8 @@ describe('recording an attempt', () => {
   })
 
   it('records when the topic was last reviewed without creating a second row', async () => {
-    await record('passed', 3, new Date('2026-08-17T09:00:00Z'))
-    await record('passed', 3, new Date('2026-08-19T09:00:00Z'))
+    await record('choice', 'passed', new Date('2026-08-17T09:00:00Z'))
+    await record('choice', 'passed', new Date('2026-08-19T09:00:00Z'))
 
     const rows = await ctx.db.select().from(topicProgress)
     expect(rows).toHaveLength(1)

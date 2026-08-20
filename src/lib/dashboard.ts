@@ -39,7 +39,6 @@ export async function getDashboard(userId: string): Promise<Dashboard> {
         questionId: attempts.questionId,
         topicSlug: attempts.topicSlug,
         result: attempts.result,
-        confidence: attempts.confidence,
         attemptedAt: attempts.attemptedAt,
       })
       .from(attempts)
@@ -99,7 +98,7 @@ export async function getDashboard(userId: string): Promise<Dashboard> {
     },
     weakest: overviews
       .filter((overview) => WEAK_STATUSES.includes(overview.status))
-      .sort((a, b) => (a.lastConfidence ?? 0) - (b.lastConfidence ?? 0) || a.progress - b.progress)
+      .sort((a, b) => a.progress - b.progress || b.attempts - a.attempts)
       .slice(0, 5),
     streak,
   }
