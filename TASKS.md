@@ -50,15 +50,16 @@ playback can move between them. Then the player on the topic page: play, pause,
 previous and next section, and speed from 1x to 2x, since past 2x it stops being
 worth listening to.
 
-The five existing topics need scripts written. A topic without one shows no
-player rather than falling back to reading the prose.
+Every existing topic needs a script written, and the count grows with every
+content group shipped under task 4. A topic without one shows no player rather
+than falling back to reading the prose.
 
 Touches `content/javascript/*/narration.ts`, `src/content/schema.ts`, a new
 player component, and the topic page.
 
-Done when all five topics play end to end, the section controls work, speed
-persists across topics, and the content check rejects a narration script whose
-sections are empty.
+Done when every topic in `content/` plays end to end, the section controls work,
+speed persists across topics, and the content check rejects a narration script
+whose sections are empty.
 
 ## 3. Spoken narration in the question session
 
@@ -75,15 +76,79 @@ moving to the next question stops the previous audio rather than overlapping it.
 
 ## 4. The JavaScript interview surface
 
-Five topics is not interview coverage. The goal is that anything reasonably
-asked in a JavaScript interview has a topic, and that each topic carries both
-question forms.
+The goal is that anything reasonably asked in a JavaScript interview has a
+topic, and that each topic carries the full question mix.
 
-This is content work, not platform work, and it is far too big for one branch.
-Break it into groups of three or four related topics, each its own task, and
-write the list of groups before starting the first one.
+This is content work, not platform work, and it is far too big for one branch,
+so it is broken into groups of three or four related topics. **One group is one
+task and one branch.** They are listed in a deliberate order - each group leans
+on the ones above it - but a group can be pulled forward if an interview is
+coming and it is the gap that matters.
 
-Done when the list of groups exists in this file and the first group ships.
+The conventions the first group established, so the rest stay consistent:
+
+- `order` runs in tens, in teaching order across the whole track, leaving room
+  to insert. Renumber the ones below rather than squeezing a topic in at 45.
+- Every topic ships a lesson with at least one visual, ten or eleven questions
+  spanning concept, output, debugging, coding, scenario, interview and three
+  or four multiple choice, and two exercises.
+- Output questions carry `expectedOutput` so they grade themselves, unless the
+  answer is genuinely prose, in which case they carry `expectedAnswer`.
+- The correct multiple choice option is not always first.
+
+Done when every group below has shipped. Each group is done when its topics
+pass the content check and read as one lesson each, not as a list of facts.
+
+### Group 2: functions
+
+Parameters and arguments, higher order functions, currying and partial
+application, recursion and the call stack.
+
+### Group 3: objects
+
+Property descriptors with getters and setters, destructuring, optional chaining
+and nullish handling, JSON serialisation and its edges.
+
+### Group 4: collections and iteration
+
+The array methods worth knowing cold, the iterable protocol, generators,
+`Map`, `Set` and their weak counterparts.
+
+### Group 5: classes
+
+Class syntax and fields, `extends` and `super`, static and private members,
+composition against inheritance.
+
+### Group 6: async in practice
+
+Promise combinators, error handling across async boundaries, cancellation with
+`AbortController`, async iteration.
+
+Sits after the existing event loop and promises topics rather than replacing
+them: those two explain the model, this group is what you do with it.
+
+### Group 7: modules and the runtime
+
+ES modules against CommonJS, resolution and side effects, strict mode and
+`globalThis`, what a bundler changes.
+
+### Group 8: errors
+
+The built-in error types, custom errors, `try`/`catch`/`finally` semantics
+including the return value trap, and errors that cross an async boundary.
+
+### Group 9: memory and performance
+
+Garbage collection and the shapes of a leak, `WeakMap` and `WeakRef`, debounce
+and throttle, the real cost of common collection operations.
+
+### Group 10: the browser surface
+
+The DOM, events and delegation, `fetch` and the network, storage.
+
+Decide first whether this is JavaScript or its own track. It is the only group
+that is not about the language, and everything in it belongs equally to a
+future React track.
 
 ---
 

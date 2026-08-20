@@ -1,0 +1,155 @@
+## Why this matters
+
+Two variables can hold the same object, and changing one changes "both" - which
+is not a quirk, it is the only way objects could work without copying them on
+every assignment. The bugs come from not knowing which of your variables are
+sharing.
+
+This is also the topic underneath every state management library. "Return a new
+object instead of mutating the old one" is advice that only makes sense once you
+know what identity means and what `===` compares for objects.
+
+## What a variable holds
+
+A variable holding a primitive holds the value itself. A variable holding an
+object holds a reference to it - the object lives elsewhere, and any number of
+variables can point at the same one.
+
+<MemoryModel
+  title="Assignment copies the reference, not the object"
+  steps={[
+    {
+      note: 'A primitive lives in the binding. An object does not: box holds a reference to something allocated separately.',
+      stack: [
+        { name: 'count', value: '1' },
+        { name: 'box', ref: 'obj#1' },
+      ],
+      heap: [{ id: 'obj#1', label: '{ n }', fields: { n: '1' } }],
+      highlight: ['obj#1'],
+    },
+    {
+      note: 'Assigning box to alias copies what box holds - the reference. There is still one object.',
+      stack: [
+        { name: 'count', value: '1' },
+        { name: 'box', ref: 'obj#1' },
+        { name: 'alias', ref: 'obj#1' },
+      ],
+      heap: [{ id: 'obj#1', label: '{ n }', fields: { n: '1' } }],
+    },
+    {
+      note: 'alias.n = 2 mutates the shared object, so reading box.n gives 2. Nothing about box changed.',
+      stack: [
+        { name: 'count', value: '1' },
+        { name: 'box', ref: 'obj#1' },
+        { name: 'alias', ref: 'obj#1' },
+      ],
+      heap: [{ id: 'obj#1', label: '{ n }', fields: { n: '2' } }],
+      highlight: ['obj#1'],
+    },
+    {
+      note: 'alias = { n: 9 } is different again: it repoints the binding at a new object and leaves the first one alone.',
+      stack: [
+        { name: 'count', value: '1' },
+        { name: 'box', ref: 'obj#1' },
+        { name: 'alias', ref: 'obj#2' },
+      ],
+      heap: [
+        { id: 'obj#1', label: '{ n }', fields: { n: '2' } },
+        { id: 'obj#2', label: '{ n }', fields: { n: '9' } },
+      ],
+      highlight: ['obj#2'],
+    },
+  ]}
+/>
+
+The two operations in the last two steps look similar and are not: mutation
+changes the object everyone can see, reassignment changes only this binding.
+
+## Arguments work the same way
+
+JavaScript is pass by value, always. The value passed for an object happens to be
+a reference, which is why a function can mutate its argument but cannot replace
+it:
+
+```js
+function mutate(o) {
+  o.count += 1
+} // caller sees this
+function reassign(o) {
+  o = { count: 99 }
+} // caller sees nothing
+```
+
+Some people call this "pass by sharing", which is a clearer name for the same
+mechanic. If a language were genuinely pass by reference, `reassign` would work.
+
+## Identity, not contents
+
+`===` on objects asks "is this the same object", never "do these look alike".
+
+```js
+{ a: 1 } === { a: 1 }   // false
+[1, 2] === [1, 2]       // false
+const x = { a: 1 }
+x === x                 // true
+```
+
+That is what makes `Set` and `Map` keys, `WeakMap` lookups and React's render
+checks work the way they do: they compare identity, cheaply, instead of walking
+two structures. If you want to compare contents, you have to say how deep and
+what to do about `NaN`, key order, `undefined` values and prototypes - which is
+why every codebase either imports a deep equality function or writes a
+narrow one for its own shapes.
+
+## How deep is a copy
+
+Spread and `Object.assign` copy one level. Everything nested is still shared:
+
+```js
+const defaults = { retries: 3, timeout: { ms: 1000 } }
+const config = { ...defaults }
+config.timeout.ms = 50 // defaults.timeout.ms is now 50 as well
+```
+
+For a real copy, `structuredClone` is the built-in answer. It handles nested
+objects, arrays, `Date`, `Map`, `Set`, `RegExp` and cycles. It also throws on
+functions, and it produces plain objects rather than instances - the prototype is
+not carried across.
+
+`JSON.parse(JSON.stringify(value))` is the old trick and it is lossy in ways that
+bite quietly: `undefined` values and functions disappear, `Date` becomes a
+string, `Map` and `Set` become `{}`, `NaN` and `Infinity` become `null`, and a
+cycle throws.
+
+> Most of the time the right answer is neither. Copy the level you are changing
+> and share the rest: `{ ...config, timeout: { ...config.timeout, ms: 50 } }`.
+> That is what immutable updates are, and it is cheaper than cloning a whole
+> tree to change one field.
+
+## The interview angle
+
+> **"Is JavaScript pass by value or pass by reference?"**
+> Pass by value. For objects the value is a reference, so mutations are visible
+> to the caller and reassignments are not. Saying "pass by reference" without
+> that distinction is the answer interviewers are listening for.
+
+> **"How would you check whether two objects are equal?"**
+> Start by asking what equal means for the data, then say what you would use:
+> `JSON.stringify` comparison is fine for plain, key-ordered, JSON-safe data and
+> wrong everywhere else; a recursive walk needs decisions about `NaN`, arrays
+> versus objects, and prototypes.
+
+## Traps
+
+- **`const` does not stop mutation.** It protects the binding. `Object.freeze`
+  protects the object, one level deep.
+- **A shallow copy of an array of objects shares every element.** `[...rows]` is
+  a new array of the same rows.
+- **Default parameters are evaluated per call, module-level objects are not.** A
+  mutable object at module scope used as a shared default accumulates state
+  across calls.
+- **`Set` and `Map` keys compare with SameValueZero.** That differs from `===`
+  for `NaN`, so a `Set` holds only one of them, and differs from `Object.is` for
+  `-0`, which is the same key as `0`.
+- **Frozen is not deep and not enforced in non-strict code.** A write to a frozen
+  object throws in strict code and fails silently otherwise.
