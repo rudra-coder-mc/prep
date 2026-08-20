@@ -82,7 +82,10 @@ export function SpeakButton({
       if (!element) return
 
       if (!url.current) {
-        const response = await fetch(`/api/speech/${audioKey}`, { cache: 'force-cache' })
+        // Plain fetch. A recording answers with a year of immutable caching of
+        // its own, so forcing the cache buys nothing on the path that works and
+        // makes a 404 from before the recording existed permanent.
+        const response = await fetch(`/api/speech/${audioKey}`)
         if (!response.ok) {
           setState('idle')
           speaking = null

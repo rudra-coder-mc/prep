@@ -39,6 +39,13 @@ export async function GET(
   })
 }
 
+/**
+ * A refusal here is about the state of the cache directory, not about the key,
+ * and that state changes the moment `npm run narration:build` runs. Stored
+ * without a header saying otherwise, a 404 is heuristically cacheable, and a
+ * browser that saw one before the recording existed goes on reporting it
+ * afterwards. Saying no-store is what makes "not built yet" a temporary answer.
+ */
 function problem(status: number, error: string): Response {
-  return Response.json({ error }, { status })
+  return Response.json({ error }, { status, headers: { 'Cache-Control': 'no-store' } })
 }
