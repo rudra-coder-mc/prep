@@ -1,29 +1,50 @@
 import { describe, expect, it } from 'vitest'
-import {
-  daysUntilDue,
-  nextDueDate,
-  nextStep,
-  type Confidence,
-  type LadderStep,
-} from './interval-ladder'
+import { daysUntilDue, nextDueDate, nextRung, TOP_RUNG, type LadderStep } from './interval-ladder'
 
 const MONDAY_NOON = new Date('2026-08-17T12:00:00.000Z')
 
-describe('nextStep', () => {
-  it('maps each confidence level to its rung', () => {
-    const expected = [0, 1, 3, 7, 14]
-    for (let c = 1; c <= 5; c++) {
-      expect(daysUntilDue(nextStep('passed', c as Confidence))).toBe(expected[c - 1])
-    }
+describe('nextRung on a graded form', () => {
+  it('climbs one rung at a time, so a question answered right works its way out', () => {
+    const days = [0, 1, 2, 3, 4].map((from) =>
+      daysUntilDue(nextRung('choice', 'passed', from as LadderStep).step),
+    )
+
+    expect(days).toEqual([1, 3, 7, 14, 14])
   })
 
-  it('drops a failed answer to the bottom even at full confidence', () => {
-    expect(nextStep('failed', 5)).toBe(0)
-    expect(daysUntilDue(nextStep('failed', 5))).toBe(0)
+  it('stops at the top rather than running off the end of the ladder', () => {
+    expect(nextRung('ordering', 'passed', TOP_RUNG).step).toBe(TOP_RUNG)
   })
 
-  it('treats a weak result by its confidence rating', () => {
-    expect(daysUntilDue(nextStep('weak', 2))).toBe(1)
+  it('drops to the bottom on a wrong answer, however far it had climbed', () => {
+    expect(nextRung('choice', 'failed', TOP_RUNG).step).toBe(0)
+    expect(nextRung('ordering', 'failed', 3).step).toBe(0)
+  })
+
+  it('records what kind of evidence the answer was without letting it set the rung', () => {
+    expect(nextRung('choice', 'passed', 0).confidence).toBe(3)
+    expect(nextRung('ordering', 'passed', 0).confidence).toBe(4)
+    // Both climbed by one, whatever they were recorded as.
+    expect(nextRung('choice', 'passed', 0).step).toBe(nextRung('ordering', 'passed', 0).step)
+  })
+})
+
+describe('nextRung on an open question', () => {
+  it('places the question by its self grade rather than moving it up one', () => {
+    expect(daysUntilDue(nextRung('open', 'passed', 0).step)).toBe(14)
+    expect(daysUntilDue(nextRung('open', 'weak', 0).step)).toBe(3)
+  })
+
+  /**
+   * A Weak on something answered correctly four times is real information, and
+   * it should pull the question back down rather than nudge it further out.
+   */
+  it('pulls a question back down when the grade says so', () => {
+    expect(daysUntilDue(nextRung('open', 'weak', TOP_RUNG).step)).toBe(3)
+  })
+
+  it('drops a failed self grade to the bottom', () => {
+    expect(nextRung('open', 'failed', TOP_RUNG).step).toBe(0)
   })
 })
 

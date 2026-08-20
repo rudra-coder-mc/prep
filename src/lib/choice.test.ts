@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Question } from '@/content/schema'
-import { CHOICE_CONFIDENCE, gradeChoice } from './choice'
+import { gradeChoice } from './choice'
 
 const question: Question = {
   id: 'typeof-null',
@@ -21,7 +21,6 @@ describe('gradeChoice', () => {
       correct: true,
       correctOption: 0,
       result: 'passed',
-      confidence: CHOICE_CONFIDENCE,
       answer: "'object'",
     })
   })
@@ -36,10 +35,6 @@ describe('gradeChoice', () => {
 
   it('reports the right answer either way, so the verdict can name it', () => {
     expect(gradeChoice(question, 3).correctOption).toBe(0)
-  })
-
-  it('does not settle for the top of the ladder on a recognised answer', () => {
-    expect(CHOICE_CONFIDENCE).toBeLessThan(5)
   })
 
   it('refuses an option that does not exist rather than scoring it wrong', () => {

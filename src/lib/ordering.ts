@@ -1,19 +1,10 @@
 import type { Question } from '@/content/schema'
-import type { Confidence, Result } from './interval-ladder'
-
-/**
- * Reconstructing a sequence and rejecting the distractors cannot be guessed the
- * way one option in four can, so an ordering question buys more of the ladder
- * than a choice question does. It is still short of the top, which is for
- * producing an answer rather than assembling one.
- */
-export const ORDERING_CONFIDENCE: Confidence = 4
+import type { Result } from './interval-ladder'
 
 export type OrderingVerdict = {
   correct: boolean
   correctOrder: number[]
   result: Result
-  confidence: Confidence
   /** The sequence as it reads, stored on the attempt so history stays legible. */
   answer: string
 }
@@ -58,7 +49,6 @@ export function gradeOrdering(question: Question, submitted: number[]): Ordering
     // not the same as no idea, but scoring that needs a threshold and every
     // threshold is arbitrary.
     result: correct ? 'passed' : 'failed',
-    confidence: ORDERING_CONFIDENCE,
     answer: built.join(', '),
   }
 }

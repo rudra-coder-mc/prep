@@ -3,14 +3,8 @@ import { and, eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { attempts, reviewSchedule, topicProgress } from '@/db/schema'
 import { getTopic } from '@/content/loader'
-import { questionKey } from '@/content/schema'
-import {
-  nextDueDate,
-  nextStep,
-  SELF_GRADE_CONFIDENCE,
-  type Confidence,
-  type Result,
-} from '@/lib/interval-ladder'
+import { questionKey, type AnswerForm } from '@/content/schema'
+import { nextDueDate, nextRung, type LadderStep, type Result } from '@/lib/interval-ladder'
 import { gradeChoice } from '@/lib/choice'
 import { gradeOrdering } from '@/lib/ordering'
 import { answerAudioKey } from '@/lib/speech'
@@ -20,7 +14,8 @@ export type AttemptInput = {
   questionId: string
   answer: string
   result: Result
-  confidence: Confidence
+  /** Which form was answered. The ladder derives the rest from it. */
+  form: AnswerForm
   hintsUsed: number
   notes?: string
 }
@@ -87,7 +82,7 @@ export async function answerChoice(
       questionId,
       answer: verdict.answer,
       result: verdict.result,
-      confidence: verdict.confidence,
+      form: 'choice',
       hintsUsed: 0,
     },
     now,
@@ -126,7 +121,7 @@ export async function answerOrdering(
       questionId,
       answer: verdict.answer,
       result: verdict.result,
-      confidence: verdict.confidence,
+      form: 'ordering',
       hintsUsed,
     },
     now,
@@ -168,11 +163,25 @@ export async function recordSelfGrade(
       questionId,
       answer: '',
       result,
-      confidence: SELF_GRADE_CONFIDENCE[result],
+      form: 'open',
       hintsUsed,
     },
     now,
   )
+}
+
+/**
+ * Where the question sits now. A question with no schedule row has never been
+ * answered, so it starts at the bottom and one correct answer moves it up one.
+ */
+async function currentRung(userId: string, key: string): Promise<LadderStep> {
+  const [row] = await db
+    .select({ intervalStep: reviewSchedule.intervalStep })
+    .from(reviewSchedule)
+    .where(and(eq(reviewSchedule.userId, userId), eq(reviewSchedule.questionId, key)))
+    .limit(1)
+
+  return (row?.intervalStep ?? 0) as LadderStep
 }
 
 /**
@@ -181,7 +190,7 @@ export async function recordSelfGrade(
  */
 export async function recordAttempt(userId: string, input: AttemptInput, now = new Date()) {
   const key = questionKey(input.topicSlug, input.questionId)
-  const step = nextStep(input.result, input.confidence)
+  const { step, confidence } = nextRung(input.form, input.result, await currentRung(userId, key))
   const dueAt = nextDueDate(step, now)
 
   await db.insert(attempts).values({
@@ -190,7 +199,7 @@ export async function recordAttempt(userId: string, input: AttemptInput, now = n
     topicSlug: input.topicSlug,
     answer: input.answer,
     result: input.result,
-    confidence: input.confidence,
+    confidence,
     hintsUsed: input.hintsUsed,
     notes: input.notes ?? null,
     attemptedAt: now,
