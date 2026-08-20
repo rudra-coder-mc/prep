@@ -5,8 +5,8 @@ export const meta: TopicMeta = {
   title: 'Closures',
   summary:
     'A function remembering the scope it was created in, long after that scope has returned.',
-  order: 10,
+  order: 40,
   difficulty: 'medium',
   tags: ['closure', 'scope', 'functions'],
-  prerequisites: [],
+  prerequisites: ['javascript/scope-and-hoisting'],
 }

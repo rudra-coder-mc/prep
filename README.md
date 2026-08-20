@@ -6,9 +6,12 @@ It is not a course. It is a loop: read a short animated explanation of one topic
 mark it learned, and from then on answer active-recall questions about it on a
 schedule until you can explain and apply it without help.
 
-V1 covers five JavaScript topics: closures, the event loop and microtasks,
-`this` and binding, prototypes, and promises with async/await. Each has an
-animated lesson, eight questions and two practical exercises.
+The JavaScript track covers eight topics, in teaching order: types and
+coercion, scope and hoisting, values and references, closures, `this` and
+binding, prototypes, the event loop and microtasks, and promises with
+async/await. Each has an animated lesson, ten or so questions in the forms
+interviews actually use, and two practical exercises. The remaining groups
+needed for full interview coverage are listed in `TASKS.md`.
 
 The architecture supports adding TypeScript, React, Next.js, Node, Express,
 NestJS, MongoDB and PostgreSQL later without schema changes. Adding a topic is

@@ -1,0 +1,167 @@
+## Why this matters
+
+Scope is the question "which variable does this name refer to?", and hoisting is
+the question "does it exist yet?". Every closure question, every `this` question
+and every "why is this undefined" question is one of those two underneath.
+
+It is also the topic where the vocabulary does the most damage. "Hoisting" makes
+people picture declarations being moved to the top of the file, which is a
+useful lie right up to the point where `let` throws a `ReferenceError` and the
+picture stops explaining anything.
+
+## Scopes nest, lookups go outward
+
+A scope is created by the script or module, by every function, and by every
+block - `{ ... }`, including the bodies of `if`, `for` and `try`. A name is
+resolved by looking in the current scope, then the one enclosing it, and so on
+until the global scope. The first scope that has the name wins; if none does,
+reading it throws a `ReferenceError`.
+
+<ScopeChain
+  title="Resolving a name outward"
+  steps={[
+    {
+      note: 'Three nested scopes. The innermost block declares its own total, shadowing the one in the function.',
+      scopes: [
+        { name: 'global', bindings: { rate: '0.2' } },
+        { name: 'invoice()', bindings: { items: '[...]', total: '100' } },
+        { name: 'if block', bindings: { total: '80' } },
+      ],
+    },
+    {
+      note: 'Reading total inside the block stops at the first scope that has it. The function-level total is never consulted.',
+      scopes: [
+        { name: 'global', bindings: { rate: '0.2' } },
+        { name: 'invoice()', bindings: { items: '[...]', total: '100' } },
+        { name: 'if block', bindings: { total: '80' } },
+      ],
+      lookup: { name: 'total', foundIn: 'if block' },
+    },
+    {
+      note: 'Reading rate finds nothing locally, so the search continues outward until the global scope answers.',
+      scopes: [
+        { name: 'global', bindings: { rate: '0.2' } },
+        { name: 'invoice()', bindings: { items: '[...]', total: '100' } },
+        { name: 'if block', bindings: { total: '80' } },
+      ],
+      lookup: { name: 'rate', foundIn: 'global' },
+    },
+    {
+      note: 'A name nothing declares is searched all the way out and then throws. In non-strict code, assigning to it instead creates a global.',
+      scopes: [
+        { name: 'global', bindings: { rate: '0.2' } },
+        { name: 'invoice()', bindings: { items: '[...]', total: '100' } },
+        { name: 'if block', bindings: { total: '80' } },
+      ],
+      lookup: { name: 'discount' },
+    },
+  ]}
+/>
+
+The chain is decided by where the code is written, not by who called it. That is
+what "lexical scope" means, and it is why you can read a function and know what
+its names refer to without running anything.
+
+## What hoisting actually is
+
+Before any code in a scope runs, the engine walks it and registers every
+declaration it finds. Nothing moves. What differs is what each kind of
+declaration is worth in the gap between being registered and being reached.
+
+- `var` is registered **and initialised to `undefined`**. Reading it early gives
+  `undefined`.
+- `function` declarations are registered **fully**. You can call one above the
+  line that defines it.
+- `let`, `const` and `class` are registered **uninitialised**. Reading one before
+  its declaration throws a `ReferenceError`. That gap is the temporal dead zone.
+
+<CodeWalkthrough
+  title="What exists, when"
+  code={`function report() {
+  console.log(typeof count)
+  console.log(typeof format)
+  console.log(typeof label)
+
+var count = 1
+function format() {}
+let label = 'total'
+}
+
+report()`}
+steps={[
+{
+lines: [1],
+note: 'Before the first statement runs, the engine registers all three declarations in the function scope.',
+variables: { count: 'undefined', format: 'a function', label: 'uninitialised (TDZ)' },
+},
+{
+lines: [2],
+note: 'var was initialised to undefined at registration, so this prints the type of undefined rather than throwing.',
+output: ['undefined'],
+},
+{
+lines: [3],
+note: 'A function declaration is fully available before its line, which is why calling helpers defined lower down works.',
+output: ['undefined', 'function'],
+},
+{
+lines: [4],
+note: 'label exists but has no value yet. typeof does not protect you here - it throws like any other read.',
+variables: { thrown: "ReferenceError: Cannot access 'label' before initialization" },
+output: ['undefined', 'function'],
+},
+]}
+/>
+
+The temporal dead zone is a feature, not an oversight. `undefined` for a variable
+you have not reached yet is a bug that surfaces somewhere else, later, as a
+confusing value. A `ReferenceError` names the variable and points at the line.
+
+## `var` is function scoped, and that is the whole difference
+
+```js
+function f() {
+  if (true) {
+    var a = 1
+    let b = 2
+  }
+  console.log(a) // 1  - var ignored the block
+  console.log(b) // ReferenceError - b belonged to the block
+}
+```
+
+`var` also lets you redeclare the same name in the same scope without complaint,
+which turns a typo into working code, and at the top level of a script it creates
+a property on `globalThis`. `let` and `const` do neither.
+
+> `const` prevents reassigning the binding, not mutating the value. A `const`
+> object can have its properties changed all day. `Object.freeze` is the tool for
+> the other half, and it is shallow.
+
+## The interview angle
+
+> **"What is the difference between `var`, `let` and `const`?"**
+> Three things, in this order: `var` is function scoped while the others are
+> block scoped; `var` reads as `undefined` before its line while the others
+> throw; `const` cannot be reassigned. Mentioning the `globalThis` property and
+> redeclaration afterwards shows you know the rest.
+
+> **"Why does `let` work in a `for` loop when `var` does not?"**
+> The specification creates a fresh binding per iteration for `let` and copies
+> the previous value into it, so each closure captures a different variable. With
+> `var` there is one binding for the entire loop. That is a closure question
+> wearing a scope question's clothes.
+
+## Traps
+
+- **`typeof` is not a safe probe in the TDZ.** It returns `'undefined'` for a
+  name that was never declared, but throws for a `let` that has not been reached.
+- **Assigning to an undeclared name creates a global** in non-strict code. ES
+  modules are always strict, so this mostly bites in scripts and in code pasted
+  into a console.
+- **A function declaration inside a block is legal but inconsistent** across
+  strict and non-strict code. Assign a function expression to a `const` instead.
+- **Shadowing a parameter with a `let` of the same name is a syntax error**, not
+  a shadow. In the body, the parameter is already that scope's binding.
+- **Loop bodies are blocks, so a `const` in one is fine.** `for (const item of
+list)` works because each iteration gets its own binding.

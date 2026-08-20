@@ -1,0 +1,157 @@
+## Why this matters
+
+Almost every "JavaScript is weird" example is one of two rules applied honestly:
+values get converted before they are compared or combined, and the conversion
+depends on the operator, not on the values. Learn the two rules and the weirdness
+becomes predictable.
+
+It also decides real bugs. An id that arrives from an API as `"42"` compares
+equal to `42` with `==` and not with `===`, and a default of `value || 'none'`
+silently rewrites `0` and `''`. Both ship regularly.
+
+## What there is
+
+Seven primitives - `undefined`, `null`, `boolean`, `number`, `string`, `symbol`,
+`bigint` - and objects, which is everything else, including arrays and
+functions. Primitives are immutable: `'abc'.toUpperCase()` returns a new string
+rather than changing the old one.
+
+`typeof` reports that set with two dents in it:
+
+```js
+typeof null // 'object'   a bug from 1995, kept for compatibility
+typeof function () {} // 'function' even though a function is an object
+typeof NaN // 'number'   NaN is a number that is not a number
+```
+
+`typeof` on a name that was never declared returns `'undefined'` instead of
+throwing, which is the one safe way to probe for a global. That does not hold in
+a temporal dead zone, where `typeof` throws like any other read.
+
+## Truthiness
+
+There are exactly eight falsy values. Everything else, including `[]`, `{}` and
+the string `'0'`, is truthy.
+
+```js
+;(false, 0, -0, 0n, '', null, undefined, NaN)
+```
+
+The list is short enough to memorise, and worth memorising, because every
+`if (value)` in your code is testing against it.
+
+## `+` is two operators
+
+`+` is the only arithmetic operator that also concatenates. It converts both
+sides to primitives first; if either result is a string, it joins, otherwise it
+adds. Every other arithmetic operator converts to number, which is why `-` and
+`*` never surprise anyone.
+
+<CodeWalkthrough
+  title="Following + and - through coercion"
+  code={`console.log(1 + '2')
+console.log('3' - 1)
+console.log([] + {})
+console.log([1, 2] + [3])`}
+  steps={[
+    {
+      lines: [1],
+      note: 'One side is a string, so + concatenates rather than adds. The number becomes "1".',
+      output: ['12'],
+    },
+    {
+      lines: [2],
+      note: '- has no string meaning, so both sides go to number. "3" converts cleanly to 3.',
+      output: ['12', '2'],
+    },
+    {
+      lines: [3],
+      note: 'Both are objects, so both go through ToPrimitive first. [] becomes the empty string and {} becomes "[object Object]".',
+      variables: { left: "''", right: "'[object Object]'" },
+      output: ['12', '2', '[object Object]'],
+    },
+    {
+      lines: [4],
+      note: 'An array converts to its elements joined by commas, so this is "1,2" + "3". Neither side was ever a number.',
+      variables: { left: "'1,2'", right: "'3'" },
+      output: ['12', '2', '[object Object]', '1,23'],
+    },
+  ]}
+/>
+
+An object becomes a primitive through `Symbol.toPrimitive`, then `valueOf`, then
+`toString`, in that order. Arrays inherit a `toString` that joins with commas and
+a `valueOf` that returns the array itself, which is not a primitive - so arrays
+always end up as strings. That single fact explains `[] + []` being `''` and
+`[] + {}` being `'[object Object]'`.
+
+## What `==` actually does
+
+`==` is not random. It is a short list of conversions applied until both sides
+are the same type:
+
+- `null == undefined` is `true`, and neither is `==` to anything else. This is a
+  special case, not a conversion.
+- Number compared with string: the string is converted to a number.
+- Boolean on either side: it is converted to a number **first**, so
+  `'1' == true` compares `'1'` with `1`.
+- Object compared with a primitive: the object is converted to a primitive.
+- `NaN` is not equal to anything, including itself.
+
+Run `[] == false` through it: `false` becomes `0`, `[]` becomes `''`, `''`
+becomes `0`, and `0 == 0` is true. Nothing arbitrary happened, but nobody wants
+to do that in their head during code review, which is the actual argument for
+`===`.
+
+> Relational operators do not share the `null` special case. `null == 0` is
+> `false`, but `null >= 0` is `true`, because `>=` converts `null` to `0`. It is
+> the sharpest example of the rules depending on the operator.
+
+## Three ways to compare
+
+`===` compares type and value with no conversion, and is the default. It has one
+gap: `NaN === NaN` is `false` and `0 === -0` is `true`.
+
+`Object.is` closes both gaps - `Object.is(NaN, NaN)` is `true`, `Object.is(0, -0)`
+is `false` - and is otherwise identical to `===`. `Array.prototype.includes` uses
+the same rules, which is why `[NaN].includes(NaN)` is `true` while
+`[NaN].indexOf(NaN)` is `-1`.
+
+## Converting on purpose
+
+When you do want a conversion, ask for it explicitly:
+
+```js
+Number('12px') // NaN     strict, whole string or nothing
+parseInt('12px') // 12    lenient, reads the leading digits
+String(Symbol()) // 'Symbol()'   works, unlike '' + Symbol(), which throws
+Boolean(value) // the falsy list, spelled out
+```
+
+`Number('')` and `Number('  ')` are both `0`, which is the trap in validating
+form input: an empty field passes an `isNaN` check.
+
+## The interview angle
+
+> **"When is `==` acceptable?"**
+> One case: `value == null`, which is true for exactly `null` and `undefined`
+> and nothing else. It is shorter than the alternative and every reviewer knows
+> it. Everywhere else, `===`.
+
+> **"Why does `0.1 + 0.2 !== 0.3`?"**
+> Not coercion at all - `number` is a 64-bit float, and neither 0.1 nor 0.2 is
+> representable exactly. Compare with a tolerance, or use `bigint` for integers
+> beyond `Number.MAX_SAFE_INTEGER`.
+
+## Traps
+
+- **`||` for defaults rewrites falsy values.** `count || 10` turns a real `0`
+  into `10`. `??` only falls back on `null` and `undefined`.
+- **`typeof x === 'object'` is true for `null`.** Null checks come first, or use
+  `x !== null && typeof x === 'object'`.
+- **`isNaN` coerces, `Number.isNaN` does not.** `isNaN('abc')` is `true`, which
+  says nothing useful. Use `Number.isNaN`.
+- **Sorting numbers without a comparator sorts them as strings.**
+  `[10, 9, 1].sort()` is `[1, 10, 9]`.
+- **`+` on a `bigint` and a `number` throws.** The one place JavaScript refuses
+  to convert rather than guessing.
