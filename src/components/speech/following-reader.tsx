@@ -13,7 +13,7 @@ import { useNarration } from './narration-player'
  * A lesson is longer than a screen, and narration runs for minutes, so by the
  * second section the controls are somewhere above the reader. This is those
  * controls, following them down, and it appears only while a topic is actually
- * being listened to - a reader who has not pressed play gets an ordinary page.
+ * being listened to. A reader who has not pressed play gets an ordinary page.
  */
 export function FollowingReader() {
   const { sections, card, index, section, following } = useNarration()

@@ -1,6 +1,6 @@
-# 9. One app shell, and motion that only ever helps
+# 0009. One app shell, and motion that only ever helps
 
-**Status:** accepted - 2026-08-19
+**Status:** accepted, 2026-08-19
 
 ## Context
 

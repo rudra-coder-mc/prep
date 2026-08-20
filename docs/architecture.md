@@ -13,8 +13,8 @@ Read topic  ->  Mark learned  ->  Recall questions on a schedule
 
 The topic page is the centrepiece, not the question bank. Marking a topic as
 learned is the act that enrols its questions into the recall schedule. Everything
-else — the daily queue, the streak, the weak-topic list, the dashboard — is
-derived from attempts against those questions.
+else is derived from attempts against those questions: the daily queue, the
+streak, the weak-topic list, the dashboard.
 
 ## Shape
 
@@ -53,7 +53,7 @@ felt, when a question is next due, what you did each day.
 
 The two are joined by string slugs, not foreign keys. `topic_progress.topicSlug`
 holds `"javascript/closures"`; nothing in the database enforces that this topic
-exists. That is deliberate — it means adding, renaming or reorganising the
+exists. That is deliberate. It means adding, renaming or reorganising the
 curriculum is a content change, never a migration. The cost is that deleting
 content orphans rows; a maintenance task reconciles them, and orphaned rows are
 harmless in the meantime.
@@ -70,7 +70,7 @@ content/javascript/closures/
   meta.ts           slug, title, order, difficulty, tags, prerequisites
 ```
 
-A topic is a directory. Adding one means adding a directory — no registry to
+A topic is a directory. Adding one means adding a directory. No registry to
 update by hand, no seed script to rerun. The loader walks `content/` at build
 time and validates every file against a Zod schema, so a malformed question
 fails the build rather than the session.
@@ -151,7 +151,7 @@ reusable library rather than per-topic one-offs:
 
 All are data-driven: a lesson passes a description of the steps, not imperative
 animation code. Building these against the five hardest topics first is
-intentional — if the primitives survive closures, the event loop, `this`,
+intentional. If the primitives survive closures, the event loop, `this`,
 prototypes and promises, the remaining topics are authoring work rather than
 engineering work.
 
@@ -163,7 +163,7 @@ Six tables. Deliberately small.
 | ------------------- | ------------------------------------------------------------------------------------- |
 | `users`             | Identity. Managed by better-auth, which also owns its session tables.                 |
 | `topic_progress`    | Per user per topic: status, when learned, when last reviewed.                         |
-| `attempts`          | Full history. Never overwritten — every attempt is a new row.                         |
+| `attempts`          | Full history. Never overwritten, since every attempt is a new row.                    |
 | `review_schedule`   | Per user per question: when it is next due, and where it sits on the interval ladder. |
 | `exercise_progress` | Practical exercises: status, notes, completion.                                       |
 | `daily_activity`    | One row per user per day: how much was reviewed, whether the queue was cleared.       |
@@ -184,21 +184,21 @@ must agree on what today is.
 
 Confidence drives the next interval:
 
-| Confidence                   | Next due    |
-| ---------------------------- | ----------- |
-| 1 — don't understand it      | later today |
-| 2 — partly understand it     | 1 day       |
-| 3 — can explain with help    | 3 days      |
-| 4 — understand it            | 7 days      |
-| 5 — can explain and apply it | 14 days     |
+| Confidence                  | Next due    |
+| --------------------------- | ----------- |
+| 1, don't understand it      | later today |
+| 2, partly understand it     | 1 day       |
+| 3, can explain with help    | 3 days      |
+| 4, understand it            | 7 days      |
+| 5, can explain and apply it | 14 days     |
 
 A `failed` result resets to the bottom of the ladder regardless of confidence.
 The daily queue is capped so it is never a wall, and fills in priority order:
 overdue, then due today, then weakest topics.
 
 This is intentionally not SM-2. It is predictable, explainable when it
-misbehaves, and stores an interval _step_ rather than a computed date delta —
-so replacing it with real spaced repetition later needs no schema change.
+misbehaves, and stores an interval _step_ rather than a computed date delta, so
+replacing it with real spaced repetition later needs no schema change.
 
 ## Evaluation
 
@@ -207,7 +207,7 @@ Which mechanism a question uses depends on whether its answer is exact.
 **Written questions are self-evaluated.** You type an answer, reveal the
 expected one, then mark Pass / Weak / Failed and rate confidence 1-5. Free-text
 answers are stored so you can see how your own explanations changed over time.
-There is no auto-grading and no AI tutor here: grading free-text technical
+There is no auto-grading and no AI tutor here. Grading free-text technical
 answers reliably is harder than everything else combined, and the honest
 self-assessment that active recall depends on does not need a machine.
 
@@ -243,14 +243,14 @@ speech engine running in the `tts` container with its voice model baked into the
 image, so narration works offline and no lesson text leaves the machine.
 
 `src/lib/speech/` is the whole engine, and it has two entry points. Audio is
-cached by content — the file's name is a hash of the script — so a script is
+cached by content, since the file's name is a hash of the script, so a script is
 synthesised once and read from a volume every time after. Editing a script is
 therefore a new recording rather than a stale one, and the old entry is orphaned
 rather than served.
 
 **`npm run narration:build` makes the recordings, and `GET /api/speech/<key>`
 plays them.** The scripts are static text in git, so nothing is synthesised while
-a listener waits: the build walks every topic, synthesises what has no recording
+a listener waits. The build walks every topic, synthesises what has no recording
 yet, and skips what has. The key is the hash of the words, so the bytes behind one
 can never change and the browser is told to keep it forever. The topic page
 computes each section's key on the server and hands it to the player.
@@ -263,13 +263,13 @@ a script and pressing play work with no build step in between.
 Synthesis costs about a second of CPU for three and a half seconds of speech, so
 a request carries one section of a narration rather than a whole one, and a
 script over 3000 characters is refused rather than left to hang. Nothing about
-the audio gates the application starting: the engine being unready is a 502 on
+the audio gates the application starting. The engine being unready is a 502 on
 one endpoint, not a stack that will not boot.
 
 **What it says is separate text.** A lesson read verbatim sounds like a document
 being read, because it is one: code blocks become punctuation, tables become
 fragments, and figures mean nothing. So a topic may carry a `narration.ts` beside
-its lesson — an ordered list of titled sections, written to be heard. A topic
+its lesson, an ordered list of titled sections written to be heard. A topic
 without one shows no player rather than falling back to the prose, and the
 content check names the topics that have no script.
 
@@ -282,7 +282,7 @@ the chosen speed across topics.
 **The lesson follows it.** Every narration section names the lesson heading it
 covers, so while a topic is being listened to the page lights up that part of the
 lesson, dims the rest, and scrolls to each section as the voice reaches it. The
-controls follow too: once the card at the top has scrolled away, the same player
+controls follow too. Once the card at the top has scrolled away, the same player
 reappears as a bar at the bottom of the screen. None of this happens for a reader
 who has not pressed play. One `NarrationProvider` drives all three, because two
 audio elements would be two voices. See
@@ -297,15 +297,16 @@ how a section of speech finds its section of lesson.
 AI tutoring, multi-user support, social login, mobile, gamification beyond the
 streak, SM-2, and any service beyond the three containers. The schema is
 multi-user-shaped (`userId` on every progress row) so that adding users later is
-an auth change, not a data migration — but nothing else anticipates features that
-do not exist yet.
+an auth change, not a data migration. Nothing else anticipates features that do
+not exist yet.
 
 Code execution is also out of V1, but unlike the above it is planned, and the
 shape of the plan constrains V1. Runnable tasks arrive later as browser-side WASM
-runners — PGlite for Postgres, QuickJS for JavaScript, `mingo` for Mongo — and,
-for tracks needing a real process, a local CLI that runs the exercise's test suite
-on the user's own machine and posts a structured verdict back. Both write the same
-`attempts` row the web interface writes, so neither needs a new progress model.
+runners: PGlite for Postgres, QuickJS for JavaScript, `mingo` for Mongo. Tracks
+that need a real process get a local CLI instead, which runs the exercise's test
+suite on the user's own machine and posts a structured verdict back. Both write
+the same `attempts` row the web interface writes, so neither needs a new progress
+model.
 That is only true because content is files and attempts are generic, which is the
 main thing V1 has to get right. See `docs/decisions/0007-execution-runners.md` and
 `docs/decisions/0008-local-cli-verification.md`.

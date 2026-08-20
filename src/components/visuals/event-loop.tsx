@@ -8,8 +8,8 @@ import { usePrefersReducedMotion, useStepPlayer } from './use-step-player'
 
 /**
  * A queued thing. Giving it an id lets the same task move between lanes as one
- * object - the whole point of the visual is watching a timer callback leave the
- * queue and arrive on the stack, not watching one list shrink and another grow.
+ * object. The point of the visual is watching a timer callback leave the queue
+ * and arrive on the stack, not watching one list shrink and another grow.
  */
 export type EventLoopItem = string | { id?: string; label: string }
 

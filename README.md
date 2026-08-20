@@ -53,18 +53,20 @@ npm run dev:docker -- --build
 
 ## How it fits together
 
-- `content/<technology>/<topic>/` — the curriculum. MDX lesson plus colocated
-  questions and exercises. Version-controlled, not in the database.
-- `src/components/visuals/` — the reusable animation library the lessons import.
-- `src/app/(app)/` — everything behind the login, under one persistent top bar.
-- `src/components/{chrome,ui,motion}/` — the shell, the UI primitives, and the
+- `content/<technology>/<topic>/` is the curriculum. An MDX lesson with its
+  questions and exercises beside it, version-controlled rather than stored in
+  the database.
+- `src/components/visuals/` is the reusable animation library the lessons import.
+- `src/app/(app)/` is everything behind the login, under one persistent top bar.
+- `src/components/{chrome,ui,motion}/` are the shell, the UI primitives, and the
   single entrance animation the whole app uses.
-- `src/db/` — Drizzle schema and migrations. Stores users and their progress only.
-- `src/lib/speech/` — turns a narration script into audio, cached by content.
-  `services/tts/` is the Piper container it talks to; no text leaves the machine.
-  `npm run narration:build` makes every recording ahead of time, so no lesson is
-  ever synthesised while somebody is waiting for it.
-- `src/components/speech/` — the player on a topic page, which reads that topic's
+- `src/db/` holds the Drizzle schema and migrations. It stores users and their
+  progress, nothing else.
+- `src/lib/speech/` turns a narration script into audio and caches it by content.
+  `services/tts/` is the Piper container it talks to, and no text leaves the
+  machine. `npm run narration:build` makes every recording ahead of time, so no
+  lesson is ever synthesised while somebody is waiting for it.
+- `src/components/speech/` is the player on a topic page. It reads that topic's
   `narration.ts` aloud a section at a time.
 
 See `docs/architecture.md` for the full picture and `docs/decisions/` for why

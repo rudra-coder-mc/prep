@@ -48,7 +48,7 @@ export const narration: Narration = [
       against exactly that list. It is also why the or operator is a bad default
       for numbers and strings. If zero or the empty string is a legitimate
       value, the or operator throws it away. The nullish coalescing operator
-      exists precisely for that: it only steps in for null and undefined.`,
+      exists for exactly that. It only steps in for null and undefined.`,
   },
   {
     title: 'Plus is two operators wearing one symbol',

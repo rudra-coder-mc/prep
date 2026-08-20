@@ -27,10 +27,10 @@ export const narration: Narration = [
       microtask queue, including microtasks that were queued by other
       microtasks. Three. Render, if the browser thinks a frame is due.
 
-      The asymmetry between steps one and two is the entire topic. One macrotask
-      per turn. But microtasks until there are none left. Say that sentence back
-      to yourself, because almost every question in this area is testing whether
-      you know it.`,
+      The asymmetry between steps one and two is where everything else comes
+      from. One macrotask per turn. But microtasks until there are none left.
+      Say that sentence back to yourself, because almost every question in this
+      area is testing whether you know it.`,
   },
   {
     title: 'Which is which',

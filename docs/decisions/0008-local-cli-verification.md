@@ -1,6 +1,6 @@
-# 8. Hard exercises execute on the laptop; scoring stays in the platform
+# 0008. Hard exercises execute on the laptop; scoring stays in the platform
 
-**Status:** accepted — 2026-08-19
+**Status:** accepted, 2026-08-19
 
 ## Context
 
@@ -50,7 +50,7 @@ a fallback for exercises with no meaningful automated assertion.
 
 ## Consequences
 
-The verdict is self-reported: the test file is on the user's disk and could be
+The verdict is self-reported. The test file is on the user's disk and could be
 edited. This is a single-user personal tool, so the only person who could be
 misled is its author. No integrity mechanism is worth building.
 
@@ -60,7 +60,7 @@ framework.
 
 The platform is local-only (see `CLAUDE.md`), so the CLI talks to
 `http://localhost:3000` with a token from the web interface stored in
-`~/.prep/config.json`. No public API surface is created.
+`~/.prep/config.json`. No public API is created.
 
 This pattern generalises. Any future track too heavy to run in the browser gets a
 local test suite and the same verdict endpoint, rather than a new execution

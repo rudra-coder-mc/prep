@@ -14,7 +14,7 @@ export const questions: Question[] = [
 4. Plain call: fn() gives undefined in strict mode and modules, globalThis otherwise.
 
 Arrow functions are the exception. They have no this of their own and close over the surrounding one lexically, so nothing at the call site can change it, including call and apply.`,
-    explanation: `"Left of the dot" is the useful shorthand for the common case, and it immediately explains why pulling a method off its object breaks it: there is no longer anything left of the dot.`,
+    explanation: `"Left of the dot" is the useful shorthand for the common case, and it immediately explains why pulling a method off its object breaks it, because there is no longer anything left of the dot.`,
     hints: ['Is this decided when the function is written, or when it is called?'],
     tags: ['this', 'functions'],
   },
@@ -99,7 +99,7 @@ Fix one, an arrow function, which closes over start's this:
 Fix two, bind:
 
   setInterval(function () { this.count += 1 }.bind(this), 1000)`,
-    explanation: `The arrow function is the right answer in modern code, and it is worth knowing why it works: it has no this of its own, so the lookup continues outward to start's this, which is timer.
+    explanation: `The arrow function is the right answer in modern code. It works because it has no this of its own, so the lookup continues outward to start's this, which is timer.
 
 Before arrows existed the common trick was const self = this, which is the same idea using a closure.`,
     hints: ['Who calls the interval callback, and how?'],

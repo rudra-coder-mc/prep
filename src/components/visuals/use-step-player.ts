@@ -120,8 +120,8 @@ export function useStepPlayer(count: number, intervalMs = 1800): StepPlayer {
 /**
  * Starts a visual the first time it is properly on screen, once. A reader
  * scrolling through a lesson should see the animation run, not a still frame
- * with a play button on it - but only the first time, so scrolling back does
- * not restart something they have already watched.
+ * with a play button on it. Only the first time, though, so scrolling back
+ * does not restart something they have already watched.
  */
 export function useAutoPlayInView(onVisible: () => void, enabled = true) {
   const target = useRef<HTMLElement | null>(null)

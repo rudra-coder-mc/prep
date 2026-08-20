@@ -1,4 +1,4 @@
-# 0016 - Narration is separate text, and a section is the unit of playback
+# 0016. Narration is separate text, and a section is the unit of playback
 
 ## Status
 
@@ -11,7 +11,7 @@ moves through it.
 
 The obvious implementation is to feed the lesson to the engine. It is free, it
 stays in step with the prose automatically, and it needs no new content. It is
-also unlistenable. A lesson is written to be read: it carries code blocks, a
+also unlistenable. A lesson is written to be read. It carries code blocks, a
 table of promise combinators, inline symbols like triple equals, and figures
 that mean nothing without the picture. Read aloud, a code block becomes a stream
 of punctuation names, a table becomes a list of fragments, and the reader has no
@@ -62,19 +62,19 @@ would both break this project's lint rules and show the wrong speed for a frame.
 
 **Speak the lesson prose, stripped of code.** No new content to write, and it
 can never drift out of step with the lesson. Rejected because the result is a
-document being read, and because stripping is not a small problem: the code and
+document being read, and because stripping is not a small problem. The code and
 the figures are not decoration in these lessons, they are where several of the
 explanations actually live. A script that omits them has to say the same thing
 another way, which is writing a script.
 
 **Generate the script from the lesson with a model.** Tempting, and it would
 scale to the nine content groups still to come. Rejected for now on the same
-grounds as `0005` rejects automatic grading: it puts a thing nobody reviewed in
+grounds as `0005` rejects automatic grading. It puts a thing nobody reviewed in
 front of the one person this platform exists for. It is a reasonable thing to
 revisit as an authoring aid, where the output is edited before it ships.
 
 **One request per topic rather than per section.** Simpler player, one file per
-topic in the cache. Rejected: a minute of synthesis before anything plays, no
+topic in the cache. Rejected. A minute of synthesis before anything plays, no
 way to move within a topic, and a single edit anywhere in the script throws away
 the whole recording rather than one section of it.
 
@@ -91,9 +91,9 @@ That is the largest ongoing cost this decision creates, and it is stated in
 `TASKS.md` where the content groups are listed.
 
 A narration duplicates its lesson, which means the same maintenance problem
-`0014` accepted for concept maps: change a lesson and the script has to be
+`0014` accepted for concept maps. Change a lesson and the script has to be
 revisited by hand, and nothing checks that they agree. The mitigation is the
-same one - sections follow the lesson's own headings, so the thing to re-read is
+same one. Sections follow the lesson's own headings, so the thing to re-read is
 obvious.
 
 The player's controls sit on a page where every visual has controls of its own.

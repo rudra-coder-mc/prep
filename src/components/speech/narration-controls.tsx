@@ -47,7 +47,7 @@ export function NarrationControls({ className }: { className?: string }) {
       </button>
 
       {/* Every visual on a lesson page carries a speed button of its own, so
-          naming this one for what it controls is what keeps them apart - for
+          naming this one for what it controls is what keeps them apart, for
           a screen reader as much as for a test. */}
       <button
         type="button"

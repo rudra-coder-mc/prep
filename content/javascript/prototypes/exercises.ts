@@ -19,7 +19,7 @@ export const exercises: Exercise[] = [
     title: 'Tell own properties from inherited ones',
     difficulty: 'easy',
     prompt:
-      'Write a function that returns only an object’s own enumerable string-keyed properties, and show three ways an inherited property could otherwise sneak in.',
+      "Write a function that returns only an object's own enumerable string-keyed properties, and show three ways an inherited property could otherwise sneak in.",
     requirements: [
       'Do not use Object.keys or Object.entries in the main implementation.',
       'It must work on an object created with Object.create(null).',

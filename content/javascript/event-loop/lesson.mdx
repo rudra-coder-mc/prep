@@ -21,8 +21,8 @@ When the stack empties, the loop does the same three things forever:
    microtasks.
 3. Render, if the browser thinks a frame is due.
 
-The asymmetry in steps 1 and 2 is the entire topic. One macrotask per turn, but
-microtasks until there are none left.
+The asymmetry between steps 1 and 2 is what everything else falls out of. One
+macrotask per turn, but microtasks until there are none left.
 
 <EventLoop
   title="One turn of the loop"
@@ -127,7 +127,7 @@ output: ['script start', 'a start', 'b'],
 },
 {
 lines: [12],
-note: 'This .then queues second, behind a’s continuation.',
+note: "This .then queues second, behind a's continuation.",
 variables: { microtasks: '[resume a, log promise]' },
 output: ['script start', 'a start', 'b'],
 },

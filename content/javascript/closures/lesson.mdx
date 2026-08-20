@@ -16,7 +16,7 @@ not the scope it is called from. When the outer function returns, its local
 variables would normally be unreachable, but if an inner function survives, so
 does the scope it points at.
 
-The crucial word is **variable**, not value. A closure captures the binding
+The word that matters is **variable**, not value. A closure captures the binding
 itself, so if that variable later changes, every closure over it sees the new
 value.
 
@@ -77,12 +77,12 @@ variables: { 'a.[[scope]].count': '0' },
 },
 {
 lines: [10],
-note: 'A second call creates a completely separate scope. b cannot see a’s count and never will.',
+note: "A second call creates a completely separate scope. b cannot see a's count and never will.",
 variables: { 'a.[[scope]].count': '0', 'b.[[scope]].count': '0' },
 },
 {
 lines: [4, 12],
-note: 'The first a() increments the count in a’s scope.',
+note: "The first a() increments the count in a's scope.",
 variables: { 'a.[[scope]].count': '1', 'b.[[scope]].count': '0' },
 },
 {
@@ -139,7 +139,7 @@ the time any of them runs, the loop has finished writing `3` into it.
   ]}
 />
 
-Switching to `let` fixes it, and it is worth knowing exactly why: the
+Switching to `let` fixes it, and the reason matters more than the fix. The
 specification creates a **new binding for each iteration** and copies the
 previous value into it. So there are three variables, and each closure gets its
 own.

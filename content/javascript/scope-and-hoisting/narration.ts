@@ -4,8 +4,8 @@ export const narration: Narration = [
   {
     title: 'Two questions in disguise',
     heading: 'Why this matters',
-    script: `Scope is the question: which variable does this name refer to?
-      Hoisting is the question: does it exist yet? Almost every confusing thing
+    script: `Scope answers one question. Which variable does this name refer to?
+      Hoisting answers another. Does it exist yet? Almost every confusing thing
       in JavaScript is one of those two underneath. Every closure question,
       every this question, and every why is this undefined question.
 
@@ -80,7 +80,7 @@ export const narration: Narration = [
       and reading it after the block is a reference error, because let belongs
       to the block.
 
-      Var has two more habits worth naming. It lets you redeclare the same name
+      Var has two more habits. It lets you redeclare the same name
       in the same scope without any complaint, which quietly turns a typo into
       working code. And at the top level of a script it creates a property on
       the global object. Let and const do neither of those things.
@@ -101,9 +101,9 @@ export const narration: Narration = [
 
       Expect follow ups on why the dead zone exists, on the difference between a
       function declaration and a function expression assigned to a var, and on
-      what happens when you assign to a name nobody declared. That last one is
-      worth knowing: in non strict code it silently creates a global, and in
-      strict mode and in modules it throws. Modules are always strict, so in
-      practice, in modern code, it throws.`,
+      what happens when you assign to a name nobody declared. That last one splits
+      two ways. In non strict code it silently creates a global. In strict mode
+      and in modules it throws. Modules are always strict, so in modern code it
+      throws.`,
   },
 ]

@@ -1,6 +1,6 @@
-# 5. Confidence-driven interval ladder, not SM-2
+# 0005. Confidence-driven interval ladder, not SM-2
 
-**Status:** accepted — 2026-08-19
+**Status:** accepted, 2026-08-19
 
 ## Context
 
@@ -26,7 +26,7 @@ daily queue is capped and fills in priority order: overdue, then due today, then
 weakest topics.
 
 A day counts toward the streak when the queue is cleared, or when any review is
-done on a day with an empty queue — so a light day is never a broken streak.
+done on a day with an empty queue, so a light day is never a broken streak.
 
 ## Alternatives
 
@@ -34,13 +34,13 @@ done on a day with an empty queue — so a light day is never a broken streak.
 handoff deferred, and when a queue misbehaves an ease factor is much harder to
 reason about than a five-rung ladder.
 
-**No scheduling — weak topics only.** Rejected. Simplest, but topics answered
+**No scheduling, weak topics only.** Rejected. Simplest, but topics answered
 well are never revisited and decay silently, which defeats the point.
 
 ## Consequences
 
 Intervals are predictable and explainable. Storing a step rather than a computed
-delta means SM-2 can replace this later without a schema change — the ladder
+delta means SM-2 can replace this later without a schema change. The ladder
 becomes the initial ease.
 
 Long-term retention past 14 days is not modelled in V1. If topics start decaying

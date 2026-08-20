@@ -27,8 +27,8 @@ const LINE_HEIGHT = 24
 const CODE_PADDING = 12
 
 /**
- * Runs of adjacent line numbers. A step that points at two places in the file -
- * the call and the line it lands on - gets a band over each, rather than one
+ * Runs of adjacent line numbers. A step that points at two places in the file,
+ * the call and the line it lands on, gets a band over each, rather than one
  * band swallowing everything in between.
  */
 function contiguousRuns(lines: number[]): { start: number; span: number }[] {

@@ -11,10 +11,10 @@ silently rewrites `0` and `''`. Both ship regularly.
 
 ## What there is
 
-Seven primitives - `undefined`, `null`, `boolean`, `number`, `string`, `symbol`,
-`bigint` - and objects, which is everything else, including arrays and
-functions. Primitives are immutable: `'abc'.toUpperCase()` returns a new string
-rather than changing the old one.
+There are seven primitives: `undefined`, `null`, `boolean`, `number`, `string`,
+`symbol` and `bigint`. Then objects, which is everything else, including arrays
+and functions. Primitives are immutable: `'abc'.toUpperCase()` returns a new
+string rather than changing the old one.
 
 `typeof` reports that set with two dents in it:
 
@@ -81,7 +81,7 @@ console.log([1, 2] + [3])`}
 
 An object becomes a primitive through `Symbol.toPrimitive`, then `valueOf`, then
 `toString`, in that order. Arrays inherit a `toString` that joins with commas and
-a `valueOf` that returns the array itself, which is not a primitive - so arrays
+a `valueOf` that returns the array itself, which is not a primitive, so arrays
 always end up as strings. That single fact explains `[] + []` being `''` and
 `[] + {}` being `'[object Object]'`.
 
@@ -112,10 +112,10 @@ to do that in their head during code review, which is the actual argument for
 `===` compares type and value with no conversion, and is the default. It has one
 gap: `NaN === NaN` is `false` and `0 === -0` is `true`.
 
-`Object.is` closes both gaps - `Object.is(NaN, NaN)` is `true`, `Object.is(0, -0)`
-is `false` - and is otherwise identical to `===`. `Array.prototype.includes` uses
-the same rules, which is why `[NaN].includes(NaN)` is `true` while
-`[NaN].indexOf(NaN)` is `-1`.
+`Object.is` closes both gaps. `Object.is(NaN, NaN)` is `true` and
+`Object.is(0, -0)` is `false`. It is otherwise identical to `===`.
+`Array.prototype.includes` uses the same rules, which is why
+`[NaN].includes(NaN)` is `true` while `[NaN].indexOf(NaN)` is `-1`.
 
 ## Converting on purpose
 
@@ -139,7 +139,7 @@ form input: an empty field passes an `isNaN` check.
 > it. Everywhere else, `===`.
 
 > **"Why does `0.1 + 0.2 !== 0.3`?"**
-> Not coercion at all - `number` is a 64-bit float, and neither 0.1 nor 0.2 is
+> Not coercion at all. `number` is a 64-bit float, and neither 0.1 nor 0.2 is
 > representable exactly. Compare with a tolerance, or use `bigint` for integers
 > beyond `Number.MAX_SAFE_INTEGER`.
 
@@ -168,7 +168,7 @@ form input: an empty field passes an `isNaN` check.
     },
     {
       label: 'Truthiness',
-      summary: 'Eight falsy values, and everything else - including [] and {} - is truthy.',
+      summary: 'Eight falsy values. Everything else is truthy, including [] and {}.',
       nodes: ['false 0 -0 0n', "'' null undefined NaN"],
     },
     {

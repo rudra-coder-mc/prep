@@ -1,4 +1,4 @@
-# 0010 - Interview preparation is the product, and it is not one language
+# 0010. Interview preparation is the product, and it is not one language
 
 ## Status
 
@@ -18,9 +18,9 @@ The platform is for interview preparation specifically, not general study. The
 question forms that matter are the ones interviews actually use, and the mode of
 use is drilling under time pressure rather than reading.
 
-There will be many technologies. The architecture already supports this - a
-topic is a directory, attempts are keyed by slug, nothing in the schema knows
-what JavaScript is - but the interface contradicts it, and an interface that
+There will be many technologies. The architecture already supports this. A topic
+is a directory, attempts are keyed by slug, and nothing in the schema knows what
+JavaScript is. But the interface contradicts that, and an interface that
 contradicts the architecture is the version people believe.
 
 ## Decision
@@ -48,13 +48,13 @@ reading is the bottleneck. That only works if the spoken text is written as
 speech. Reading a lesson aloud verbatim produces something worse than silence.
 
 **Dark only.** There is no light theme and there will not be one. It is one
-person's tool on one machine, and a second theme doubles the surface every
-visual change has to be checked against for no benefit.
+person's tool on one machine, and a second theme doubles what every visual
+change has to be checked against for no benefit.
 
 ## Alternatives considered
 
 **Keep the JavaScript framing until a second track exists.** Honest about
-today, but the framing is load bearing: every new page copies the shape of the
+today, but the framing is load bearing. Every new page copies the shape of the
 last one, so the hardcoded technology would spread faster than it could be
 removed. The shell is cheaper to generalise while there are four pages than
 forty.
@@ -74,7 +74,7 @@ per topic and are still worth it.
 
 Every topic now carries two authoring costs beyond its lesson: questions in both
 gradeable forms, and a narration script. That is a real tax on the plan to cover
-the whole JavaScript interview surface, and it will slow content down.
+everything a JavaScript interview can ask, and it will slow content down.
 
 The narration scripts are a second source of truth about each topic. When a
 lesson changes, its script can silently disagree with it. Nothing detects that,

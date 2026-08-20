@@ -9,13 +9,13 @@ export const questions: Question[] = [
     expectedAnswer: `Pass by value, always. What gets copied into the parameter is the value of the argument, and for an object that value is a reference.
 
 The consequence is the pair of behaviours people trip over:
-- Mutating the argument - o.count += 1 - changes the object the caller can see, because both names point at it.
-- Reassigning the argument - o = {} - only repoints the local parameter, and the caller sees nothing.
+- Mutating the argument, o.count += 1, changes the object the caller can see, because both names point at it.
+- Reassigning the argument, o = {}, only repoints the local parameter, and the caller sees nothing.
 
 If it were genuinely pass by reference, the second case would replace the caller's object too. Some people call the actual behaviour "pass by sharing", which is a clearer name for it.`,
-    explanation: `The reassignment case is the whole test. It is also the reason a function that wants to "return" an object usually returns it rather than writing into an out parameter, which is a pattern that simply cannot work here.
+    explanation: `The reassignment case is the whole test. It is also the reason a function that wants to "return" an object usually returns it rather than writing into an out parameter, which is a pattern that cannot work here.
 
-Primitives make this hard to see, because a primitive being immutable means there is no mutation to observe - only reassignment, which is local either way.`,
+Primitives make this hard to see, because a primitive being immutable means there is no mutation to observe, only reassignment, which is local either way.`,
     hints: ['What happens if the function assigns a whole new object to its parameter?'],
     tags: ['memory', 'functions'],
   },
@@ -56,7 +56,7 @@ a.n = 2
 
 console.log(copy.n, alias.n)`,
     expectedOutput: '1 2',
-    explanation: `Spread built a new object and copied the value of n into it at that moment, so copy is unaffected by later changes to a. alias never copied anything - it holds the same reference, so it sees the mutation.
+    explanation: `Spread built a new object and copied the value of n into it at that moment, so copy is unaffected by later changes to a. alias never copied anything. It holds the same reference, so it sees the mutation.
 
 The copy is only shallow, though. If n had been an object rather than a number, copy.n and a.n would point at the same thing and the answer would be different.`,
     hints: [],
@@ -86,7 +86,7 @@ Fix two, copy the whole structure:
   const config = structuredClone(defaults)
   config.timeout.ms = 50
 
-The first is what I would ship - it is cheaper and it says exactly which part is being replaced. Freezing defaults would also have turned this into an error at the write instead of a silent corruption.`,
+The first is what I would ship. It is cheaper, and it says exactly which part is being replaced. Freezing defaults would also have turned this into an error at the write instead of a silent corruption.`,
     explanation: `The give-away in the symptom is "every request after the first". A bug that changes shared state rather than local state shows up as behaviour that depends on history, which is why it survives unit tests that each start fresh.
 
 The general rule for immutable updates: copy every level on the path you are changing, share everything else.`,
@@ -114,7 +114,7 @@ The general rule for immutable updates: copy every level on the path you are cha
 }`,
     explanation: `Three details carry the question. The null check has to come before typeof, since typeof null is 'object'. The WeakSet is what makes a cycle terminate, and a WeakSet rather than a Set so the bookkeeping does not keep the objects alive. Reflect.ownKeys rather than Object.keys picks up symbol keys and non-enumerable ones, which Object.freeze covers but Object.keys would skip.
 
-Worth saying afterwards that freezing deeply is rarely the right answer at scale - it costs a walk of the whole structure and only reports violations in strict code. Not sharing a mutable object is the better fix when it is available.`,
+Say afterwards that freezing deeply is rarely the right answer at scale. It costs a walk of the whole structure and only reports violations in strict code. Not sharing a mutable object is the better fix when it is available.`,
     hints: [
       'What stops the recursion on a structure that points back at itself?',
       'Which keys does Object.keys miss?',
@@ -197,7 +197,7 @@ The performance angle is the other half. Deep comparison is O(size) on every cal
     ],
     correctOption: 2,
     explanation:
-      'Only the reassignment. const protects the binding, so the name cannot be pointed at a different object, while the object itself stays fully mutable - properties can be added, changed and deleted. Object.freeze is what stops the other three, one level deep, and only throws in strict code.',
+      'Only the reassignment. const protects the binding, so the name cannot be pointed at a different object, while the object itself stays fully mutable. Properties can be added, changed and deleted. Object.freeze is what stops the other three, one level deep, and only throws in strict code.',
     hints: [],
     tags: ['objects', 'immutability'],
   },

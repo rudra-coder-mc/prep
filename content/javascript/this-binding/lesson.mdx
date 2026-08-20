@@ -85,7 +85,7 @@ and an arrow _as_ a method does not.
       lookup: { name: 'this', foundIn: 'callback (regular function)' },
     },
     {
-      note: 'An arrow callback declares no this at all, so the lookup walks outward and finds the method’s this, which is the object you wanted.',
+      note: "An arrow callback declares no this at all, so the lookup walks outward and finds the method's this, which is the object you wanted.",
       scopes: [
         { name: 'module', bindings: { this: 'undefined' } },
         { name: 'start (method)', bindings: { this: 'timer' } },
@@ -94,7 +94,7 @@ and an arrow _as_ a method does not.
       lookup: { name: 'this', foundIn: 'start (method)' },
     },
     {
-      note: 'An arrow written as a method has no method scope above it, so it lands on the module’s this instead. This is why arrows make bad methods.',
+      note: "An arrow written as a method has no method scope above it, so it lands on the module's this instead. This is why arrows make bad methods.",
       scopes: [
         { name: 'module', bindings: { this: 'undefined' } },
         { name: 'arrow property', bindings: {} },

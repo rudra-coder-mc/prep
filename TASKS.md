@@ -33,15 +33,15 @@ Touches `question-session.tsx` and `src/components/speech/`.
 Done when playing an MCQ reads the prompt and all four options in order, and
 moving to the next question stops the previous audio rather than overlapping it.
 
-## 2. The JavaScript interview surface
+## 2. Everything a JavaScript interview asks
 
 The goal is that anything reasonably asked in a JavaScript interview has a
 topic, and that each topic carries the full question mix.
 
 This is content work, not platform work, and it is far too big for one branch,
 so it is broken into groups of three or four related topics. **One group is one
-task and one branch.** They are listed in a deliberate order - each group leans
-on the ones above it - but a group can be pulled forward if an interview is
+task and one branch.** They are listed in a deliberate order, since each group
+leans on the ones above it, but a group can be pulled forward if an interview is
 coming and it is the gap that matters.
 
 The conventions the first group established, so the rest stay consistent:
@@ -108,7 +108,7 @@ including the return value trap, and errors that cross an async boundary.
 Garbage collection and the shapes of a leak, `WeakMap` and `WeakRef`, debounce
 and throttle, the real cost of common collection operations.
 
-### Group 10: the browser surface
+### Group 10: the browser, not the language
 
 The DOM, events and delegation, `fetch` and the network, storage.
 

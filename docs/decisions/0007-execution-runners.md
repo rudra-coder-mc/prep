@@ -1,12 +1,12 @@
-# 7. Execution runners: browser-first, and only where it is cheap
+# 0007. Execution runners: browser-first, and only where it is cheap
 
-**Status:** accepted — 2026-08-19
+**Status:** accepted, 2026-08-19
 
 ## Context
 
-Later tracks want runnable tasks, not just questions: SQL you actually execute,
-JavaScript whose output is checked rather than self-reported, Mongo queries,
-React components. Executing user-authored code is normally the most expensive and
+Later tracks want tasks you run, not only questions to answer. SQL you actually
+execute, JavaScript whose output is checked rather than self-reported, Mongo
+queries, React components. Executing user-authored code is normally the most expensive and
 most dangerous part of a learning platform, and it is the thing most likely to
 turn this project into an infrastructure project instead of a learning tool.
 
@@ -44,8 +44,8 @@ unless a local runner is added for them later.
 ## Consequences
 
 Everything above runs client-side. There is no execution service, no container
-orchestration, no resource limiting, and no untrusted-code security surface in
-the platform itself.
+orchestration, no resource limiting, and no untrusted code running inside the
+platform itself.
 
 Adding a runner is a content-plus-component change, not an architectural one,
 because a topic is a directory of files joined by a slug rather than rows in a

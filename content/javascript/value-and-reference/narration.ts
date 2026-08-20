@@ -76,9 +76,9 @@ export const narration: Narration = [
 
       For a genuine deep copy, structured clone is the built in answer. It
       handles nested objects, arrays, dates, maps, sets, regular expressions,
-      and even cycles. It has two limits worth knowing: it throws on functions,
-      and it produces plain objects rather than instances, because the prototype
-      is not carried across.
+      and even cycles. It has two limits. It throws on functions, and it
+      produces plain objects rather than instances, because the prototype is not
+      carried across.
 
       The old trick of stringifying to JSON and parsing it back is lossy in ways
       that bite quietly. Undefined values and functions disappear entirely.
@@ -94,7 +94,7 @@ export const narration: Narration = [
     heading: 'The interview angle',
     script: `Asked whether JavaScript is pass by value or pass by reference, the
       answer is pass by value. Then immediately add the clause that shows you
-      understand it: for objects the value is a reference, so mutations are
+      understand it. For objects the value is a reference, so mutations are
       visible to the caller and reassignments are not. Saying pass by reference
       without that distinction is exactly what the interviewer is listening for.
 

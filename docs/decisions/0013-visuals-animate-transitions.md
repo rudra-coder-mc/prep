@@ -1,4 +1,4 @@
-# 0013 - Visuals animate the transition, not the frame
+# 0013. Visuals animate the transition, not the frame
 
 ## Status
 
@@ -11,10 +11,10 @@ description of the picture, and advancing swapped one description for the next.
 Motion was attached, but it could only fade a list item in or out, because
 nothing in the implementation connected an item in one step to the same item in
 the next. A task leaving the microtask queue and arriving on the call stack was
-two unrelated events - a delete in one column, an insert in another.
+two unrelated events. A delete in one column, an insert in another.
 
 The result reads as a slideshow of diagrams. It is accurate and it is not
-memorable, and memorable is the entire reason these exist: a lesson that can be
+memorable, and memorable is the entire reason these exist. A lesson that can be
 read is already a lesson that can be read.
 
 Nothing played by itself either, so the default state of every visual on a page
@@ -50,11 +50,11 @@ a visual by describing states; describing motion instead moves the cost to
 exactly the place we do not want it.
 
 **A video or a GIF per concept.** Sharper than anything built from DOM nodes,
-and dead: it cannot be stepped, cannot be paused on the frame that matters, and
+and dead. It cannot be stepped, cannot be paused on the frame that matters, and
 goes stale the moment the lesson text around it changes.
 
-**Leave playback manual.** Honest and quiet. It also means the common case - a
-reader scrolling a lesson - sees a still frame, which is what prompted this in
+**Leave playback manual.** Honest and quiet. It also means the common case, a
+reader scrolling a lesson, sees a still frame, which is what prompted this in
 the first place.
 
 ## Consequences
@@ -72,6 +72,6 @@ Duplicate labels within one region would share a layout id and fight over which
 element is which. The event loop de-duplicates them; any future visual that
 allows repeats has to do the same.
 
-Reduced motion is not a degraded path here: layout ids, probes and the drawn
+Reduced motion is not a degraded path here. Layout ids, probes and the drawn
 arrows are all skipped, and the visual becomes the old frame-swap, which is the
 correct thing for someone who asked for less movement.

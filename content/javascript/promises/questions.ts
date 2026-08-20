@@ -10,8 +10,8 @@ export const questions: Question[] = [
 
 A promise starts pending and moves once, to either fulfilled with a value or rejected with a reason. That transition is irreversible, and calling resolve or reject again does nothing.
 
-Attaching a handler does not change the state. Handlers registered after settling still run; they are simply scheduled immediately as microtasks.`,
-    explanation: `"Settles once, irreversibly" is the property that makes promises composable, and it is the reason a promise can be handed to several consumers safely. It is also why a promise cannot be cancelled: there is no state to move it to.`,
+Attaching a handler does not change the state. Handlers registered after settling still run; they are scheduled immediately as microtasks.`,
+    explanation: `"Settles once, irreversibly" is the property that makes promises composable, and it is the reason a promise can be handed to several consumers safely. It is also why a promise cannot be cancelled. There is no state to move it to.`,
     hints: [],
     tags: ['promise', 'async'],
   },
@@ -25,8 +25,8 @@ Attaching a handler does not change the state. Handlers registered after settlin
 - race: settles with the first to settle, fulfilled or rejected. The classic use is a timeout.
 - any: fulfils with the first to fulfil, ignoring rejections, and rejects with an AggregateError only if all reject. Use it for redundant sources such as several mirrors.
 
-The one that catches people out is that all does not cancel the others when it rejects. They keep running; their results are simply discarded.`,
-    explanation: `That last point matters in practice: an unhandled rejection from one of the abandoned promises can still surface, and side effects still happen. Nothing in the promise API stops work, which is why AbortController exists separately.`,
+The one that catches people out is that all does not cancel the others when it rejects. They keep running, and their results are discarded.`,
+    explanation: `That last point matters in practice. An unhandled rejection from one of the abandoned promises can still surface, and side effects still happen. Nothing in the promise API stops work, which is why AbortController exists separately.`,
     hints: [],
     tags: ['promise', 'async'],
   },
@@ -98,7 +98,7 @@ With async/await the same bug is harder to write, because the value has to go so
 
   const user = await fetchUser(id)
   const posts = await fetchPosts(user.id)`,
-    explanation: `A missing return in a then callback is one of the most common promise bugs, and it fails twice over: the value is lost and errors escape the chain. It is the strongest practical argument for preferring async/await.`,
+    explanation: `A missing return in a then callback is one of the most common promise bugs, and it fails twice over. The value is lost, and errors escape the chain. It is the strongest practical argument for preferring async/await.`,
     hints: ['What does the first callback return?'],
     tags: ['promise', 'async'],
   },
@@ -133,7 +133,7 @@ For multiple independent calls, Promise.allSettled gives per-item outcomes rathe
 
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }`,
-    explanation: `Two details separate a good answer from a passable one. Clearing the timer in finally stops a pending timeout keeping the process alive in Node and leaking in long-running pages. And racing does not cancel the original work: it keeps running and its result is discarded, so for a real request you also want an AbortController.`,
+    explanation: `Two details separate a good answer from a passable one. Clearing the timer in finally stops a pending timeout keeping the process alive in Node and leaking in long-running pages. And racing does not cancel the original work. It keeps running and its result is discarded, so for a real request you also want an AbortController.`,
     hints: [
       'What happens to the timer if the promise wins?',
       'Does racing actually stop the loser?',
