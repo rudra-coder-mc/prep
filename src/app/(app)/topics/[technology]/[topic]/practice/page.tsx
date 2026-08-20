@@ -17,7 +17,7 @@ export default async function PracticePage({ params }: { params: Promise<Params>
   const topic = await getTopic(technology, directory)
   if (!topic) notFound()
 
-  // Answers and explanations are fetched on reveal, never sent up front.
+  // Answers are fetched when the question is answered, never sent up front.
   const questions: SessionQuestion[] = topic.questions.map((question) => ({
     id: question.id,
     topicSlug: topic.slug,
@@ -28,7 +28,7 @@ export default async function PracticePage({ params }: { params: Promise<Params>
     code: question.code,
     hints: question.hints,
     options: question.options,
-    checksOutput: question.expectedOutput !== undefined,
+    form: question.form,
     questionAudioKey: questionAudioKey(question),
   }))
 
@@ -38,7 +38,7 @@ export default async function PracticePage({ params }: { params: Promise<Params>
         <header>
           <h1 className="text-2xl font-semibold tracking-tight">Practice</h1>
           <p className="mt-1 text-sm text-muted">
-            {topic.title} · answer from memory, then grade yourself honestly.
+            {topic.title} · answer before you look, then read the answer in full.
           </p>
         </header>
       </Rise>

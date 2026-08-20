@@ -56,10 +56,20 @@ question audio scripts, and their tests.
 - [ ] `explanation` is optional.
 - [ ] `expectedOutput`, `matchesExpectedOutput` and `normaliseOutput` are gone.
 - [ ] The written form, the typed output form and the confidence picker are
-      deleted, along with `revealQuestion` and the free text path through
-      `recordAttempt`.
+      deleted, along with the free text path through `recordAttempt`. Revealing
+      an answer stays, because that is how an open question works.
 - [ ] An open question reveals its answer and records Passed, Weak or Failed,
-      with nothing to type before it.
+      with nothing to type before it. Its self grade sets the rung directly,
+      Passed 5 and Weak 3, because the picker cannot be deleted without
+      something to replace it. Task 3 does the rest of the ladder.
+- [ ] The 37 questions that were multiple choice have their existing
+      `explanation` moved into `answerInFull` rather than a new answer invented
+      for them. It is the only prose they carry, and moving it leaves nothing
+      duplicated. The topic conversions in tasks 4 to 15 rewrite it into a real
+      interview answer and give the question a fresh explanation.
+- [ ] The questions that were checked against printed output carry that output
+      as their `answerInFull` for now, with their explanation unchanged. Task 4
+      to 15 turn them into ordering or choice questions properly.
 - [ ] The 93 questions not yet authored as choice questions are `open`. The one
       per topic rule is not enforced yet, which is task 16.
 - [ ] `npm run db:reset` drops the database, migrates and seeds, and the wipe

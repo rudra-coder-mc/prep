@@ -4,9 +4,10 @@ export const questions: Question[] = [
   {
     id: 'what-decides-this',
     type: 'concept',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What determines the value of `this` in a function?',
-    expectedAnswer: `For a regular function, how it is *called*, not where it is defined. In precedence order:
+    answerInFull: `For a regular function, how it is *called*, not where it is defined. In precedence order:
 
 1. new: this is the newly created object.
 2. Explicit binding: call, apply or bind set it directly.
@@ -21,6 +22,7 @@ Arrow functions are the exception. They have no this of their own and close over
   {
     id: 'lost-this-output',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print, and why?',
     code: `const counter = {
@@ -33,7 +35,7 @@ Arrow functions are the exception. They have no this of their own and close over
 
 const inc = counter.increment
 console.log(inc())`,
-    expectedAnswer: `In a module or strict mode it throws: "Cannot read properties of undefined (reading 'count')". In sloppy mode it prints NaN, because this is globalThis, globalThis.count is undefined, and undefined + 1 is NaN.`,
+    answerInFull: `In a module or strict mode it throws: "Cannot read properties of undefined (reading 'count')". In sloppy mode it prints NaN, because this is globalThis, globalThis.count is undefined, and undefined + 1 is NaN.`,
     explanation: `Assigning the method to a variable copies the function, not the relationship to the object. Nothing is left of the dot at the call site, so this is not counter.
 
 This is the same bug as passing a method to setTimeout or to an array method, and the reason React class components needed constructor binding.`,
@@ -43,6 +45,7 @@ This is the same bug as passing a method to setTimeout or to an array method, an
   {
     id: 'arrow-vs-regular',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `const obj = {
@@ -54,7 +57,7 @@ This is the same bug as passing a method to setTimeout or to an array method, an
 }
 
 console.log(obj.regular(), obj.arrow())`,
-    expectedAnswer: `'obj' and undefined.`,
+    answerInFull: `'obj' and undefined.`,
     explanation: `The arrow function is defined in the same scope as obj itself, not inside a method, so its this is whatever this was in the surrounding scope: undefined in a module, or globalThis in a script.
 
 An object literal does not create a scope for this. This is why arrow functions are wrong for methods but right for callbacks defined *inside* methods.`,
@@ -64,9 +67,10 @@ An object literal does not create a scope for this. This is why arrow functions 
   {
     id: 'call-apply-bind',
     type: 'interview',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What is the difference between call, apply and bind?',
-    expectedAnswer: `All three set this explicitly.
+    answerInFull: `All three set this explicitly.
 
 - call invokes immediately, with arguments listed individually: fn.call(obj, a, b)
 - apply invokes immediately, with arguments as an array: fn.apply(obj, [a, b])
@@ -80,6 +84,7 @@ Spread has made apply largely unnecessary: fn.call(obj, ...args) does the same j
   {
     id: 'settimeout-this',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'This timer never updates the count. Explain why, and give two fixes.',
     code: `const timer = {
@@ -90,7 +95,7 @@ Spread has made apply largely unnecessary: fn.call(obj, ...args) does the same j
     }, 1000)
   },
 }`,
-    expectedAnswer: `The callback is a regular function called by the host, not as a method, so this is not timer. In browsers it ends up as the Window object, so it increments a global rather than timer.count.
+    answerInFull: `The callback is a regular function called by the host, not as a method, so this is not timer. In browsers it ends up as the Window object, so it increments a global rather than timer.count.
 
 Fix one, an arrow function, which closes over start's this:
 
@@ -108,6 +113,7 @@ Before arrows existed the common trick was const self = this, which is the same 
   {
     id: 'bind-once',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `function whoAmI() {
@@ -121,7 +127,7 @@ const bound = whoAmI.bind(a)
 const reBound = bound.bind(b)
 
 console.log(bound(), reBound(), bound.call(b))`,
-    expectedOutput: `'a', 'a', 'a'`,
+    answerInFull: `'a', 'a', 'a'`,
     explanation: `bind is permanent. The function it returns ignores every later attempt to change this, whether by binding again or by call and apply. Rebinding produces a wrapper whose own this is irrelevant, because the inner bound function already fixed it.
 
 The one exception is new: calling a bound function with new uses the new instance as this and discards the bound value.`,
@@ -131,10 +137,11 @@ The one exception is new: calling a bound function with new uses the new instanc
   {
     id: 'class-field-vs-method',
     type: 'scenario',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'A colleague writes every class method as an arrow-function class field so that `this` is never lost. What are the trade-offs?',
-    expectedAnswer: `It works: a class field is created per instance and captures the instance's this, so the method can be passed anywhere safely.
+    answerInFull: `It works: a class field is created per instance and captures the instance's this, so the method can be passed anywhere safely.
 
 The costs:
 - Each instance gets its own function object rather than sharing one on the prototype, so many instances use more memory.
@@ -149,9 +156,10 @@ I would use a normal method by default and reach for a field only where the meth
   {
     id: 'implement-call',
     type: 'coding',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'Implement Function.prototype.myCall without using call, apply or bind.',
-    expectedAnswer: `Function.prototype.myCall = function (context, ...args) {
+    answerInFull: `Function.prototype.myCall = function (context, ...args) {
   const target = context ?? globalThis
   const key = Symbol('fn')
 
@@ -173,7 +181,8 @@ Using a Symbol rather than a string key avoids clobbering an existing property, 
   },
   {
     id: 'arrow-this-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'What determines `this` inside an arrow function?',
     options: [
@@ -183,14 +192,15 @@ Using a Symbol rather than a string key avoids clobbering an existing property, 
       'It is always undefined',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'An arrow function has no `this` of its own, so the name resolves outward through the scope chain like any other variable. That also means call, apply and bind cannot change it, which is exactly why arrows are the fix for a callback that loses its receiver.',
     hints: [],
     tags: ['this', 'arrow-functions'],
   },
   {
     id: 'detached-method-mcq',
-    type: 'mcq',
+    type: 'debugging',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What is `this` when the extracted function runs, in a module?',
     code: `const counter = {
@@ -209,14 +219,15 @@ increment()`,
       'An empty object created for the call',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       '`this` is set by how a function is called, not where it was written. Called plainly, with no receiver, it is undefined in strict mode, and module code is always strict. Reading this.count then throws. Outside strict mode it would be the global object, which fails silently instead.',
     hints: [],
     tags: ['this', 'binding'],
   },
   {
     id: 'bind-vs-call-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'What does bind do that call does not?',
     options: [
@@ -226,7 +237,7 @@ increment()`,
       'Changes the original function permanently',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'call and apply invoke immediately; bind returns a new function with the receiver fixed, to be called later. It is the one you want when handing a method to something that will call it back, since the binding travels with the function.',
     hints: [],
     tags: ['this', 'binding'],

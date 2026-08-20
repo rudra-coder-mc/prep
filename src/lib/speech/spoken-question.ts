@@ -124,33 +124,39 @@ export function questionScript(question: Question): string {
  * to reach the browser before it has been given.
  */
 export function answerScript(question: Question): string {
-  const explanation = speakable(question.explanation)
   const answer = spokenAnswer(question)
+  const explanation = question.explanation ? speakable(question.explanation) : null
 
   return sentences(
     answer.script,
     answer.hasCode ? CODE_IS_ON_SCREEN : null,
-    'Why this is the answer.',
-    explanation.script,
-    explanation.hasCode ? CODE_IS_ON_SCREEN : null,
+    // An explanation only says what the answer left out, and plenty of questions
+    // leave nothing out. Announcing a reason and then saying nothing is worse
+    // than moving on.
+    explanation ? 'Why this is the answer.' : null,
+    explanation ? explanation.script : null,
+    explanation?.hasCode ? CODE_IS_ON_SCREEN : null,
   )
 }
 
+/**
+ * The lead-in differs by form, because "the answer is B" means nothing on a
+ * question with no options and "the answer" is a thin thing to say when the
+ * option has just been read out. Both then run into the answer in full.
+ */
 function spokenAnswer(question: Question): Speakable {
-  if (question.type === 'mcq') {
+  const full = speakable(question.answerInFull)
+
+  if (question.form === 'choice') {
     const letter = OPTION_LETTERS[question.correctOption ?? 0] ?? ''
     const option = speakable(question.options?.[question.correctOption ?? 0] ?? '')
-    return { script: sentences(`The answer is ${letter}.`, ended(option.script)), hasCode: false }
+    return {
+      script: sentences(`The answer is ${letter}.`, ended(option.script), full.script),
+      hasCode: full.hasCode,
+    }
   }
 
-  // Printed output is as unreadable aloud as the program that produced it, and
-  // it is short and on the screen, so it is pointed at rather than spelled out.
-  if (question.expectedOutput !== undefined) {
-    return { script: 'The expected output is on screen.', hasCode: false }
-  }
-
-  const written = speakable(question.expectedAnswer ?? '')
-  return { script: sentences('The expected answer.', written.script), hasCode: written.hasCode }
+  return { script: sentences('The answer.', full.script), hasCode: full.hasCode }
 }
 
 /**

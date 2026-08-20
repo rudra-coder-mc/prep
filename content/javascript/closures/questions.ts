@@ -4,9 +4,10 @@ export const questions: Question[] = [
   {
     id: 'what-is-a-closure',
     type: 'concept',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What is a closure, and when is one created?',
-    expectedAnswer: `A closure is a function together with the lexical environment it was defined in. Whenever a function is created it keeps a reference to the scope around it, so it can still read and write those variables after the outer function has returned.
+    answerInFull: `A closure is a function together with the lexical environment it was defined in. Whenever a function is created it keeps a reference to the scope around it, so it can still read and write those variables after the outer function has returned.
 
 The points to say out loud:
 - It captures the variable itself, not a copy of its value.
@@ -19,6 +20,7 @@ The points to say out loud:
   {
     id: 'counter-output',
     type: 'output',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What does this print, and why?',
     code: `function makeCounter() {
@@ -33,7 +35,7 @@ const a = makeCounter()
 const b = makeCounter()
 
 console.log(a(), a(), b())`,
-    expectedOutput: '1 2 1',
+    answerInFull: '1 2 1',
     explanation: `Each call to makeCounter creates a new execution context with its own count binding, so a and b close over different variables. a increments its own count twice, reaching 2, while b starts fresh at 1.
 
 If they had shared a count, the answer would be 1 2 3, which is what you get if count is declared outside makeCounter.`,
@@ -43,13 +45,14 @@ If they had shared a count, the answer would be 1 2 3, which is what you get if 
   {
     id: 'var-in-loop',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'This is meant to print 0, 1, 2. It prints 3, 3, 3. Explain why, and give two different fixes.',
     code: `for (var i = 0; i < 3; i++) {
   setTimeout(() => console.log(i), 0)
 }`,
-    expectedAnswer: `var is function-scoped, so there is exactly one i shared by all three callbacks. The loop finishes before any timeout runs, leaving i at 3, and all three closures read that same binding.
+    answerInFull: `var is function-scoped, so there is exactly one i shared by all three callbacks. The loop finishes before any timeout runs, leaving i at 3, and all three closures read that same binding.
 
 Fix one: use let, which creates a fresh binding per iteration.
 
@@ -70,10 +73,11 @@ Fix two: capture the value in a new scope explicitly.
   {
     id: 'private-state',
     type: 'coding',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'Write a function once(fn) that returns a wrapped function which calls fn at most one time and returns the first result on every later call.',
-    expectedAnswer: `function once(fn) {
+    answerInFull: `function once(fn) {
   let called = false
   let result
 
@@ -97,6 +101,7 @@ Forwarding this with apply is what makes the wrapper safe to use as a method.`,
   {
     id: 'loop-capture-fix-output',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `const fns = []
@@ -104,7 +109,7 @@ for (let i = 0; i < 3; i++) {
   fns.push(() => i)
 }
 console.log(fns.map((f) => f()))`,
-    expectedOutput: '[0, 1, 2]',
+    answerInFull: '[0, 1, 2]',
     explanation: `let gives each iteration its own binding of i, so each arrow function closes over a different variable. Replacing let with var would print [3, 3, 3], because all three would close over the one shared binding.`,
     hints: [],
     tags: ['closure', 'scope'],
@@ -112,10 +117,11 @@ console.log(fns.map((f) => f()))`,
   {
     id: 'memory-retention',
     type: 'scenario',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'A colleague reports that a page slowly grows in memory. They are attaching event handlers created inside a function that also builds a large array. What would you look at?',
-    expectedAnswer: `A closure keeps its entire enclosing scope reachable, not just the variables it happens to use. If the handler is defined in the same scope as the large array, that array cannot be collected while the handler is still attached.
+    answerInFull: `A closure keeps its entire enclosing scope reachable, not just the variables it happens to use. If the handler is defined in the same scope as the large array, that array cannot be collected while the handler is still attached.
 
 Things to check and do:
 - Whether handlers are removed when their elements are removed.
@@ -128,10 +134,11 @@ Things to check and do:
   {
     id: 'module-pattern',
     type: 'interview',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'How do closures give you private state, and how does that compare with private class fields?',
-    expectedAnswer: `A closure makes state private by construction: the variable lives in a scope nobody outside can name, so there is no syntax that reaches it. This is the module pattern: return an object of functions that all close over the same variables.
+    answerInFull: `A closure makes state private by construction: the variable lives in a scope nobody outside can name, so there is no syntax that reaches it. This is the module pattern: return an object of functions that all close over the same variables.
 
 Compared with #private class fields:
 - Closures allocate their state per instance created by the factory, and each function is a new object, so many instances cost more memory than prototype methods.
@@ -144,6 +151,7 @@ Compared with #private class fields:
   {
     id: 'shared-scope',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `function make() {
@@ -159,14 +167,15 @@ m.increment()
 m.increment()
 const { read } = m
 console.log(read())`,
-    expectedOutput: '2',
+    answerInFull: '2',
     explanation: `Both functions close over the same value binding, so increment and read stay in sync. Destructuring read off the object does not break anything, because a closure captures its scope rather than its this. That is the practical difference between closure-based privacy and methods that depend on this. The latter would break here.`,
     hints: ['Does pulling read out of the object change what it can see?'],
     tags: ['closure', 'objects'],
   },
   {
     id: 'what-a-closure-captures-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'What does a closure actually capture?',
     options: [
@@ -176,14 +185,15 @@ console.log(read())`,
       'A deep clone of every variable in the enclosing scope',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'The binding, not the value. This is the single fact that explains almost every closure interview question: if the outer variable is reassigned, every closure over it sees the new value, because they all point at the same binding rather than at snapshots of it.',
     hints: [],
     tags: ['closure', 'scope'],
   },
   {
     id: 'var-loop-output-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `for (var i = 0; i < 3; i++) {
@@ -191,14 +201,15 @@ console.log(read())`,
 }`,
     options: ['3 3 3', '0 1 2', '0 0 0', 'Nothing, it throws a ReferenceError'],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'var is function scoped, so all three callbacks close over one shared i. The loop finishes before any timeout runs, leaving i at 3. Swapping var for let creates a fresh binding per iteration and prints 0 1 2.',
     hints: [],
     tags: ['closure', 'scope'],
   },
   {
     id: 'when-closure-created-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'When is a closure created?',
     options: [
@@ -208,7 +219,7 @@ console.log(read())`,
       'Only when the inner function reads an outer variable',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'At definition time. Every function keeps a reference to the scope it was created in, whether or not it ever uses it. The scope surviving after the outer function returns is a consequence of that reference, not the moment the closure comes into being.',
     hints: [],
     tags: ['closure'],

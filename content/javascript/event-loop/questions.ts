@@ -4,13 +4,14 @@ export const questions: Question[] = [
   {
     id: 'ordering-basic',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What is the output order, and why?',
     code: `console.log('1')
 setTimeout(() => console.log('2'), 0)
 Promise.resolve().then(() => console.log('3'))
 console.log('4')`,
-    expectedAnswer: `1, 4, 3, 2
+    answerInFull: `1, 4, 3, 2
 
 Synchronous code runs to completion first, so 1 and 4 print immediately. When the
 call stack empties, the microtask queue is drained before anything else, so the
@@ -22,10 +23,11 @@ promise callback prints 3. Only then does the loop take a macrotask, printing 2.
   {
     id: 'microtask-vs-macrotask',
     type: 'concept',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'What is the difference between a microtask and a macrotask, and which APIs produce each?',
-    expectedAnswer: `A macrotask is one unit of work the event loop picks up per turn: timers, I/O callbacks, event handlers, message events. A microtask is work queued to run at the end of the current turn, before the loop picks up anything else.
+    answerInFull: `A macrotask is one unit of work the event loop picks up per turn: timers, I/O callbacks, event handlers, message events. A microtask is work queued to run at the end of the current turn, before the loop picks up anything else.
 
 Macrotasks: setTimeout, setInterval, setImmediate in Node, I/O, UI events.
 Microtasks: promise reactions (.then, .catch, .finally), queueMicrotask, await continuations, MutationObserver.
@@ -38,6 +40,7 @@ The important asymmetry is that the entire microtask queue is drained after each
   {
     id: 'async-await-ordering',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `async function a() {
@@ -54,7 +57,7 @@ console.log('script start')
 a()
 Promise.resolve().then(() => console.log('promise'))
 console.log('script end')`,
-    expectedOutput: `script start
+    answerInFull: `script start
 a start
 b
 script end
@@ -72,6 +75,7 @@ The subtle part is ordering between "a end" and "promise". The continuation of a
   {
     id: 'blocking-loop',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'A user reports the page freezes for two seconds when they click a button. The handler is below. What is wrong, and what would you do?',
@@ -79,7 +83,7 @@ The subtle part is ordering between "a end" and "promise". The continuation of a
   const result = expensiveSynchronousWork()
   render(result)
 })`,
-    expectedAnswer: `The work runs on the same thread as rendering and event handling. Until the handler returns, the call stack is occupied, so nothing else can run: no repaint, no other events, no timers, no promise callbacks. "Asynchronous" does not mean "parallel" and there is no second thread to fall back on.
+    answerInFull: `The work runs on the same thread as rendering and event handling. Until the handler returns, the call stack is occupied, so nothing else can run: no repaint, no other events, no timers, no promise callbacks. "Asynchronous" does not mean "parallel" and there is no second thread to fall back on.
 
 Options, roughly in order of how much they help:
 - Move the work to a Web Worker, which is the only way to genuinely run it elsewhere.
@@ -94,6 +98,7 @@ Wrapping it in a promise changes nothing, because the body still runs synchronou
   {
     id: 'nested-microtasks',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What order do these print?',
     code: `setTimeout(() => console.log('timeout'), 0)
@@ -102,7 +107,7 @@ Promise.resolve().then(() => {
   console.log('micro 1')
   Promise.resolve().then(() => console.log('micro 2'))
 })`,
-    expectedOutput: `micro 1, micro 2, timeout`,
+    answerInFull: `micro 1, micro 2, timeout`,
     explanation: `A microtask queued from inside a microtask joins the same drain, so micro 2 runs before the loop moves on. The queue is emptied, not merely visited once. This is exactly why an unbounded chain of microtasks can lock a page while a timer chain cannot.`,
     hints: ['Is the microtask queue drained once, or repeatedly until empty?'],
     tags: ['event-loop', 'async'],
@@ -110,9 +115,10 @@ Promise.resolve().then(() => {
   {
     id: 'settimeout-delay',
     type: 'interview',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'Does setTimeout(fn, 1000) guarantee fn runs in exactly one second? Explain.',
-    expectedAnswer: `No. It guarantees a minimum delay, not an exact time. After 1000ms the callback becomes eligible, and it runs when the loop next takes a macrotask and the stack is empty. If synchronous work is running, or a long queue is ahead of it, it runs later.
+    answerInFull: `No. It guarantees a minimum delay, not an exact time. After 1000ms the callback becomes eligible, and it runs when the loop next takes a macrotask and the stack is empty. If synchronous work is running, or a long queue is ahead of it, it runs later.
 
 Two more details:
 - Nested timers are clamped to a minimum of about 4ms after several levels of nesting.
@@ -124,10 +130,11 @@ Two more details:
   {
     id: 'render-timing',
     type: 'scenario',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'You set an element to display a loading spinner, then immediately run a long synchronous task. The spinner never appears. Why?',
-    expectedAnswer: `Changing the DOM does not paint. It marks the document as needing layout and paint, which happens when the browser gets the main thread back, after the current task and all its microtasks have finished. The long task never releases the thread, so the frame containing the spinner is never rendered.
+    answerInFull: `Changing the DOM does not paint. It marks the document as needing layout and paint, which happens when the browser gets the main thread back, after the current task and all its microtasks have finished. The long task never releases the thread, so the frame containing the spinner is never rendered.
 
 Fixes: yield to the loop before starting the work, so a frame can be painted, or move the work to a worker.`,
     explanation: `Rendering sits between macrotasks in the loop, alongside them rather than above them. That single fact explains most "my UI does not update until the end" bugs, and it is also why forcing a synchronous layout read does not help.`,
@@ -137,10 +144,11 @@ Fixes: yield to the loop before starting the work, so a frame can be painted, or
   {
     id: 'starvation',
     type: 'coding',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'Write a function that processes a large array without blocking the page, yielding to the event loop between chunks.',
-    expectedAnswer: `async function processInChunks(items, work, chunkSize = 500) {
+    answerInFull: `async function processInChunks(items, work, chunkSize = 500) {
   for (let i = 0; i < items.length; i += chunkSize) {
     const chunk = items.slice(i, i + chunkSize)
     for (const item of chunk) work(item)
@@ -157,7 +165,8 @@ In modern browsers scheduler.yield() is the purpose-built version of this.`,
   },
   {
     id: 'log-order-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'In what order do these print?',
     code: `console.log('a')
@@ -166,14 +175,15 @@ Promise.resolve().then(() => console.log('c'))
 console.log('d')`,
     options: ['a d c b', 'a d b c', 'a b c d', 'a c d b'],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'Synchronous code first, so a and d. The stack then empties, the microtask queue is drained, which runs c. Only then does the loop take a macrotask, running b. A zero millisecond timeout is still a macrotask and still loses to any pending microtask.',
     hints: [],
     tags: ['event-loop', 'microtasks'],
   },
   {
     id: 'microtask-drain-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'How much of the microtask queue runs between two macrotasks?',
     options: [
@@ -183,14 +193,15 @@ console.log('d')`,
       'None, microtasks only run when the call stack is idle',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'The queue is drained completely, and anything a microtask queues while running is drained in the same pass. That is why an endlessly self queueing microtask starves the loop and freezes the page, while an endlessly self queueing setTimeout does not.',
     hints: [],
     tags: ['event-loop', 'microtasks'],
   },
   {
     id: 'queue-microtask-vs-timeout-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'Which callback runs first?',
     code: `setTimeout(() => console.log('timeout'), 0)
@@ -202,7 +213,7 @@ queueMicrotask(() => console.log('microtask'))`,
       'They run at the same time, in parallel',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'Scheduling order between the two queues does not matter. Once the stack empties, microtasks are drained before the loop takes its next macrotask, so the microtask always wins regardless of which line came first.',
     hints: [],
     tags: ['event-loop', 'microtasks'],

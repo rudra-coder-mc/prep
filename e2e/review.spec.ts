@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { answerable } from './answering'
+import { answerable, revealButton, walkToForm } from './answering'
 
 test('an empty queue says so rather than showing a broken session', async ({ page }) => {
   await page.goto('/review')
@@ -31,18 +31,16 @@ test('marking a topic learned puts its questions into the review queue', async (
 
 test('a passed question leaves the queue for the rest of the day', async ({ page }) => {
   // Practice writes the same attempts the review queue reads, and its order is
-  // the content order, so this passes a known written question on purpose. Only
-  // a pass is promised to be gone for the day: a failed answer is meant to come
+  // the content order, so this passes a known open question on purpose. Only a
+  // pass is promised to be gone for the day: a failed answer is meant to come
   // back within hours, and the queue is shared with whatever other specs did.
   await page.goto('/topics/javascript/closures/practice')
-  await expect(answerable(page)).toBeVisible()
+  await walkToForm(page, 'open')
   const prompt = await page.locator('h2').first().textContent()
   expect(prompt).toBeTruthy()
 
-  await page.getByLabel('Your answer').fill('answer')
-  await page.getByRole('radio', { name: /^5 —/ }).check()
-  await page.getByRole('button', { name: 'Submit and reveal answer' }).click()
-  await expect(page.getByText('Expected answer')).toBeVisible()
+  await revealButton(page).click()
+  await expect(page.getByText('The answer', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Passed' }).click()
   await expect(answerable(page)).toBeVisible()
 

@@ -36,7 +36,8 @@ is the correct option, and the other three are the values it would print if you
 misread it in each of the three most likely ways.
 
 **A question that was already multiple choice** keeps its options and gains the
-answer in full it has never had. Its short `explanation` usually needs cutting
+answer in full it has never had. Its id still ends in `-mcq`, a word nothing is
+called any more, so rename it to end in `-choice` while you are in the file. Its short `explanation` usually needs cutting
 back once the full answer says the main thing, and sometimes it should go
 entirely.
 

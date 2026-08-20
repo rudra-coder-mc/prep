@@ -4,9 +4,10 @@ export const questions: Question[] = [
   {
     id: 'what-hoisting-means',
     type: 'concept',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What does hoisting actually do, and how do var, let and function declarations differ?',
-    expectedAnswer: `Nothing moves. Before any code in a scope runs, the engine registers every declaration in that scope. What differs is the value each one has between being registered and being reached.
+    answerInFull: `Nothing moves. Before any code in a scope runs, the engine registers every declaration in that scope. What differs is the value each one has between being registered and being reached.
 
 - var is registered and initialised to undefined, so reading it early gives undefined.
 - A function declaration is registered complete, so it can be called above its own definition.
@@ -22,6 +23,7 @@ It also explains why the TDZ exists. Undefined for a variable you have not reach
   {
     id: 'typeof-before-declaration-output',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `function report() {
@@ -32,7 +34,7 @@ It also explains why the TDZ exists. Undefined for a variable you have not reach
 }
 
 report()`,
-    expectedOutput: `undefined
+    answerInFull: `undefined
 function`,
     explanation: `Both declarations are registered before the first line runs, but they are worth different things at that point. var count exists and holds undefined, so typeof reports 'undefined'. The function declaration is registered complete, so it is already callable.
 
@@ -43,6 +45,7 @@ Adding a third line with a let above its declaration would not print anything. I
   {
     id: 'shadowed-var-output',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `var total = 10
@@ -53,7 +56,7 @@ function show() {
 }
 
 show()`,
-    expectedOutput: 'undefined',
+    answerInFull: 'undefined',
     explanation: `The var inside show declares a function-scoped total for the whole function body, initialised to undefined before the first line. The log resolves total in the nearest scope that has it, which is show's own, so the outer 10 is never reached.
 
 Deleting the inner declaration prints 10. Changing it to let throws a ReferenceError instead, which is the more useful failure. It says the variable is being read too early rather than quietly handing over undefined.`,
@@ -63,6 +66,7 @@ Deleting the inner declaration prints 10. Changing it to let throws a ReferenceE
   {
     id: 'tdz-reference-error',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'This throws "ReferenceError: Cannot access \'fallback\' before initialization" whenever the list is empty. Explain why, and give two fixes.',
@@ -72,7 +76,7 @@ Deleting the inner declaration prints 10. Changing it to let throws a ReferenceE
   const fallback = '<p>Nothing yet</p>'
   return items.map((item) => \`<li>\${item}</li>\`).join('')
 }`,
-    expectedAnswer: `const fallback is registered for the whole function body but has no value until its line runs. The early return reads it inside that gap, the temporal dead zone, so it throws rather than giving undefined.
+    answerInFull: `const fallback is registered for the whole function body but has no value until its line runs. The early return reads it inside that gap, the temporal dead zone, so it throws rather than giving undefined.
 
 Fix one: move the declaration above the guard, so it is initialised before anything can read it.
 
@@ -88,10 +92,11 @@ If fallback had been declared with var, this would have returned undefined inste
   {
     id: 'module-pattern-scope',
     type: 'coding',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'Using a block and a const, expose only increment and read from a counter, keeping its state unreachable from the surrounding scope. Then say why doing the same with var at the top level would not be equivalent.',
-    expectedAnswer: `let increment
+    answerInFull: `let increment
 let read
 
 {
@@ -113,10 +118,11 @@ An IIFE achieves the same thing and was the only way to do it before let and con
   {
     id: 'const-is-not-frozen',
     type: 'scenario',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'A colleague says the shared config object cannot change because it is declared with const. Values in it are changing at runtime anyway. What do you tell them, and what would you actually do?',
-    expectedAnswer: `const prevents reassigning the binding, not mutating the value. config = {...} throws; config.retries = 5 does not, and that is what is happening.
+    answerInFull: `const prevents reassigning the binding, not mutating the value. config = {...} throws; config.retries = 5 does not, and that is what is happening.
 
 What I would do:
 - Object.freeze the config, remembering it is shallow, so nested objects need freezing too if they matter.
@@ -131,9 +137,10 @@ A deep freeze is easy to write recursively but is rarely the right answer at sca
   {
     id: 'var-let-const-interview',
     type: 'interview',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'Explain the difference between var, let and const as you would in an interview.',
-    expectedAnswer: `Three differences, in order of how often they matter:
+    answerInFull: `Three differences, in order of how often they matter:
 
 - Scope. var is function scoped and ignores blocks. let and const are block scoped, so a declaration inside an if or a loop body does not escape it.
 - Early access. var reads as undefined before its line. let and const throw a ReferenceError, because they sit in the temporal dead zone until their declaration runs.
@@ -148,7 +155,8 @@ The practical default worth stating at the end: const everywhere, let when the b
   },
   {
     id: 'tdz-typeof-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What happens when this runs?',
     code: `console.log(typeof value)
@@ -160,14 +168,15 @@ let value = 1`,
       'It throws a SyntaxError before anything runs',
     ],
     correctOption: 2,
-    explanation:
+    answerInFull:
       "A ReferenceError at runtime. let is registered without a value, and every read before its declaration throws, including typeof. The idea that typeof is always safe comes from undeclared names, where it does return 'undefined'. This name is declared, just not yet initialised.",
     hints: [],
     tags: ['hoisting'],
   },
   {
     id: 'function-expression-hoisting-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'Which of these can be called on the line above where it is written?',
     options: [
@@ -177,14 +186,15 @@ let value = 1`,
       'let f = function f() {}',
     ],
     correctOption: 1,
-    explanation:
+    answerInFull:
       'Only the function declaration. It is registered complete before the scope runs. The other three are assignments to a variable: the binding is registered early, but the function is not created until the assignment runs, so calling it above throws. For the const and let forms that is a ReferenceError.',
     hints: [],
     tags: ['hoisting', 'functions'],
   },
   {
     id: 'global-property-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'hard',
     prompt:
       'A script at the top level declares var a = 1 and let b = 2. What is true of globalThis afterwards?',
@@ -195,7 +205,7 @@ let value = 1`,
       'globalThis.b is 2 and globalThis.a is undefined',
     ],
     correctOption: 1,
-    explanation:
+    answerInFull:
       'var at the top level of a script creates a property on the global object; let and const create bindings in a separate global scope that the object cannot see. Neither appears in a module. An ES module has its own top-level scope, and Node wraps a CommonJS one in a function, which is why testing this in a file rather than a console shows nothing.',
     hints: [],
     tags: ['scope', 'declarations'],

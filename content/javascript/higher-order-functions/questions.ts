@@ -4,9 +4,10 @@ export const questions: Question[] = [
   {
     id: 'what-is-a-higher-order-function',
     type: 'concept',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What is a higher order function, and what does the pattern actually buy you?',
-    expectedAnswer: `A higher order function is one that takes a function as an argument, returns a function, or both. It is possible because functions in JavaScript are ordinary values: they can be stored, passed and returned like any object.
+    answerInFull: `A higher order function is one that takes a function as an argument, returns a function, or both. It is possible because functions in JavaScript are ordinary values: they can be stored, passed and returned like any object.
 
 What it buys is that the varying step of an algorithm becomes a parameter. Two pieces of code that differ only in one step collapse into one implementation plus a callback, and the wrapper and the work no longer have to know anything about each other.
 
@@ -18,6 +19,7 @@ Examples worth naming: map, filter and reduce take one; once, memoize and deboun
   {
     id: 'foreach-return-value',
     type: 'output',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What does this print?',
     code: `const nums = [1, 2, 3, 4]
@@ -31,7 +33,7 @@ nums.forEach((n) => {
   kept.push(n)
 })
 console.log(kept)`,
-    expectedOutput: `undefined
+    answerInFull: `undefined
 [ 1, 3 ]`,
     explanation: `forEach exists for its side effects and always returns undefined. Whatever the callback returns is thrown away, which is why the first log is undefined rather than an array of doubles. map is the one that collects return values.
 
@@ -42,6 +44,7 @@ The return inside the second callback ends that one call and nothing more. forEa
   {
     id: 'async-foreach',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'This logs "all saved" immediately and the saves finish long afterwards. Explain why, and give two fixes that behave differently from each other.',
@@ -51,7 +54,7 @@ The return inside the second callback ends that one call and nothing more. forEa
   })
   console.log('all saved')
 }`,
-    expectedAnswer: `The async callback returns a promise as soon as it hits the first await. forEach ignores whatever its callback returns, so it starts the next one straight away, finishes the loop, and saveAll reaches the log with every save still in flight. Nothing is awaited because there is nothing holding the promises.
+    answerInFull: `The async callback returns a promise as soon as it hits the first await. forEach ignores whatever its callback returns, so it starts the next one straight away, finishes the loop, and saveAll reaches the log with every save still in flight. Nothing is awaited because there is nothing holding the promises.
 
 Fix one, sequential:
 
@@ -74,10 +77,11 @@ They are not interchangeable. The first saves one at a time and stops at the fir
   {
     id: 'implement-reduce',
     type: 'coding',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'Implement reduce(array, fn, initial) without using Array.prototype.reduce, matching the real one on the details that matter.',
-    expectedAnswer: `function reduce(array, fn, ...rest) {
+    answerInFull: `function reduce(array, fn, ...rest) {
   const hasInitial = rest.length > 0
   let acc = hasInitial ? rest[0] : array[0]
   let index = hasInitial ? 0 : 1
@@ -109,6 +113,7 @@ Without an initial value the first element becomes the accumulator and the callb
   {
     id: 'function-identity',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `function makeHandler() {
@@ -120,7 +125,7 @@ const second = makeHandler()
 
 console.log(first === second)
 console.log(String(first) === String(second))`,
-    expectedOutput: `false
+    answerInFull: `false
 true`,
     explanation: `Every evaluation of a function expression creates a new function object, so two calls to makeHandler produce two objects that happen to have identical source. Comparing them with === compares identity, which is false.
 
@@ -131,10 +136,11 @@ Converting them to strings compares their source text, which is the same, so tha
   {
     id: 'listener-never-removed',
     type: 'scenario',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'A widget adds a scroll listener when it opens and removes it when it closes. Listeners keep accumulating and scrolling gets slower every time it is reopened. The add and remove calls both look correct. What would you check?',
-    expectedAnswer: `Almost certainly the handler is being created inline in both places, so the function passed to removeEventListener is a different object from the one that was added:
+    answerInFull: `Almost certainly the handler is being created inline in both places, so the function passed to removeEventListener is a different object from the one that was added:
 
   window.addEventListener('scroll', () => this.onScroll())
   window.removeEventListener('scroll', () => this.onScroll())
@@ -158,9 +164,10 @@ Two other things worth checking: that the capture flag matches on both calls, an
   {
     id: 'when-callbacks-hurt',
     type: 'interview',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'When do higher order functions make code worse rather than better?',
-    expectedAnswer: `Four situations where the abstraction costs more than it saves:
+    answerInFull: `Four situations where the abstraction costs more than it saves:
 
 - One caller. Pulling a step into a callback so that a single call site can pass it is indirection with nothing on the other side. Wait for the second case.
 - Stack traces and debugging. Three layers of wrapper mean an error surfaces inside machinery the reader did not write, and the frame that matters is buried.
@@ -175,6 +182,7 @@ There is also a readability limit. Point free style, where the arguments are nev
   {
     id: 'reduce-single-element',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `let calls = 0
@@ -185,7 +193,7 @@ const total = [7].reduce((a, b) => {
 })
 
 console.log(total, calls)`,
-    expectedOutput: '7 0',
+    answerInFull: '7 0',
     explanation: `With no initial value, reduce takes the first element as the accumulator and starts iterating from the second. A single element array has no second element, so the loop body never runs and the callback is never called once.
 
 The array is returned through unchanged, so total is 7 and calls is 0. The same rule is why an empty array with no initial value throws a TypeError rather than returning undefined: there is no first element to start from.
@@ -196,32 +204,35 @@ Passing an initial value of 0 would make both of those cases ordinary, and the c
   },
   {
     id: 'which-is-higher-order-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'Which of these is not a higher order function?',
     options: ['setTimeout', 'Array.prototype.map', 'Number.parseInt', 'Function.prototype.bind'],
     correctOption: 2,
-    explanation:
+    answerInFull:
       'parseInt takes a string and a number and returns a number. No function goes in or comes out, so it is an ordinary function. setTimeout and map take one, and bind returns one. The definition is only about whether a function is an argument or the result, not about how clever the function is.',
     hints: [],
     tags: ['functions', 'callbacks'],
   },
   {
     id: 'filter-boolean-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What does this evaluate to?',
     code: `['0', '', 'false', 0, null, []].filter(Boolean)`,
     options: ["['0', 'false', []]", "['0', 'false']", '[]', "['0', '', 'false', []]"],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'filter(Boolean) keeps everything truthy. The strings "0" and "false" are non-empty strings, so they are truthy despite what they say, and an empty array is an object, so it is truthy too. The empty string, the number 0 and null are the falsy ones and are dropped. This is a neat idiom and a good illustration of passing an existing function as a callback, since Boolean happens to take exactly one argument and so is safe here.',
     hints: [],
     tags: ['functions', 'callbacks', 'coercion'],
   },
   {
     id: 'stop-a-foreach-mcq',
-    type: 'mcq',
+    type: 'coding',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'How do you stop iterating early inside a forEach?',
     options: [
@@ -231,7 +242,7 @@ Passing an initial value of 0 would make both of those cases ordinary, and the c
       'return from the callback',
     ],
     correctOption: 2,
-    explanation:
+    answerInFull:
       'forEach offers no way out. break is a syntax error, since the callback is a function rather than a loop body, and returning only ends that one call, so it behaves like continue. some and every stop as soon as the callback settles the answer, find stops at the first match, and for...of supports break directly.',
     hints: [],
     tags: ['functions', 'callbacks', 'arrays'],

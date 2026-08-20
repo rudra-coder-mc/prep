@@ -4,9 +4,10 @@ export const questions: Question[] = [
   {
     id: 'pass-by-value-or-reference',
     type: 'concept',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'Is JavaScript pass by value or pass by reference? Explain precisely.',
-    expectedAnswer: `Pass by value, always. What gets copied into the parameter is the value of the argument, and for an object that value is a reference.
+    answerInFull: `Pass by value, always. What gets copied into the parameter is the value of the argument, and for an object that value is a reference.
 
 The consequence is the pair of behaviours people trip over:
 - Mutating the argument, o.count += 1, changes the object the caller can see, because both names point at it.
@@ -22,6 +23,7 @@ Primitives make this hard to see, because a primitive being immutable means ther
   {
     id: 'mutate-versus-reassign-output',
     type: 'output',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What does this print?',
     code: `function mutate(o) {
@@ -36,7 +38,7 @@ const box = { count: 0 }
 mutate(box)
 reassign(box)
 console.log(box.count)`,
-    expectedOutput: '1',
+    answerInFull: '1',
     explanation: `mutate reaches through the reference and changes the object both names point at, so count becomes 1. reassign only repoints its own parameter at a new object; box still points at the original, which is untouched, and the new object becomes garbage as soon as the function returns.
 
 This is the clearest one-screen demonstration that the language passes references by value rather than passing by reference.`,
@@ -46,6 +48,7 @@ This is the clearest one-screen demonstration that the language passes reference
   {
     id: 'spread-versus-alias-output',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `const a = { n: 1 }
@@ -55,7 +58,7 @@ const alias = a
 a.n = 2
 
 console.log(copy.n, alias.n)`,
-    expectedOutput: '1 2',
+    answerInFull: '1 2',
     explanation: `Spread built a new object and copied the value of n into it at that moment, so copy is unaffected by later changes to a. alias never copied anything. It holds the same reference, so it sees the mutation.
 
 The copy is only shallow, though. If n had been an object rather than a number, copy.n and a.n would point at the same thing and the answer would be different.`,
@@ -65,6 +68,7 @@ The copy is only shallow, though. If n had been an object rather than a number, 
   {
     id: 'shallow-copy-bug',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'Every request after the first one uses a 50ms timeout, even though the defaults say 1000. Explain why, and fix it.',
@@ -75,7 +79,7 @@ function withFastTimeout() {
   config.timeout.ms = 50
   return config
 }`,
-    expectedAnswer: `Spread copies one level. config.timeout is the same object as defaults.timeout, so writing to it edits the shared defaults, permanently, for every later caller.
+    answerInFull: `Spread copies one level. config.timeout is the same object as defaults.timeout, so writing to it edits the shared defaults, permanently, for every later caller.
 
 Fix one, copy the level being changed:
 
@@ -96,10 +100,11 @@ The general rule for immutable updates: copy every level on the path you are cha
   {
     id: 'deep-freeze',
     type: 'coding',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'Write deepFreeze(value) that freezes an object and everything reachable from it, and survives a structure that contains a cycle.',
-    expectedAnswer: `function deepFreeze(value, seen = new WeakSet()) {
+    answerInFull: `function deepFreeze(value, seen = new WeakSet()) {
   if (value === null || typeof value !== 'object') return value
   if (seen.has(value)) return value
 
@@ -124,10 +129,11 @@ Say afterwards that freezing deeply is rarely the right answer at scale. It cost
   {
     id: 'state-not-updating',
     type: 'scenario',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'A list component does not re-render after items are added, even though the array clearly has more entries. The code does items.push(next) and then sets state to items. What is happening?',
-    expectedAnswer: `The state was never replaced. push mutates the existing array, so the reference stored in state is the same before and after, and a framework that compares state by identity concludes nothing changed.
+    answerInFull: `The state was never replaced. push mutates the existing array, so the reference stored in state is the same before and after, and a framework that compares state by identity concludes nothing changed.
 
 The fix is to produce a new array: setItems([...items, next]), or setItems((current) => [...current, next]) if the update depends on the previous value.
 
@@ -141,9 +147,10 @@ The functional form of the setter matters for a second reason unrelated to this 
   {
     id: 'object-equality-interview',
     type: 'interview',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'How would you check whether two objects are equal?',
-    expectedAnswer: `First I would ask what equal means for this data, because the language only gives identity: === is true only when both names point at the same object.
+    answerInFull: `First I would ask what equal means for this data, because the language only gives identity: === is true only when both names point at the same object.
 
 Then, in order of increasing cost:
 - If the objects are plain, JSON-safe and produced by the same code, comparing JSON.stringify output can be acceptable. It breaks on different key order, undefined values, Date, Map, Set, NaN and cycles.
@@ -157,19 +164,21 @@ The performance angle is the other half. Deep comparison is O(size) on every cal
   },
   {
     id: 'array-identity-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'What is the value of [1, 2] === [1, 2]?',
     options: ['true', 'false', 'It depends on the contents', 'It throws a TypeError'],
     correctOption: 1,
-    explanation:
+    answerInFull:
       '=== on objects compares identity, not contents. These are two separate arrays, so they are never equal regardless of what is inside them. The same is true of {} === {}, and it is why Set, Map and framework render checks can compare in constant time.',
     hints: [],
     tags: ['equality', 'objects'],
   },
   {
     id: 'json-round-trip-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What survives JSON.parse(JSON.stringify(value)) unchanged?',
     options: [
@@ -179,14 +188,15 @@ The performance angle is the other half. Deep comparison is O(size) on every cal
       'A Map with two entries',
     ],
     correctOption: 1,
-    explanation:
+    answerInFull:
       'Only the plain nested data. A Date is serialised to an ISO string and comes back as a string, an undefined value is dropped from the output entirely, and a Map serialises as {} because it has no own enumerable properties. structuredClone handles all three, and throws on functions rather than dropping them silently.',
     hints: [],
     tags: ['objects', 'immutability'],
   },
   {
     id: 'const-mutation-mcq',
-    type: 'mcq',
+    type: 'debugging',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'Which line throws, given const config = { retries: 3 }?',
     options: [
@@ -196,7 +206,7 @@ The performance angle is the other half. Deep comparison is O(size) on every cal
       'delete config.retries',
     ],
     correctOption: 2,
-    explanation:
+    answerInFull:
       'Only the reassignment. const protects the binding, so the name cannot be pointed at a different object, while the object itself stays fully mutable. Properties can be added, changed and deleted. Object.freeze is what stops the other three, one level deep, and only throws in strict code.',
     hints: [],
     tags: ['objects', 'immutability'],

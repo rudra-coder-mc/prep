@@ -4,10 +4,11 @@ export const questions: Question[] = [
   {
     id: 'parameter-against-argument',
     type: 'concept',
+    form: 'open',
     difficulty: 'easy',
     prompt:
       'What is the difference between a parameter and an argument, and what happens when the two counts do not match?',
-    expectedAnswer: `Parameters are the names in the declaration. Arguments are the values at the call site. They are matched by position, and nothing checks that there are the same number of them.
+    answerInFull: `Parameters are the names in the declaration. Arguments are the values at the call site. They are matched by position, and nothing checks that there are the same number of them.
 
 What happens when they differ:
 - Fewer arguments than parameters: the leftover parameters are undefined, and any defaults they declare are applied.
@@ -21,6 +22,7 @@ There is no arity error in JavaScript, which is why a callback written for one a
   {
     id: 'default-and-null',
     type: 'output',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What does this print?',
     code: `function greet(name = 'world') {
@@ -30,7 +32,7 @@ There is no arity error in JavaScript, which is why a callback written for one a
 console.log(greet())
 console.log(greet(undefined))
 console.log(greet(null))`,
-    expectedOutput: `hello world
+    answerInFull: `hello world
 hello world
 hello null`,
     explanation: `A default fires on undefined and on nothing else. Calling with no argument and calling with an explicit undefined are the same thing to the language, so both take the default.
@@ -42,11 +44,12 @@ null is a value somebody chose to pass, so it is kept and concatenated. This is 
   {
     id: 'map-parse-int',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'This is meant to turn the strings into numbers. It returns [1, NaN, NaN]. Explain why, and give the fix you would actually ship.',
     code: `const parsed = ['1', '2', '3'].map(parseInt)`,
-    expectedAnswer: `map calls its callback with three arguments: the element, the index and the array. parseInt accepts two, the string and a radix. So the index is being passed as the radix.
+    answerInFull: `map calls its callback with three arguments: the element, the index and the array. parseInt accepts two, the string and a radix. So the index is being passed as the radix.
 
 - parseInt('1', 0): a radix of 0 is treated as unspecified, so this parses as decimal and gives 1.
 - parseInt('2', 1): radix 1 is out of range, so this gives NaN.
@@ -67,6 +70,7 @@ Number would also work here, since it takes one argument, but parseInt with an e
   {
     id: 'parameter-scope',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `const value = 'outer'
@@ -77,7 +81,7 @@ function show(input = value) {
 }
 
 console.log(show())`,
-    expectedOutput: 'outer',
+    answerInFull: 'outer',
     explanation: `A function with a default gets two scopes rather than one. The parameter list is evaluated in its own scope, which sits inside the enclosing scope and outside the body, so the default resolves value to the module level binding.
 
 The body's const value is declared in the body scope, which does not exist yet when the default runs. It shadows the outer binding for the rest of the function, but the parameter already holds what it resolved to.`,
@@ -87,10 +91,11 @@ The body's const value is declared in the body scope, which does not exist yet w
   {
     id: 'arity-limiter',
     type: 'coding',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'Write takes(n, fn), which returns a function that passes at most the first n arguments through to fn, so a function can be handed to map without picking up the index.',
-    expectedAnswer: `function takes(n, fn) {
+    answerInFull: `function takes(n, fn) {
   return function (...args) {
     return fn.apply(this, args.slice(0, n))
   }
@@ -110,10 +115,11 @@ This is lodash's ary, and it exists for exactly the map(parseInt) problem. In ev
   {
     id: 'shared-default-object',
     type: 'scenario',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'A helper declares a default of items = EMPTY, where EMPTY is a const empty array at module level, and pushes into items. It works in tests, then a caller reports seeing data that belongs to a different caller. What is happening, and how would you fix it?',
-    expectedAnswer: `A default expression is evaluated per call, but this one evaluates to the same array every time, because EMPTY is one object created once at module level. Every caller that omits items is handed that same array, and the first push makes it permanently non-empty for everyone.
+    answerInFull: `A default expression is evaluated per call, but this one evaluates to the same array every time, because EMPTY is one object created once at module level. Every caller that omits items is handed that same array, and the first push makes it permanently non-empty for everyone.
 
 The fix is a default that constructs:
 
@@ -129,10 +135,11 @@ The deeper fix is that a function should not mutate an argument it did not creat
   {
     id: 'positional-or-options',
     type: 'interview',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'When would you take an options object instead of positional parameters, and what do you give up by doing it?',
-    expectedAnswer: `Take positional parameters when there are two or three, they are all required, and their order is obvious from the name of the function. slice(text, start, end) needs nothing else.
+    answerInFull: `Take positional parameters when there are two or three, they are all required, and their order is obvious from the name of the function. slice(text, start, end) needs nothing else.
 
 Move to an options object when any of these are true:
 - More than about three parameters, where a call site becomes unreadable.
@@ -148,6 +155,7 @@ What it costs: the argument is now one object, so it can be mutated by the calle
   {
     id: 'arrow-arguments',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `function outer() {
@@ -156,7 +164,7 @@ What it costs: the argument is now one object, so it can be mutated by the calle
 }
 
 console.log(outer('a'))`,
-    expectedOutput: 'a',
+    answerInFull: 'a',
     explanation: `An arrow function has no arguments object of its own. The name is resolved the way any other free variable is, by walking outward, so it finds outer's arguments object and reads the argument outer was called with.
 
 Calling inner with 'b' does nothing to that, because inner never binds arguments. Turn inner into a regular function and it prints b instead.`,
@@ -165,32 +173,35 @@ Calling inner with 'b' does nothing to that, because inner never binds arguments
   },
   {
     id: 'function-length-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What is the value of countArgs.length here?',
     code: `function countArgs(a, b = 2, c) {}`,
     options: ['1', '3', '2', '0'],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'length counts the parameters before the first one with a default, and stops there. It does not resume after it, so c is not counted either, and a rest parameter is never counted. Express reads this number to decide whether a middleware is an error handler, and curry implementations read it to know how many arguments are still outstanding.',
     hints: [],
     tags: ['functions', 'parameters'],
   },
   {
     id: 'default-trigger-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'Which of these calls uses the default in function f(x = 10)?',
     options: ['f(null)', 'f(undefined)', 'f(0)', "f('')"],
     correctOption: 1,
-    explanation:
+    answerInFull:
       'Only undefined triggers a default, and an omitted argument is undefined, so f() and f(undefined) behave identically. null, 0 and the empty string are all falsy, which tempts people into expecting a default, but they are values a caller chose to send and the language keeps them.',
     hints: [],
     tags: ['functions', 'defaults'],
   },
   {
     id: 'rest-against-arguments-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'Which statement about rest parameters and the arguments object is true?',
     options: [
@@ -200,7 +211,7 @@ Calling inner with 'b' does nothing to that, because inner never binds arguments
       'A rest parameter can appear anywhere in the list as long as it is the only one',
     ],
     correctOption: 1,
-    explanation:
+    answerInFull:
       'Rest gives you an ordinary array, inheriting from Array.prototype, containing the leftovers after the named parameters. arguments is array-like, has no array methods, holds every argument including the named ones, and does not exist in arrow functions. A rest parameter must be last, because by definition nothing can follow the leftovers.',
     hints: [],
     tags: ['functions', 'rest', 'arguments'],

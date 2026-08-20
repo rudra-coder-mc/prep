@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { walkToForm } from './answering'
+import { revealButton, walkToForm } from './answering'
 
 /**
  * A question and its answer can be listened to rather than read.
@@ -65,16 +65,14 @@ test('the answer gets its own listen button, and only once it has been given', a
   await serveAudio(page, asked)
 
   await page.goto('/topics/javascript/closures/practice')
-  await walkToForm(page, 'written')
+  await walkToForm(page, 'open')
 
-  const listenToAnswer = page.getByRole('button', { name: 'Listen to the answer and explanation' })
+  const listenToAnswer = page.getByRole('button', { name: 'Listen to the answer' })
   await expect(listenToAnswer).toHaveCount(0)
 
-  await page.getByLabel('Your answer').fill('a function plus its scope')
-  await page.getByRole('radio', { name: /^3 —/ }).check()
-  await page.getByRole('button', { name: 'Submit and reveal answer' }).click()
+  await revealButton(page).click()
 
-  await expect(page.getByText('Expected answer')).toBeVisible()
+  await expect(page.getByText('The answer', { exact: true })).toBeVisible()
   await expect(listenToAnswer).toBeVisible()
 
   await listenToAnswer.click()

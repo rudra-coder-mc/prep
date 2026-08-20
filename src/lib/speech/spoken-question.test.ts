@@ -5,9 +5,10 @@ import { answerScript, questionScript, speakable } from './spoken-question'
 const base: Question = {
   id: 'q',
   type: 'concept',
+  form: 'open',
   difficulty: 'easy',
   prompt: 'What is a closure?',
-  expectedAnswer: 'A function plus the scope it was defined in.',
+  answerInFull: 'A function plus the scope it was defined in.',
   explanation: 'The binding is shared.',
   hints: [],
   tags: [],
@@ -84,10 +85,9 @@ describe('questionScript', () => {
   it('reads the options in order and letters them, so it can be answered by ear', () => {
     const script = questionScript({
       ...base,
-      type: 'mcq',
+      form: 'choice',
       options: ['The binding', 'The value'],
       correctOption: 0,
-      expectedAnswer: undefined,
     })
 
     expect(script).toBe('What is a closure? Your choices are. A. The binding. B. The value.')
@@ -95,47 +95,39 @@ describe('questionScript', () => {
 })
 
 describe('answerScript', () => {
-  it('reads the expected answer and then the explanation', () => {
+  it('reads the answer in full and then the explanation', () => {
     expect(answerScript(base)).toBe(
-      'The expected answer. A function plus the scope it was defined in. Why this is the answer. The binding is shared.',
+      'The answer. A function plus the scope it was defined in. Why this is the answer. The binding is shared.',
     )
   })
 
-  it('names the correct option for a multiple choice question', () => {
+  it('names the correct option before reading the answer in full', () => {
     const script = answerScript({
       ...base,
-      type: 'mcq',
+      form: 'choice',
       options: ['The binding', 'The value'],
       correctOption: 1,
-      expectedAnswer: undefined,
     })
 
     expect(script).toBe(
-      'The answer is B. The value. Why this is the answer. The binding is shared.',
+      'The answer is B. The value. A function plus the scope it was defined in. Why this is the answer. The binding is shared.',
     )
   })
 
-  it('points at the printed output rather than spelling it out', () => {
-    const script = answerScript({
-      ...base,
-      type: 'output',
-      expectedAnswer: undefined,
-      expectedOutput: '1 2 1',
-    })
-
-    expect(script).toBe(
-      'The expected output is on screen. Why this is the answer. The binding is shared.',
+  it('stops after the answer when there is no explanation to add', () => {
+    expect(answerScript({ ...base, explanation: undefined })).toBe(
+      'The answer. A function plus the scope it was defined in.',
     )
   })
 
-  it('mentions the code it had to leave out of a written answer', () => {
+  it('mentions the code it had to leave out of the answer', () => {
     const script = answerScript({
       ...base,
-      expectedAnswer: 'Do this:\n\n  const a = 1\n\nAnd that is it.',
+      answerInFull: 'Do this:\n\n  const a = 1\n\nAnd that is it.',
     })
 
     expect(script).toBe(
-      'The expected answer. Do this: And that is it. The code for this is on screen. Why this is the answer. The binding is shared.',
+      'The answer. Do this: And that is it. The code for this is on screen. Why this is the answer. The binding is shared.',
     )
   })
 })

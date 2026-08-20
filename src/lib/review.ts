@@ -54,7 +54,7 @@ export async function getDailyQueue(userId: string, now = new Date()): Promise<D
     code: question.code,
     hints: question.hints,
     options: question.options,
-    checksOutput: question.expectedOutput !== undefined,
+    form: question.form,
     questionAudioKey: questionAudioKey(question),
   }))
 

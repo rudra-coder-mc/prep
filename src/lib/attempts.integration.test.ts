@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { createTestDatabase, insertTestUser, type TestDatabase } from '@/db/testing'
 import { attempts, reviewSchedule, topicProgress } from '@/db/schema'
 import { nextDueDate, nextStep } from '@/lib/interval-ladder'
+import { revealQuestion } from '@/lib/attempts'
 
 /**
  * recordAttempt writes through the shared connection, so these exercise the same
@@ -126,5 +127,30 @@ describe('recording an attempt', () => {
     const rows = await ctx.db.select().from(topicProgress)
     expect(rows).toHaveLength(1)
     expect(rows[0]?.lastReviewedAt?.toISOString()).toContain('2026-08-19')
+  })
+})
+
+/**
+ * Revealing runs against real content rather than the database, and it is the
+ * one call that hands an answer to the browser. The answer in full names the
+ * correct option, so serving it for a choice question would be a way to read the
+ * answer without answering, which is the rule the whole session flow rests on.
+ */
+describe('revealing an answer', () => {
+  it('reveals an open question, which is how that form works', async () => {
+    const revealed = await revealQuestion(TOPIC, 'what-is-a-closure')
+
+    expect(revealed.answerInFull.length).toBeGreaterThan(0)
+    expect(revealed.answerAudioKey.length).toBeGreaterThan(0)
+  })
+
+  it('refuses a choice question, whose answer would name the correct option', async () => {
+    await expect(revealQuestion(TOPIC, 'what-a-closure-captures-mcq')).rejects.toThrow(
+      /answered by choosing an option/,
+    )
+  })
+
+  it('refuses a question that does not exist rather than returning nothing', async () => {
+    await expect(revealQuestion(TOPIC, 'no-such-question')).rejects.toThrow(/No such question/)
   })
 })

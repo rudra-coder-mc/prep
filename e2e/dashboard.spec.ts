@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { answerCurrent } from './answering'
 
 test('the dashboard summarises topics, questions and exercises', async ({ page }) => {
   await page.goto('/')
@@ -32,10 +33,7 @@ test('the actions lead to review and to the topic list', async ({ page }) => {
 
 test('question counts reflect attempts that were actually recorded', async ({ page }) => {
   await page.goto('/topics/javascript/closures/practice')
-  await page.getByLabel('Your answer').fill('an answer')
-  await page.getByRole('radio', { name: /^4 —/ }).check()
-  await page.getByRole('button', { name: 'Submit and reveal answer' }).click()
-  await page.getByRole('button', { name: 'Passed' }).click()
+  await answerCurrent(page)
   await expect(page.getByText(/^2 of \d+$/)).toBeVisible()
 
   await page.goto('/')
