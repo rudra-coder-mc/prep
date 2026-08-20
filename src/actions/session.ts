@@ -1,7 +1,7 @@
 'use server'
 
 import { recordReview } from '@/lib/activity'
-import { answerChoice, recordSelfGrade, revealQuestion } from '@/lib/attempts'
+import { answerChoice, answerOrdering, recordSelfGrade, revealQuestion } from '@/lib/attempts'
 import type { Result } from '@/lib/interval-ladder'
 import { requireSession } from '@/lib/session'
 
@@ -14,6 +14,20 @@ export async function answerChoiceAction(topicSlug: string, questionId: string, 
   const session = await requireSession()
 
   const verdict = await answerChoice(session.user.id, topicSlug, questionId, chosen)
+  await recordReview(session.user.id)
+
+  return verdict
+}
+
+export async function answerOrderingAction(
+  topicSlug: string,
+  questionId: string,
+  submitted: number[],
+  hintsUsed: number,
+) {
+  const session = await requireSession()
+
+  const verdict = await answerOrdering(session.user.id, topicSlug, questionId, submitted, hintsUsed)
   await recordReview(session.user.id)
 
   return verdict

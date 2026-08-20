@@ -3,7 +3,12 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { answerChoiceAction, revealAnswerAction, selfGradeAction } from '@/actions/session'
+import {
+  answerChoiceAction,
+  answerOrderingAction,
+  revealAnswerAction,
+  selfGradeAction,
+} from '@/actions/session'
 import {
   DURATION_FAST,
   EASE_SOFT,
@@ -32,6 +37,11 @@ export type SessionQuestion = {
   code?: string
   hints: string[]
   options?: string[]
+  /**
+   * An ordering question's pool, in the order it is shown. Which entries print,
+   * and in what order, is not here: that is the answer.
+   */
+  items?: string[]
   /** How it is answered. Decides which form the session renders. */
   form: AnswerForm
   /**
@@ -279,6 +289,169 @@ function OpenQuestion({
   )
 }
 
+type OrderingVerdict = {
+  correct: boolean
+  correctOrder: number[]
+  answerInFull: string
+  explanation?: string
+  answerAudioKey: string
+}
+
+/**
+ * The ordering form: tap the lines in the order the program prints them, and
+ * tap one again to take it back out. Nothing says how many of them print, since
+ * that is most of the answer on a question about what runs.
+ */
+function OrderingQuestion({
+  question,
+  items,
+  onGraded,
+  reducedMotion,
+}: {
+  question: SessionQuestion
+  items: string[]
+  onGraded: (result: Result) => Promise<void>
+  reducedMotion: boolean
+}) {
+  const [chosen, setChosen] = useState<number[]>([])
+  const [hintsShown, setHintsShown] = useState(0)
+  const [verdict, setVerdict] = useState<OrderingVerdict | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  function toggle(index: number) {
+    if (verdict !== null || busy) return
+    setChosen((current) =>
+      current.includes(index) ? current.filter((at) => at !== index) : [...current, index],
+    )
+  }
+
+  async function submit() {
+    if (chosen.length === 0) return
+    setBusy(true)
+    try {
+      setVerdict(await answerOrderingAction(question.topicSlug, question.id, chosen, hintsShown))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function toneFor(index: number): string {
+    if (!verdict) {
+      return chosen.includes(index)
+        ? 'border-accent bg-accent-dim text-accent'
+        : 'border-border hover:border-edge hover:bg-raised'
+    }
+    if (verdict.correctOrder.includes(index)) return 'border-pass bg-pass/10 text-pass'
+    if (chosen.includes(index)) return 'border-fail bg-fail/10 text-fail'
+    return 'border-border opacity-60'
+  }
+
+  return (
+    <>
+      {!verdict ? (
+        <Hints
+          hints={question.hints}
+          shown={hintsShown}
+          onShow={() => setHintsShown(hintsShown + 1)}
+          reducedMotion={reducedMotion}
+        />
+      ) : null}
+
+      <p className="mt-6 text-sm text-muted">
+        Tap the lines in the order they print. Not everything here prints. Tap one again to take it
+        back out.
+      </p>
+
+      <ul aria-label="Lines to order" className="mt-3 space-y-2">
+        {items.map((item, index) => {
+          const place = chosen.indexOf(index)
+
+          return (
+            <li key={index}>
+              <button
+                type="button"
+                disabled={verdict !== null || busy}
+                onClick={() => toggle(index)}
+                aria-pressed={place >= 0}
+                className={cx(
+                  'flex w-full items-start gap-3 rounded-card border p-3.5 text-left text-sm transition-colors',
+                  'disabled:cursor-default',
+                  toneFor(index),
+                )}
+              >
+                <span className="grid size-6 shrink-0 place-items-center rounded-md border border-current/30 text-xs font-semibold tabular-nums">
+                  {place >= 0 ? place + 1 : ''}
+                </span>
+                <span className="font-mono leading-6 whitespace-pre-wrap">{item}</span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+
+      {!verdict ? (
+        <Button
+          variant="primary"
+          onClick={submit}
+          disabled={chosen.length === 0 || busy}
+          className="mt-5"
+        >
+          {busy ? 'Checking...' : 'Check the order'}
+        </Button>
+      ) : (
+        <motion.div
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
+        >
+          {!verdict.correct ? (
+            <Card className="mt-5">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div>
+                  <SectionLabel>You said</SectionLabel>
+                  <ol className="mt-2 space-y-1 font-mono text-sm text-fail">
+                    {chosen.map((index) => (
+                      <li key={index}>{items[index]}</li>
+                    ))}
+                  </ol>
+                </div>
+                <div>
+                  <SectionLabel>It prints</SectionLabel>
+                  <ol className="mt-2 space-y-1 font-mono text-sm text-pass">
+                    {verdict.correctOrder.map((index) => (
+                      <li key={index}>{items[index]}</li>
+                    ))}
+                  </ol>
+                </div>
+              </div>
+            </Card>
+          ) : null}
+
+          <AnswerCard
+            answerInFull={verdict.answerInFull}
+            explanation={verdict.explanation}
+            answerAudioKey={verdict.answerAudioKey}
+            heading={
+              <p className={cx('font-medium', verdict.correct ? 'text-pass' : 'text-fail')}>
+                {verdict.correct ? 'Correct' : 'Not this time'}
+              </p>
+            }
+          />
+
+          <Button
+            variant="primary"
+            className="mt-5"
+            disabled={busy}
+            onClick={() => onGraded(verdict.correct ? 'passed' : 'failed')}
+          >
+            Next question
+          </Button>
+        </motion.div>
+      )}
+    </>
+  )
+}
+
 type Verdict = {
   correct: boolean
   correctOption: number
@@ -491,6 +664,13 @@ export function QuestionSession({
             <ChoiceQuestion
               question={question}
               options={question.options}
+              onGraded={advance}
+              reducedMotion={reducedMotion}
+            />
+          ) : question.form === 'ordering' && question.items ? (
+            <OrderingQuestion
+              question={question}
+              items={question.items}
               onGraded={advance}
               reducedMotion={reducedMotion}
             />

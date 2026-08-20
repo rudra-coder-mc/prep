@@ -28,6 +28,7 @@ export default async function PracticePage({ params }: { params: Promise<Params>
     code: question.code,
     hints: question.hints,
     options: question.options,
+    items: question.items,
     form: question.form,
     questionAudioKey: questionAudioKey(question),
   }))

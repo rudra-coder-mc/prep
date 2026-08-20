@@ -12,6 +12,7 @@ import {
   type Result,
 } from '@/lib/interval-ladder'
 import { gradeChoice } from '@/lib/choice'
+import { gradeOrdering } from '@/lib/ordering'
 import { answerAudioKey } from '@/lib/speech'
 
 export type AttemptInput = {
@@ -95,6 +96,45 @@ export async function answerChoice(
   return {
     correct: verdict.correct,
     correctOption: verdict.correctOption,
+    answerInFull: question.answerInFull,
+    explanation: question.explanation,
+    answerAudioKey: answerAudioKey(question),
+    result: verdict.result,
+  }
+}
+
+/**
+ * Grades a built sequence on the server and records it in one step. The page
+ * receives the pool but never which entries print, so submitting is the only way
+ * to find out.
+ */
+export async function answerOrdering(
+  userId: string,
+  topicSlug: string,
+  questionId: string,
+  submitted: number[],
+  hintsUsed: number,
+  now = new Date(),
+) {
+  const question = await loadQuestion(topicSlug, questionId)
+  const verdict = gradeOrdering(question, submitted)
+
+  await recordAttempt(
+    userId,
+    {
+      topicSlug,
+      questionId,
+      answer: verdict.answer,
+      result: verdict.result,
+      confidence: verdict.confidence,
+      hintsUsed,
+    },
+    now,
+  )
+
+  return {
+    correct: verdict.correct,
+    correctOrder: verdict.correctOrder,
     answerInFull: question.answerInFull,
     explanation: question.explanation,
     answerAudioKey: answerAudioKey(question),

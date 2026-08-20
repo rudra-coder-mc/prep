@@ -4,6 +4,8 @@ export const optionsList = (page: Page) => page.getByRole('list', { name: 'Answe
 
 export const revealButton = (page: Page) => page.getByRole('button', { name: 'Reveal the answer' })
 
+export const orderingList = (page: Page) => page.getByRole('list', { name: 'Lines to order' })
+
 /**
  * The current question, once it is actually answerable. A question animates out
  * before the next one mounts, and during that gap the previous question's
@@ -11,7 +13,11 @@ export const revealButton = (page: Page) => page.getByRole('button', { name: 'Re
  * early gets the old one.
  */
 export const answerable = (page: Page) =>
-  page.locator('ul[aria-label="Answer options"], button:has-text("Reveal the answer")').first()
+  page
+    .locator(
+      'ul[aria-label="Answer options"], ul[aria-label="Lines to order"], button:has-text("Reveal the answer")',
+    )
+    .first()
 
 /** Answers whichever form the current question takes, and moves past it. */
 export async function answerCurrent(page: Page) {
@@ -19,6 +25,15 @@ export async function answerCurrent(page: Page) {
 
   if (await optionsList(page).isVisible()) {
     await optionsList(page).getByRole('button').first().click()
+    await page.getByRole('button', { name: 'Next question' }).click()
+    return
+  }
+
+  if (await orderingList(page).isVisible()) {
+    // Any sequence records an attempt, and the point here is to get past the
+    // question rather than to get it right.
+    await orderingList(page).getByRole('button').first().click()
+    await page.getByRole('button', { name: 'Check the order' }).click()
     await page.getByRole('button', { name: 'Next question' }).click()
     return
   }
@@ -32,12 +47,16 @@ export async function answerCurrent(page: Page) {
  * to be answerable before its form is read, or the check races the transition
  * and answerCurrent consumes the very question being looked for.
  */
-export async function walkToForm(page: Page, form: 'choice' | 'open') {
+export async function walkToForm(page: Page, form: 'choice' | 'ordering' | 'open') {
   for (let index = 0; index < 30; index += 1) {
     await expect(answerable(page)).toBeVisible()
 
-    const choice = await optionsList(page).isVisible()
-    if (choice === (form === 'choice')) return
+    const onScreen = (await optionsList(page).isVisible())
+      ? 'choice'
+      : (await orderingList(page).isVisible())
+        ? 'ordering'
+        : 'open'
+    if (onScreen === form) return
 
     await answerCurrent(page)
   }

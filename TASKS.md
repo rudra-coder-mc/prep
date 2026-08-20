@@ -20,52 +20,17 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 
 Typing an explanation and then marking yourself is a self grade with extra
 steps, and typing exact output fails you over a quote character. Both are gone.
-What is left is to add the ordering form, let the ladder climb now that nobody
-rates their own confidence, and convert the twelve topics onto the forms.
+All three forms exist. What is left is to let the ladder climb now that nobody
+rates their own confidence, and to convert the twelve topics onto the forms.
 
 Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
 `docs/glossary.md` defines the terms. Read those first.
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1. Ordering questions
+## 1. The ladder climbs, and confidence is derived
 
-Branch `feature/ordering-questions`. Blocked by nothing.
-
-**What to build.** A third form. The question shows a pool of lines, some of
-which the program never prints, and you tap them in the order they are printed.
-Tapping again takes one back out. Submitting grades the whole sequence at once.
-
-**Why.** Sequencing is most of what an event loop or promises interview asks,
-and it is the part typed output was testing badly. See `0024`.
-
-**Areas touched.** The content schema and the content check, the session
-component and its grading action, the question audio script, and the event loop
-topic's content.
-
-**Acceptance criteria.**
-
-- [ ] `items` holds the pool in the order it is shown. `correctOrder` holds the
-      positions of the real lines in the order they print. Anything not named in
-      `correctOrder` is a distractor.
-- [ ] The check refuses fewer than three real lines, a pool with no distractor,
-      a pool over eight items, and a `correctOrder` naming a position twice or a
-      position the pool does not have.
-- [ ] The page never receives `correctOrder`, and the browser sends back
-      positions rather than text, so a line printed twice grades correctly.
-- [ ] Grading is all or nothing. A wrong answer shows the correct sequence
-      beside the submitted one.
-- [ ] The screen never says how many lines are real.
-- [ ] The recording reads the pool in the order the screen shows it, so the
-      question can be answered by ear.
-- [ ] The event loop topic's `ordering-basic` question is the first real one.
-
-**Done when** `npm run verify` passes and the event loop ordering question can
-be answered correctly, answered wrongly, and heard.
-
-## 2. The ladder climbs, and confidence is derived
-
-Branch `improvement/derived-confidence`. Blocked by 1.
+Branch `improvement/derived-confidence`. Blocked by nothing.
 
 **What to build.** Nothing asks for a confidence rating. The platform works it
 out from the answer form and the verdict, and a question that keeps being
@@ -91,9 +56,9 @@ text that describes a rung.
 **Done when** `npm run verify` passes and answering the same question correctly
 four times in a row moves it from four hours to fourteen days.
 
-## 3 to 14. Convert one topic
+## 2 to 13. Convert one topic
 
-One branch per topic, named `content/<topic-slug>`. Each blocked by 1.
+One branch per topic, named `content/<topic-slug>`. Each blocked by nothing.
 
 The full brief is `docs/tasks/converting-a-topic.md`. Read it before starting.
 It covers the mix a converted topic ships, how each existing question shape
@@ -123,9 +88,9 @@ Delete a line below when its topic is merged.
 **Done when** the topic passes `npm run content:check`, its audio is built, and
 every wrong option in it is wrong for a reason you can say out loud.
 
-## 15. Enforce one open question per topic
+## 14. Enforce one open question per topic
 
-Branch `improvement/open-question-cap`. Blocked by 3 to 14.
+Branch `improvement/open-question-cap`. Blocked by 2 to 13.
 
 **What to build.** The content check stops accepting a second open question in a
 topic, which it could not do while 93 questions were waiting to be converted.

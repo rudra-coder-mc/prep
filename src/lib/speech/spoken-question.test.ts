@@ -92,6 +92,24 @@ describe('questionScript', () => {
 
     expect(script).toBe('What is a closure? Your choices are. A. The binding. B. The value.')
   })
+
+  /**
+   * The pool is safe to read out because its order is authored rather than the
+   * printing order, so hearing it gives nothing away.
+   */
+  it('reads an ordering pool in the order the screen shows it', () => {
+    const script = questionScript({
+      ...base,
+      form: 'ordering',
+      prompt: 'What does this print, in order?',
+      items: ['three', 'one', 'caught', 'two'],
+      correctOrder: [1, 3, 0],
+    })
+
+    expect(script).toBe(
+      'What does this print, in order? The lines to put in order are. A. three. B. one. C. caught. D. two.',
+    )
+  })
 })
 
 describe('answerScript', () => {
