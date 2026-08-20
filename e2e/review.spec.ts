@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { answerable, revealButton, walkToForm } from './answering'
+import { answerable, movedOn, revealButton, walkToForm } from './answering'
 
 test('an empty queue says so rather than showing a broken session', async ({ page }) => {
   await page.goto('/review')
@@ -42,7 +42,7 @@ test('a passed question leaves the queue for the rest of the day', async ({ page
   await revealButton(page).click()
   await expect(page.getByText('The answer', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Passed' }).click()
-  await expect(answerable(page)).toBeVisible()
+  await expect(movedOn(page)).toBeVisible()
 
   await page.goto('/review')
   await expect(page.getByText(prompt ?? '')).toHaveCount(0)

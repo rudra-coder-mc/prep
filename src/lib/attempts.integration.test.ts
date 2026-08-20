@@ -4,6 +4,7 @@ import { createTestDatabase, insertTestUser, type TestDatabase } from '@/db/test
 import { attempts, reviewSchedule, topicProgress } from '@/db/schema'
 import { nextDueDate, nextRung, type LadderStep } from '@/lib/interval-ladder'
 import type { AnswerForm } from '@/content/schema'
+import { getTopic } from '@/content/loader'
 import { revealQuestion } from '@/lib/attempts'
 
 /**
@@ -151,20 +152,44 @@ describe('recording an attempt', () => {
 /**
  * Revealing runs against real content rather than the database, and it is the
  * one call that hands an answer to the browser. The answer in full names the
- * correct option, so serving it for a choice question would be a way to read the
- * answer without answering, which is the rule the whole session flow rests on.
+ * correct option, or the correct sequence, so serving it for anything but an
+ * open question would be a way to read the answer without answering, which is
+ * the rule the whole session flow rests on.
  */
 describe('revealing an answer', () => {
+  /**
+   * The ids come from the topic rather than being written here. Converting a
+   * topic onto the three forms moves questions between forms and renames them,
+   * so a hardcoded id turns a guard failure into a missing question, and the
+   * test stops testing the guard without ever going red for the right reason.
+   */
+  async function questionWith(form: AnswerForm): Promise<string> {
+    const topic = await getTopic('javascript', 'closures')
+    const question = topic?.questions.find((candidate) => candidate.form === form)
+
+    if (question === undefined) {
+      throw new Error(`${TOPIC} has no ${form} question, so this test cannot say anything`)
+    }
+
+    return question.id
+  }
+
   it('reveals an open question, which is how that form works', async () => {
-    const revealed = await revealQuestion(TOPIC, 'what-is-a-closure')
+    const revealed = await revealQuestion(TOPIC, await questionWith('open'))
 
     expect(revealed.answerInFull.length).toBeGreaterThan(0)
     expect(revealed.answerAudioKey.length).toBeGreaterThan(0)
   })
 
   it('refuses a choice question, whose answer would name the correct option', async () => {
-    await expect(revealQuestion(TOPIC, 'what-a-closure-captures-mcq')).rejects.toThrow(
-      /answered by choosing an option/,
+    await expect(revealQuestion(TOPIC, await questionWith('choice'))).rejects.toThrow(
+      /answered rather than revealed/,
+    )
+  })
+
+  it('refuses an ordering question, whose answer would name the sequence', async () => {
+    await expect(revealQuestion(TOPIC, await questionWith('ordering'))).rejects.toThrow(
+      /answered rather than revealed/,
     )
   })
 

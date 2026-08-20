@@ -21,7 +21,7 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 Typing an explanation and then marking yourself is a self grade with extra
 steps, and typing exact output fails you over a quote character. Both are gone.
 All three forms exist and the platform schedules them without asking anyone to
-rate themselves. What is left is the content: twelve topics to convert onto the
+rate themselves. What is left is the content: eleven topics to convert onto the
 forms, and then the rule that stops open questions spreading.
 
 Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
@@ -29,7 +29,7 @@ Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1 to 12. Convert one topic
+## 1 to 11. Convert one topic
 
 One branch per topic, named `content/<topic-slug>`. Each blocked by nothing.
 
@@ -45,28 +45,27 @@ full they have never had.
 
 Delete a line below when its topic is merged.
 
-1. `content/closures`
-2. `content/currying-and-partial-application`
-3. `content/event-loop`
-4. `content/higher-order-functions`
-5. `content/parameters-and-arguments`
-6. `content/promises`
-7. `content/prototypes`
-8. `content/recursion-and-the-call-stack`
-9. `content/scope-and-hoisting`
-10. `content/this-binding`
-11. `content/types-and-coercion`
-12. `content/value-and-reference`
+1. `content/currying-and-partial-application`
+2. `content/event-loop`
+3. `content/higher-order-functions`
+4. `content/parameters-and-arguments`
+5. `content/promises`
+6. `content/prototypes`
+7. `content/recursion-and-the-call-stack`
+8. `content/scope-and-hoisting`
+9. `content/this-binding`
+10. `content/types-and-coercion`
+11. `content/value-and-reference`
 
 **Done when** the topic passes `npm run content:check`, its audio is built, and
 every wrong option in it is wrong for a reason you can say out loud.
 
-## 13. Enforce one open question per topic
+## 12. Enforce one open question per topic
 
-Branch `improvement/open-question-cap`. Blocked by 1 to 12.
+Branch `improvement/open-question-cap`. Blocked by 1 to 11.
 
 **What to build.** The content check stops accepting a second open question in a
-topic, which it could not do while 93 questions were waiting to be converted.
+topic, which it could not do while 84 questions were waiting to be converted.
 
 **Why.** An escape hatch with no lock on it becomes the default, and the
 platform is self graded again. See `0023`.

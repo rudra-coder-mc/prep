@@ -45,11 +45,13 @@ export async function revealQuestion(
   const question = await loadQuestion(topicSlug, questionId)
 
   // The answer in full names the correct option, so serving it for a choice
-  // question would be a way to read the answer without answering. Only an open
+  // question would be a way to read the answer without answering. The same is
+  // true of an ordering question, whose answer names the sequence. Only an open
   // question is revealed, and only it has a reveal button.
   if (question.form !== 'open') {
+    const gives = question.form === 'ordering' ? 'sequence' : 'option'
     throw new Error(
-      `Question ${topicSlug}#${questionId} is answered by choosing an option, not by revealing text`,
+      `Question ${topicSlug}#${questionId} is answered rather than revealed, since its answer names the correct ${gives}`,
     )
   }
 
