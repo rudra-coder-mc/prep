@@ -43,6 +43,12 @@ stays open, any topic with something that happens in an order gets an ordering
 question, and the questions that were already multiple choice gain the answer in
 full they have never had.
 
+`content/javascript/closures/questions.ts` is the converted topic to read first.
+It shows the mix, the shape of a wrong option that is worth writing, and the one
+ordering question a topic gets. Reordering which form sits where also breaks
+end-to-end and integration tests that lean on the topic being driven, so budget
+for that as part of the task rather than treating it as a surprise.
+
 Delete a line below when its topic is merged.
 
 1. `content/currying-and-partial-application`
