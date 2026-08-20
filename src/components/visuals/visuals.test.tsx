@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { CallStack, type CallStackStep } from './call-stack'
+import { ConceptMap, type ConceptBranch } from './concept-map'
 import { EventLoop, type EventLoopStep } from './event-loop'
 import { MemoryModel, type MemoryStep } from './memory-model'
 import { PromiseTimeline, type PromiseTimelineStep } from './promise-timeline'
@@ -275,5 +276,47 @@ describe('PromiseTimeline', () => {
     expect(container.querySelector('[data-promise="b"]')?.getAttribute('data-state')).toBe(
       'rejected',
     )
+  })
+})
+
+describe('ConceptMap', () => {
+  const branches: ConceptBranch[] = [
+    {
+      label: 'What it is',
+      summary: 'A function plus the scope it was defined in.',
+      nodes: ['definition time', 'the binding, not the value'],
+    },
+    {
+      label: 'What it costs',
+      summary: 'The captured scope stays alive as long as the closure does.',
+      nodes: ['keeps memory reachable'],
+    },
+  ]
+
+  it('shows the shape of the whole topic before anything is stepped through', () => {
+    const { container } = render(<ConceptMap center="Closure" branches={branches} />)
+
+    // Every branch is present from the start; only the reached ones are lit.
+    expect(container.querySelectorAll('[data-branch]')).toHaveLength(2)
+    expect(container.querySelectorAll('[data-branch][data-reached]')).toHaveLength(1)
+  })
+
+  it('fills in a branch when it is reached', async () => {
+    const { container } = render(<ConceptMap center="Closure" branches={branches} />)
+    expect(container.querySelector('[data-node="keeps memory reachable"]')).toBeNull()
+
+    await next()
+    expect(container.querySelector('[data-node="keeps memory reachable"]')).not.toBeNull()
+    expect(container.querySelectorAll('[data-branch][data-reached]')).toHaveLength(2)
+  })
+
+  it('reads out the summary of the branch it is on', async () => {
+    render(<ConceptMap center="Closure" branches={branches} />)
+    expect(screen.getByText('A function plus the scope it was defined in.')).toBeDefined()
+
+    await next()
+    expect(
+      screen.getByText('The captured scope stays alive as long as the closure does.'),
+    ).toBeDefined()
   })
 })

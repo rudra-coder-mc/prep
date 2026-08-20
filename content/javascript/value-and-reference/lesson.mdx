@@ -153,3 +153,40 @@ cycle throws.
   `-0`, which is the same key as `0`.
 - **Frozen is not deep and not enforced in non-strict code.** A write to a frozen
   object throws in strict code and fails silently otherwise.
+
+## In one picture
+
+<ConceptMap
+  center={'What a variable holds'}
+  branches={[
+    {
+      label: 'Primitives',
+      summary: 'A primitive is held in the binding itself, and cannot be changed.',
+      nodes: ['immutable', 'copied on assignment'],
+    },
+    {
+      label: 'Objects',
+      summary: 'An object lives elsewhere, and the binding holds a reference to it.',
+      nodes: ['many names, one object', 'mutation is visible to all of them'],
+    },
+    {
+      label: 'Arguments',
+      summary: 'Always passed by value - and for an object, that value is a reference.',
+      nodes: ['mutation reaches the caller', 'reassignment does not'],
+    },
+    {
+      label: 'Equality',
+      summary: '=== asks whether it is the same object, never whether it looks alike.',
+      nodes: ['[1,2] === [1,2] is false', 'no structural equality in the language'],
+    },
+    {
+      label: 'Copying',
+      summary: 'Copy the level you are changing and share the rest.',
+      nodes: [
+        'spread copies one level',
+        'structuredClone goes deep',
+        'JSON round trip loses things',
+      ],
+    },
+  ]}
+/>

@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion, type Transition } from 'motion/react'
-import { useEffect, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { EASE_SOFT } from '@/components/motion/reduced-motion'
 import { cx } from '@/lib/cx'
 
@@ -61,6 +61,121 @@ export function useSearchProbe(
 
   if (!enabled) return to
   return probe.step === stepKey ? probe.at : from
+}
+
+/** A line to draw between two registered elements. */
+export type Link = { id: string; from: string; to: string; accent?: boolean }
+export type DrawnLink = { id: string; d: string; accent: boolean }
+
+/** Long enough to follow the layout animation the boxes are doing underneath. */
+const TRACK_MS = 700
+
+/**
+ * Draws a curve between two elements and keeps drawing it while either of them
+ * is still moving. Positions come from the DOM rather than from a layout the
+ * component computes, so a link survives wrapping, resizing and whatever the
+ * surrounding animation is doing to its endpoints.
+ */
+export function useMeasuredLinks(links: Link[], stepKey: number) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const nodes = useRef(new Map<string, HTMLElement | null>())
+  const [drawn, setDrawn] = useState<DrawnLink[]>([])
+
+  const register = useCallback(
+    (id: string) => (node: HTMLElement | null) => {
+      nodes.current.set(id, node)
+    },
+    [],
+  )
+
+  // Serialised so the effect re-runs when the links change rather than on every
+  // render, which would restart the tracking loop forever.
+  const signature = links
+    .map((link) => `${link.id}|${link.from}|${link.to}|${link.accent}`)
+    .join(',')
+
+  useEffect(() => {
+    if (typeof requestAnimationFrame === 'undefined') return
+
+    let frame = 0
+    const startedAt = Date.now()
+
+    const measure = () => {
+      const container = containerRef.current
+      if (!container) return
+
+      const base = container.getBoundingClientRect()
+      const next: DrawnLink[] = []
+
+      for (const entry of signature ? signature.split(',') : []) {
+        const [id, from, to, accent] = entry.split('|')
+        const start = from ? nodes.current.get(from) : null
+        const end = to ? nodes.current.get(to) : null
+        if (!id || !start || !end) continue
+
+        const a = start.getBoundingClientRect()
+        const b = end.getBoundingClientRect()
+        const x1 = a.right - base.left
+        const y1 = a.top + a.height / 2 - base.top
+        const x2 = b.left - base.left
+        const y2 = b.top + b.height / 2 - base.top
+        const bend = Math.max((x2 - x1) / 2, 12)
+
+        next.push({
+          id,
+          d: `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`,
+          accent: accent === 'true',
+        })
+      }
+
+      setDrawn((current) =>
+        current.length === next.length &&
+        current.every((link, i) => link.d === next[i]?.d && link.accent === next[i]?.accent)
+          ? current
+          : next,
+      )
+
+      if (Date.now() - startedAt < TRACK_MS) frame = requestAnimationFrame(measure)
+    }
+
+    frame = requestAnimationFrame(measure)
+    return () => cancelAnimationFrame(frame)
+  }, [signature, stepKey])
+
+  return { containerRef, register, drawn }
+}
+
+/** The svg layer the drawn links live in, sized to its positioned parent. */
+export function LinkLayer({
+  links,
+  reducedMotion,
+}: {
+  links: DrawnLink[]
+  reducedMotion: boolean
+}) {
+  return (
+    <svg
+      aria-hidden
+      className="pointer-events-none absolute inset-0 size-full overflow-visible"
+      fill="none"
+    >
+      <AnimatePresence>
+        {links.map((link) => (
+          <motion.path
+            key={link.id}
+            d={link.d}
+            initial={reducedMotion ? { opacity: 1 } : { pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={SETTLE}
+            stroke={link.accent ? 'var(--color-accent)' : 'var(--color-edge)'}
+            strokeWidth={1.5}
+            strokeDasharray={link.accent ? undefined : '3 3'}
+          />
+        ))}
+      </AnimatePresence>
+    </svg>
+  )
 }
 
 export type TokenTone = 'plain' | 'accent' | 'pass' | 'fail' | 'weak' | 'dim'

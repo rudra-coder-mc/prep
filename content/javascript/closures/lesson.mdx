@@ -175,3 +175,36 @@ Expect these follow-ups:
   a stale value in an effect is exactly this bug.
 - **`let` per iteration is a loop feature, not a block feature.** A single
   `let` outside the loop brings the shared-binding problem straight back.
+
+## In one picture
+
+<ConceptMap
+  center={'Closure'}
+  branches={[
+    {
+      label: 'What it is',
+      summary: 'A function together with the lexical environment it was defined in.',
+      nodes: ['created at definition time', 'not at call time'],
+    },
+    {
+      label: 'What it captures',
+      summary: 'The variable binding itself, which is why closures see later changes.',
+      nodes: ['the binding, not the value', 'one scope, shared by every closure in it'],
+    },
+    {
+      label: 'What it buys',
+      summary: 'State nothing outside can name, which is privacy by construction.',
+      nodes: ['factories', 'once, memoize, throttle', 'the module pattern'],
+    },
+    {
+      label: 'What it costs',
+      summary: 'The captured scope stays reachable for as long as the closure does.',
+      nodes: ['handlers keep big data alive', 'remove listeners you added'],
+    },
+    {
+      label: 'The classic question',
+      summary: 'var in a loop prints 3 3 3, because all three close over one binding.',
+      nodes: ['let gives a binding per iteration', 'capture the value in a new scope'],
+    },
+  ]}
+/>

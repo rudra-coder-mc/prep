@@ -1,9 +1,8 @@
 'use client'
 
-import { AnimatePresence, motion } from 'motion/react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { motion } from 'motion/react'
 import { cx } from '@/lib/cx'
-import { QUICK, Region, SETTLE, StepNote } from './flow'
+import { LinkLayer, QUICK, Region, SETTLE, StepNote, useMeasuredLinks } from './flow'
 import { VisualFrame } from './step-controls'
 import { usePrefersReducedMotion, useStepPlayer } from './use-step-player'
 
@@ -16,103 +15,6 @@ export type MemoryStep = {
   highlight?: string[]
 }
 
-type Connector = { id: string; d: string; highlighted: boolean }
-
-/** Long enough to follow the layout animation the boxes are doing underneath. */
-const TRACK_MS = 700
-
-/**
- * Draws the arrow from a binding to the object it points at, and keeps drawing
- * it while the boxes are still moving. The arrow is the entire idea of the
- * visual - a binding does not contain an object, it points at one - so it has
- * to survive the animation rather than snap into place after it.
- */
-function useConnectors(
-  bindings: MemoryStep['stack'],
-  highlight: Set<string>,
-  stepKey: number,
-): {
-  containerRef: React.RefObject<HTMLDivElement | null>
-  registerBinding: (name: string) => (node: HTMLElement | null) => void
-  registerObject: (id: string) => (node: HTMLElement | null) => void
-  connectors: Connector[]
-} {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const bindingNodes = useRef(new Map<string, HTMLElement | null>())
-  const objectNodes = useRef(new Map<string, HTMLElement | null>())
-  const [connectors, setConnectors] = useState<Connector[]>([])
-
-  const registerBinding = useCallback(
-    (name: string) => (node: HTMLElement | null) => {
-      bindingNodes.current.set(name, node)
-    },
-    [],
-  )
-
-  const registerObject = useCallback(
-    (id: string) => (node: HTMLElement | null) => {
-      objectNodes.current.set(id, node)
-    },
-    [],
-  )
-
-  const pointing = bindings.filter((binding) => binding.ref !== undefined)
-  // Serialised so the effect re-runs when the shape changes rather than on
-  // every render, which would restart the tracking loop forever.
-  const shape = pointing.map((binding) => `${binding.name}->${binding.ref}`).join(',')
-  const highlighted = [...highlight].sort().join(',')
-
-  useEffect(() => {
-    if (typeof requestAnimationFrame === 'undefined') return
-
-    let frame = 0
-    const startedAt = Date.now()
-
-    const measure = () => {
-      const container = containerRef.current
-      if (!container) return
-
-      const base = container.getBoundingClientRect()
-      const next: Connector[] = []
-
-      for (const entry of shape ? shape.split(',') : []) {
-        const [name, id] = entry.split('->')
-        const from = name ? bindingNodes.current.get(name) : null
-        const to = id ? objectNodes.current.get(id) : null
-        if (!from || !to || !id) continue
-
-        const a = from.getBoundingClientRect()
-        const b = to.getBoundingClientRect()
-        const x1 = a.right - base.left
-        const y1 = a.top + a.height / 2 - base.top
-        const x2 = b.left - base.left
-        const y2 = b.top + b.height / 2 - base.top
-        const bend = Math.max((x2 - x1) / 2, 12)
-
-        next.push({
-          id: entry,
-          d: `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`,
-          highlighted: highlighted.split(',').includes(id),
-        })
-      }
-
-      setConnectors((current) =>
-        current.length === next.length &&
-        current.every((c, i) => c.d === next[i]?.d && c.highlighted === next[i]?.highlighted)
-          ? current
-          : next,
-      )
-
-      if (Date.now() - startedAt < TRACK_MS) frame = requestAnimationFrame(measure)
-    }
-
-    frame = requestAnimationFrame(measure)
-    return () => cancelAnimationFrame(frame)
-  }, [shape, highlighted, stepKey])
-
-  return { containerRef, registerBinding, registerObject, connectors }
-}
-
 export function MemoryModel({ title = 'Memory', steps }: { title?: string; steps: MemoryStep[] }) {
   const player = useStepPlayer(steps.length)
   const reducedMotion = usePrefersReducedMotion()
@@ -121,42 +23,29 @@ export function MemoryModel({ title = 'Memory', steps }: { title?: string; steps
   const bindings = step?.stack ?? []
   const objects = step?.heap ?? []
 
-  const { containerRef, registerBinding, registerObject, connectors } = useConnectors(
-    bindings,
-    highlighted,
-    player.index,
-  )
+  // A binding does not contain an object, it points at one, so the arrow is the
+  // whole idea of the visual rather than decoration on top of it.
+  const links = bindings
+    .filter((binding) => binding.ref !== undefined)
+    .map((binding) => ({
+      id: `${binding.name}->${binding.ref}`,
+      from: `binding:${binding.name}`,
+      to: `object:${binding.ref}`,
+      accent: highlighted.has(binding.ref ?? ''),
+    }))
+
+  const { containerRef, register, drawn } = useMeasuredLinks(links, player.index)
 
   return (
     <VisualFrame title={title} player={player}>
       <div ref={containerRef} className="relative grid gap-8 sm:grid-cols-2">
-        <svg
-          aria-hidden
-          className="pointer-events-none absolute inset-0 size-full overflow-visible"
-          fill="none"
-        >
-          <AnimatePresence>
-            {connectors.map((connector) => (
-              <motion.path
-                key={connector.id}
-                d={connector.d}
-                initial={reducedMotion ? { opacity: 1 } : { pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={SETTLE}
-                stroke={connector.highlighted ? 'var(--color-accent)' : 'var(--color-edge)'}
-                strokeWidth={1.5}
-                strokeDasharray={connector.highlighted ? undefined : '3 3'}
-              />
-            ))}
-          </AnimatePresence>
-        </svg>
+        <LinkLayer links={drawn} reducedMotion={reducedMotion} />
 
         <Region label="Stack" empty={bindings.length === 0 ? 'nothing declared' : undefined}>
           {bindings.map((binding) => (
             <motion.div
               key={binding.name}
-              ref={registerBinding(binding.name)}
+              ref={register(`binding:${binding.name}`)}
               layout={!reducedMotion}
               initial={reducedMotion ? false : { opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
@@ -190,7 +79,7 @@ export function MemoryModel({ title = 'Memory', steps }: { title?: string; steps
           {objects.map((object) => (
             <motion.div
               key={object.id}
-              ref={registerObject(object.id)}
+              ref={register(`object:${object.id}`)}
               layout={!reducedMotion}
               initial={reducedMotion ? false : { opacity: 0, scale: 0.9 }}
               animate={{

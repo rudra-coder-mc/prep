@@ -186,3 +186,40 @@ Two questions carry most of the weight:
   leaves it responsive.
 - **`async` on a function does not make its body asynchronous.** It only makes
   the function return a promise and allows `await` inside.
+
+## In one picture
+
+<ConceptMap
+  center={'One thread'}
+  branches={[
+    {
+      label: 'One turn of the loop',
+      summary: 'Take one macrotask, drain every microtask, then render if a frame is due.',
+      nodes: ['the asymmetry is the topic'],
+    },
+    {
+      label: 'Macrotasks',
+      summary: 'The queue the loop takes exactly one item from per turn.',
+      nodes: ['setTimeout and setInterval', 'I/O and UI events'],
+    },
+    {
+      label: 'Microtasks',
+      summary: 'Drained to empty before the loop moves on, including ones queued during the drain.',
+      nodes: ['promise reactions', 'queueMicrotask', 'everything after an await'],
+    },
+    {
+      label: 'Rendering',
+      summary: 'Happens between macrotasks, so a busy stack means no frames at all.',
+      nodes: ['a spinner set and cleared never shows', 'yield, or use a worker'],
+    },
+    {
+      label: 'Consequences',
+      summary: 'Scheduling is not parallelism, and a promise does not move work off the thread.',
+      nodes: [
+        'setTimeout 0 is a minimum',
+        'yield with a macrotask, not a microtask',
+        'microtasks can starve the page',
+      ],
+    },
+  ]}
+/>

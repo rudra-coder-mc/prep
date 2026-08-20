@@ -2,6 +2,7 @@ import type { MDXComponents } from 'mdx/types'
 import {
   CallStack,
   CodeWalkthrough,
+  ConceptMap,
   EventLoop,
   MemoryModel,
   PromiseTimeline,
@@ -52,6 +53,7 @@ export function useMDXComponents(components: MDXComponents = {}): MDXComponents 
     ),
     CallStack,
     CodeWalkthrough,
+    ConceptMap,
     EventLoop,
     MemoryModel,
     PromiseTimeline,

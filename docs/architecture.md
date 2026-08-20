@@ -123,7 +123,10 @@ one is a list of steps, and `src/components/visuals/flow.tsx` holds the shared
 vocabulary they animate with: a token that keeps its identity as it moves
 between regions, a region that lights up when the loop is working on it, an
 output log and a caption. Visuals play themselves the first time they are
-scrolled into view. See `docs/decisions/0013-visuals-animate-transitions.md`.
+scrolled into view. Each lesson closes with a `<ConceptMap>`, the same player
+arranged as a mind map of the topic. See
+`docs/decisions/0013-visuals-animate-transitions.md` and
+`docs/decisions/0014-concept-map-recap.md`.
 
 ## The visual layer
 

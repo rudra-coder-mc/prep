@@ -155,3 +155,40 @@ form input: an empty field passes an `isNaN` check.
   `[10, 9, 1].sort()` is `[1, 10, 9]`.
 - **`+` on a `bigint` and a `number` throws.** The one place JavaScript refuses
   to convert rather than guessing.
+
+## In one picture
+
+<ConceptMap
+  center={'Coercion'}
+  branches={[
+    {
+      label: 'The types',
+      summary: 'Seven primitives and objects, with two dents in what typeof reports.',
+      nodes: ['undefined null boolean', 'number string symbol bigint', "typeof null is 'object'"],
+    },
+    {
+      label: 'Truthiness',
+      summary: 'Eight falsy values, and everything else - including [] and {} - is truthy.',
+      nodes: ['false 0 -0 0n', "'' null undefined NaN"],
+    },
+    {
+      label: '+ is two operators',
+      summary: 'It concatenates if either side ends up a string, and adds otherwise.',
+      nodes: ['arrays always become strings', '- and * only ever add', "1 + '2' is '12'"],
+    },
+    {
+      label: 'What == does',
+      summary: 'A short list of conversions, applied until both sides share a type.',
+      nodes: ['null == undefined only', 'boolean becomes number first', 'object becomes primitive'],
+    },
+    {
+      label: 'Comparing on purpose',
+      summary: '=== by default, Object.is for the two cases === gets wrong.',
+      nodes: [
+        'NaN is never === itself',
+        'Object.is separates 0 and -0',
+        'value == null is the exception',
+      ],
+    },
+  ]}
+/>
