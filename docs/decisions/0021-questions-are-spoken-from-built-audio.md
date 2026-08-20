@@ -78,8 +78,14 @@ removed. Building is a command, and the button says which one.
 
 ## Consequences
 
-260 more recordings, roughly two hours of synthesis on a first run and about
-150 MB in the cache volume. It is a one-off: everything after it is a skip.
+260 more recordings. Measured on the first full run: fifty minutes of synthesis,
+227 of them actually built, and the cache holding the whole curriculum grew to
+415 MB. It is a one-off, since everything after it is a skip.
+
+The 33 that were already there are questions whose spoken form is word for word
+another one's, which is mostly "What does this print? The code for this is on
+screen." Content addressing means they share a recording rather than duplicating
+it, which is the same property that makes editing a script a new file.
 
 Editing a prompt or an explanation orphans its recording and needs a build
 before that question can be listened to again. The 502 says so.
