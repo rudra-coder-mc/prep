@@ -30,6 +30,15 @@ beforeEach(() => {
 })
 
 describe('GET /api/speech/[key]', () => {
+  it('refuses to let a missing recording be cached, since the next build makes it', async () => {
+    readCached.mockResolvedValue(null)
+
+    const response = await get(KEY)
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get('Cache-Control')).toBe('no-store')
+  })
+
   it('answers with the recording that was built for that key', async () => {
     const response = await get(KEY)
 

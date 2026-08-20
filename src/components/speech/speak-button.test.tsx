@@ -36,7 +36,9 @@ describe('SpeakButton', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Listen to the question' }))
 
     await waitFor(() => expect(play).toHaveBeenCalled())
-    expect(fetch).toHaveBeenCalledWith('/api/speech/abc123', expect.anything())
+    // No cache option: a forced cache would replay a 404 taken before the
+    // recording was built, and the response carries its own caching anyway.
+    expect(fetch).toHaveBeenCalledWith('/api/speech/abc123')
   })
 
   it('pauses when it is pressed again, rather than starting a second time', async () => {
