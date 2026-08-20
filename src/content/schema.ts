@@ -17,7 +17,7 @@ export const QUESTION_TYPES = [
  * quote characters rather than over the answer. See
  * docs/decisions/0023-every-question-is-answered-never-typed.md.
  */
-export const ANSWER_FORMS = ['choice', 'open'] as const
+export const ANSWER_FORMS = ['choice', 'ordering', 'open'] as const
 
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 
@@ -33,6 +33,93 @@ export const topicMetaSchema = z.object({
   tags: z.array(z.string()).default([]),
   prerequisites: z.array(z.string()).default([]),
 })
+
+/** The pool is small on purpose. Longer than this tests memory of a list. */
+export const MAX_ORDERING_ITEMS = 8
+
+/** Two real lines is a coin flip, which is worse odds than four options. */
+export const MIN_ORDERING_LINES = 3
+
+/**
+ * An ordering question's answer lives in two fields that have to agree, and
+ * every way they can disagree produces a question that renders but cannot be
+ * answered correctly. See docs/decisions/0024-ordering-questions-carry-distractors.md.
+ */
+function checkOrdering(
+  question: { items?: string[]; correctOrder?: number[] },
+  ctx: z.RefinementCtx,
+) {
+  const items = question.items ?? []
+  const order = question.correctOrder
+
+  if (items.length > MAX_ORDERING_ITEMS) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['items'],
+      message: `a pool of ${items.length} is longer than the ${MAX_ORDERING_ITEMS} a reader can hold in their head`,
+    })
+  }
+
+  if (order === undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['correctOrder'],
+      message: 'required, since nothing else says which lines print or in what order',
+    })
+    return
+  }
+
+  if (order.length < MIN_ORDERING_LINES) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['correctOrder'],
+      message: `needs at least ${MIN_ORDERING_LINES} lines, or the answer is close enough to a guess`,
+    })
+  }
+
+  if (new Set(order).size !== order.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['correctOrder'],
+      message:
+        'names the same position twice, so one line would have to print in two places at once',
+    })
+  }
+
+  const outOfRange = order.filter((position) => position >= items.length)
+  if (outOfRange.length > 0) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['correctOrder'],
+      message: `position ${outOfRange[0]} is not in the pool, which has ${items.length}`,
+    })
+    return
+  }
+
+  if (order.length >= items.length) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['items'],
+      message:
+        'every line in the pool prints, so the answer is a permutation and the last one places itself',
+    })
+    return
+  }
+
+  // A distractor reading the same as a real line is not a distractor: whichever
+  // one the reader taps, the sequence they built is the same.
+  const printed = new Set(order.map((position) => items[position]))
+  const decoys = items.filter((_, position) => !order.includes(position))
+  const shadowed = decoys.find((decoy) => printed.has(decoy))
+
+  if (shadowed !== undefined) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['items'],
+      message: `the distractor ${JSON.stringify(shadowed)} reads the same as a line that does print, so it is not one`,
+    })
+  }
+}
 
 export const questionSchema = z
   .object({
@@ -55,6 +142,18 @@ export const questionSchema = z
       .nonnegative()
       .optional()
       .describe('Which entry in options is right. The answer itself, so it is never sent early.'),
+    items: z
+      .array(z.string().min(1))
+      .optional()
+      .describe(
+        "An ordering question's pool, in the order it is shown and read aloud. Holds lines the program never prints as well as the ones it does.",
+      ),
+    correctOrder: z
+      .array(z.number().int().nonnegative())
+      .optional()
+      .describe(
+        'Which entries in items the program prints, in the order it prints them. The answer itself, so it is never sent early.',
+      ),
     answerInFull: z
       .string()
       .min(1)
@@ -111,6 +210,19 @@ export const questionSchema = z
       }
 
       return
+    }
+
+    if (question.form === 'ordering') {
+      checkOrdering(question, ctx)
+      return
+    }
+
+    if (question.items !== undefined || question.correctOrder !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['items'],
+        message: `only an ordering question has a pool of items, and this one is answered by "${question.form}"`,
+      })
     }
 
     if (question.options !== undefined || question.correctOption !== undefined) {

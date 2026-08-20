@@ -4,18 +4,25 @@ export const questions: Question[] = [
   {
     id: 'ordering-basic',
     type: 'output',
-    form: 'open',
+    form: 'ordering',
     difficulty: 'medium',
-    prompt: 'What is the output order, and why?',
+    prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log('1')
 setTimeout(() => console.log('2'), 0)
-Promise.resolve().then(() => console.log('3'))
+Promise.resolve()
+  .then(() => console.log('3'))
+  .catch(() => console.log('caught'))
 console.log('4')`,
+    items: ['3', '1', 'caught', '2', '4'],
+    correctOrder: [1, 4, 0, 3],
     answerInFull: `1, 4, 3, 2
 
 Synchronous code runs to completion first, so 1 and 4 print immediately. When the
 call stack empties, the microtask queue is drained before anything else, so the
-promise callback prints 3. Only then does the loop take a macrotask, printing 2.`,
+promise callback prints 3. Only then does the loop take a macrotask, printing 2.
+
+Nothing prints "caught". The promise is already resolved, so the chain has no
+rejection to handle and the catch callback is never called at all.`,
     explanation: `The rule is that microtasks are not a queue the loop visits in turn. They are drained completely after every task, before rendering and before the next macrotask. A zero-millisecond timer is not "as soon as possible"; it is "on the next macrotask turn, at the earliest".`,
     hints: ['What has to be true before any queued callback can run at all?'],
     tags: ['event-loop', 'async'],

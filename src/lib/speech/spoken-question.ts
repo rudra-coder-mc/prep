@@ -98,21 +98,39 @@ function sentences(...parts: (string | null)[]): string {
 export function questionScript(question: Question): string {
   const prompt = speakable(question.prompt)
 
-  const options =
-    question.options && question.options.length > 0
-      ? sentences(
-          'Your choices are.',
-          ...question.options.map(
-            (option, index) =>
-              `${OPTION_LETTERS[index] ?? index + 1}. ${ended(speakable(option).script)}`,
-          ),
-        )
-      : null
-
   return sentences(
     prompt.script,
     question.code !== undefined || prompt.hasCode ? CODE_IS_ON_SCREEN : null,
-    options,
+    lettered(question),
+  )
+}
+
+/**
+ * The options of a choice question, or the pool of an ordering one, read in the
+ * order the screen shows them.
+ *
+ * Both are read out for the same reason: a question you can only answer by
+ * looking is a question you cannot answer while walking. An ordering question's
+ * pool is safe to read because the display order is authored rather than the
+ * printing order, so hearing it gives nothing away.
+ */
+function lettered(question: Question): string | null {
+  const entries =
+    question.form === 'choice'
+      ? question.options
+      : question.form === 'ordering'
+        ? question.items
+        : undefined
+
+  if (entries === undefined || entries.length === 0) return null
+
+  const lead = question.form === 'choice' ? 'Your choices are.' : 'The lines to put in order are.'
+
+  return sentences(
+    lead,
+    ...entries.map(
+      (entry, index) => `${OPTION_LETTERS[index] ?? index + 1}. ${ended(speakable(entry).script)}`,
+    ),
   )
 }
 
