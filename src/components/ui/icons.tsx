@@ -79,6 +79,27 @@ export function PauseIcon(props: IconProps) {
   )
 }
 
+/** A speaker with sound coming out of it, for "read this to me". */
+export function SpeakerIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 9.5v5h3l4.5 3.5v-12L7 9.5z" />
+      <path d="M15.5 9a4 4 0 0 1 0 6" />
+      <path d="M18 6.5a7.5 7.5 0 0 1 0 11" />
+    </Svg>
+  )
+}
+
+/** The same speaker with the waves struck through, for audio that is playing. */
+export function SpeakerOffIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4 9.5v5h3l4.5 3.5v-12L7 9.5z" />
+      <path d="M15.5 10.5l4 3M19.5 10.5l-4 3" />
+    </Svg>
+  )
+}
+
 export function CheckIcon(props: IconProps) {
   return (
     <Svg {...props}>

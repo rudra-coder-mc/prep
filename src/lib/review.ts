@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { reviewSchedule } from '@/db/schema'
 import { getQuestionsByKeys } from '@/content/loader'
+import { questionAudioKey } from '@/lib/speech'
 import type { SessionQuestion } from '@/components/question-session'
 import {
   buildDailyQueue,
@@ -54,6 +55,7 @@ export async function getDailyQueue(userId: string, now = new Date()): Promise<D
     hints: question.hints,
     options: question.options,
     checksOutput: question.expectedOutput !== undefined,
+    questionAudioKey: questionAudioKey(question),
   }))
 
   return { questions, reasons, dueToday: countDueToday(schedule, now), cap: DAILY_QUEUE_CAP }

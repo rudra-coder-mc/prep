@@ -76,8 +76,9 @@ npm run dev:docker -- --build
   lesson is ever synthesised while somebody is waiting for it. That command is
   also the only thing that runs the container: it is behind a compose profile
   and is off the rest of the time.
-- `src/components/speech/` is the player on a topic page. It reads that topic's
-  `narration.ts` aloud a section at a time.
+- `src/components/speech/` is the player on a topic page, which reads that
+  topic's `narration.ts` aloud a section at a time, and the speaker button on a
+  question, which reads the prompt and then the answer once it has been given.
 
 See `docs/architecture.md` for the full picture and `docs/decisions/` for why
 it is shaped this way.

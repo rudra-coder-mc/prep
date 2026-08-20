@@ -16,24 +16,7 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1. Spoken narration in the question session
-
-The point of audio on questions is answering without reading. A play button on
-a question reads the prompt and then each option in turn, so an MCQ can be
-answered by ear.
-
-The engine, the endpoint and a working player all exist; this is the question
-session calling them. Nothing here waits on the narration scripts, since a
-question carries its own words. Reuse `fetchNarrationAudio` and the one element
-per player rule from `src/components/speech/`, rather than writing a second way
-to play audio.
-
-Touches `question-session.tsx` and `src/components/speech/`.
-
-Done when playing an MCQ reads the prompt and all four options in order, and
-moving to the next question stops the previous audio rather than overlapping it.
-
-## 2. Everything a JavaScript interview asks
+## 1. Everything a JavaScript interview asks
 
 The goal is that anything reasonably asked in a JavaScript interview has a
 topic, and that each topic carries the full question mix.

@@ -4,6 +4,7 @@ import { Rise } from '@/components/motion/rise'
 import { PageShell } from '@/components/ui/page'
 import { getTopic } from '@/content'
 import { requireSession } from '@/lib/session'
+import { questionAudioKey } from '@/lib/speech'
 
 type Params = { technology: string; topic: string }
 
@@ -28,6 +29,7 @@ export default async function PracticePage({ params }: { params: Promise<Params>
     hints: question.hints,
     options: question.options,
     checksOutput: question.expectedOutput !== undefined,
+    questionAudioKey: questionAudioKey(question),
   }))
 
   return (

@@ -6,6 +6,7 @@ import { getTopic } from '@/content/loader'
 import { questionKey } from '@/content/schema'
 import { nextDueDate, nextStep, type Confidence, type Result } from '@/lib/interval-ladder'
 import { gradeMcq } from '@/lib/mcq'
+import { answerAudioKey } from '@/lib/speech'
 import { matchesExpectedOutput, OUTPUT_CONFIDENCE } from '@/lib/output-answer'
 
 export type AttemptInput = {
@@ -38,7 +39,7 @@ async function loadQuestion(topicSlug: string, questionId: string) {
 export async function revealQuestion(
   topicSlug: string,
   questionId: string,
-): Promise<{ expectedAnswer: string; explanation: string }> {
+): Promise<{ expectedAnswer: string; explanation: string; answerAudioKey: string }> {
   const question = await loadQuestion(topicSlug, questionId)
 
   if (question.expectedAnswer === undefined) {
@@ -47,7 +48,11 @@ export async function revealQuestion(
     )
   }
 
-  return { expectedAnswer: question.expectedAnswer, explanation: question.explanation }
+  return {
+    expectedAnswer: question.expectedAnswer,
+    explanation: question.explanation,
+    answerAudioKey: answerAudioKey(question),
+  }
 }
 
 /**
@@ -82,6 +87,7 @@ export async function answerMultipleChoice(
     correct: verdict.correct,
     correctOption: verdict.correctOption,
     explanation: question.explanation,
+    answerAudioKey: answerAudioKey(question),
     result: verdict.result,
   }
 }
@@ -188,6 +194,7 @@ export async function answerOutputQuestion(
     correct,
     expectedOutput: question.expectedOutput,
     explanation: question.explanation,
+    answerAudioKey: answerAudioKey(question),
     result,
   }
 }

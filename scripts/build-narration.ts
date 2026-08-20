@@ -1,14 +1,18 @@
-import { getAllTopics } from '@/content/loader'
+import { getAllTopics, type Topic } from '@/content/loader'
 import { cacheDirectory } from '@/lib/speech/cache'
 import { narrate } from '@/lib/speech/narrate'
 import { SpeechServiceError } from '@/lib/speech/piper'
+import { answerScript, questionScript } from '@/lib/speech/spoken-question'
 
 /**
- * Builds every narration script in `content/` into audio, once.
+ * Builds everything in `content/` that can be listened to, once.
  *
- * The scripts are static, so there is no reason to synthesise them while
- * somebody is waiting: this turns the whole curriculum into files ahead of time
- * and the app never does the expensive part again. A script that already has a
+ * Two things: every narration section of every lesson, and, for every question,
+ * one recording of the prompt and one of the answer with its explanation.
+ *
+ * All of it is static text, so there is no reason to synthesise it while
+ * somebody is waiting. This turns the whole curriculum into files ahead of time
+ * and the app never does the expensive part again. Anything that already has a
  * recording is skipped, so running this after adding one topic only builds that
  * topic.
  *
@@ -27,28 +31,63 @@ async function main() {
     `building narration for ${spoken.length} topics into ${cacheDirectory()}, engine at ${process.env.SPEECH_SERVICE_URL ?? 'http://tts:5000'}`,
   )
 
-  let built = 0
-  let already = 0
+  const tally = { built: 0, already: 0 }
 
   for (const topic of spoken) {
     const sections = topic.narration ?? []
 
-    // One section at a time. The engine is a single container doing real work,
-    // and the whole curriculum arriving at once would only make it slower.
+    // One at a time throughout. The engine is a single container doing real
+    // work, and the whole curriculum arriving at once would only make it slower.
     for (const [position, section] of sections.entries()) {
-      const { source } = await narrate(section.script)
-      if (source === 'engine') {
-        built += 1
-        console.log(`  built    ${topic.slug} ${position + 1}/${sections.length} ${section.title}`)
-      } else {
-        already += 1
-      }
+      await record(
+        tally,
+        section.script,
+        `${topic.slug} ${position + 1}/${sections.length} ${section.title}`,
+      )
     }
   }
 
   console.log(
-    `narration ready: ${built} built, ${already} already there, ${built + already} sections in all`,
+    `narration ready: ${tally.built} built, ${tally.already} already there, ${tally.built + tally.already} sections in all`,
   )
+
+  await buildQuestions(topics)
+}
+
+/**
+ * A question is spoken from the words it already has rather than from a script
+ * written for it, which is the opposite of how a lesson is narrated. A question
+ * is a sentence somebody asks out loud; a lesson is a document. See
+ * docs/decisions/0021-questions-are-spoken-from-built-audio.md.
+ */
+async function buildQuestions(topics: Topic[]) {
+  const total = topics.reduce((count, topic) => count + topic.questions.length, 0)
+  console.log(`building audio for ${total} questions, two recordings each`)
+
+  const tally = { built: 0, already: 0 }
+
+  for (const topic of topics) {
+    for (const question of topic.questions) {
+      await record(tally, questionScript(question), `${topic.slug}#${question.id} question`)
+      await record(tally, answerScript(question), `${topic.slug}#${question.id} answer`)
+    }
+  }
+
+  console.log(
+    `questions ready: ${tally.built} built, ${tally.already} already there, ${tally.built + tally.already} recordings in all`,
+  )
+}
+
+type Tally = { built: number; already: number }
+
+async function record(tally: Tally, script: string, what: string) {
+  const { source } = await narrate(script)
+  if (source === 'engine') {
+    tally.built += 1
+    console.log(`  built    ${what}`)
+  } else {
+    tally.already += 1
+  }
 }
 
 main().catch((error: unknown) => {

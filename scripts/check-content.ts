@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { getAllTopics, type Topic } from '@/content/loader'
 import { collidingHeadings, unknownHeadings } from '@/content/headings'
+import { checkScript, MAX_SCRIPT_LENGTH } from '@/lib/speech/script'
+import { answerScript, questionScript } from '@/lib/speech/spoken-question'
 
 /**
  * Runs before the build so malformed content fails there rather than during a
@@ -25,6 +27,43 @@ async function main() {
   )
 
   await checkNarrationAnchors(spoken)
+  checkQuestionScripts(topics)
+}
+
+/**
+ * Every question is read aloud from the words it already carries, and the engine
+ * speaks one request at a time up to a fixed length. A prompt or an explanation
+ * that grows past it would fail partway through the next narration build, which
+ * is a long way from where the mistake was made.
+ */
+function checkQuestionScripts(topics: Topic[]) {
+  const failures: string[] = []
+  let scripts = 0
+
+  for (const topic of topics) {
+    for (const question of topic.questions) {
+      for (const [kind, script] of [
+        ['question', questionScript(question)],
+        ['answer', answerScript(question)],
+      ] as const) {
+        scripts += 1
+        const problem = checkScript(script)
+        if (problem === 'empty') {
+          failures.push(`${topic.slug}#${question.id}: the ${kind} has nothing speakable in it`)
+        } else if (problem === 'too-long') {
+          failures.push(
+            `${topic.slug}#${question.id}: the ${kind} is ${script.length} characters spoken, over the ${MAX_SCRIPT_LENGTH} the engine takes in one request`,
+          )
+        }
+      }
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`question audio:\n  ${failures.join('\n  ')}`)
+  }
+
+  console.log(`question audio: all ${scripts} scripts are short enough to be spoken`)
 }
 
 /**
