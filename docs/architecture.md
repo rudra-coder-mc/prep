@@ -285,8 +285,18 @@ the audio gates the application starting, and with the engine out of the default
 stack there is nothing left to gate it: the app waits on the database and on
 nothing else.
 
-**What it says is separate text.** A lesson read verbatim sounds like a document
-being read, because it is one: code blocks become punctuation, tables become
+**A question is spoken from its own words.** Lessons carry a hand-written script
+and questions do not, because a prompt is already a sentence somebody asks out
+loud. `src/lib/speech/spoken-question.ts` builds two scripts per question, one of
+the prompt and its options and one of the answer and its explanation, and both
+are recorded by the same build. Code is not read: a paragraph containing an
+indented line is dropped and the script says it is on screen instead. The
+answer's key comes back with the reveal rather than with the question, for the
+same reason the answer does. See
+`docs/decisions/0021-questions-are-spoken-from-built-audio.md`.
+
+**What a lesson says is separate text.** A lesson read verbatim sounds like a
+document being read, because it is one: code blocks become punctuation, tables become
 fragments, and figures mean nothing. So a topic may carry a `narration.ts` beside
 its lesson, an ordered list of titled sections written to be heard. A topic
 without one shows no player rather than falling back to the prose, and the

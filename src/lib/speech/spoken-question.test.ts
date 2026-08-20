@@ -1,0 +1,141 @@
+import { describe, expect, it } from 'vitest'
+import type { Question } from '@/content/schema'
+import { answerScript, questionScript, speakable } from './spoken-question'
+
+const base: Question = {
+  id: 'q',
+  type: 'concept',
+  difficulty: 'easy',
+  prompt: 'What is a closure?',
+  expectedAnswer: 'A function plus the scope it was defined in.',
+  explanation: 'The binding is shared.',
+  hints: [],
+  tags: [],
+}
+
+describe('speakable', () => {
+  it('leaves prose alone apart from collapsing the way it was laid out', () => {
+    expect(speakable('One sentence.\nAnother one.')).toEqual({
+      script: 'One sentence. Another one.',
+      hasCode: false,
+    })
+  })
+
+  it('drops indented code and says so, rather than reading punctuation aloud', () => {
+    const written = `Use let instead:
+
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => console.log(i), 0)
+  }
+
+That gives a binding per iteration.`
+
+    expect(speakable(written)).toEqual({
+      script: 'Use let instead: That gives a binding per iteration.',
+      hasCode: true,
+    })
+  })
+
+  it('reads a bullet list as sentences, since a listener cannot see the bullets', () => {
+    expect(speakable('- It captures the variable.\n- Not the value.').script).toBe(
+      'It captures the variable. Not the value.',
+    )
+  })
+
+  it('does not add a second full stop to a bullet that already ends in one', () => {
+    expect(speakable('- One.').script).toBe('One.')
+  })
+
+  it('ends a bullet that has no punctuation of its own', () => {
+    expect(speakable('- One\n- Two').script).toBe('One. Two.')
+  })
+
+  it('is empty when there was nothing but code', () => {
+    expect(speakable('  const a = 1')).toEqual({ script: '', hasCode: true })
+  })
+
+  it('drops the whole block, including the braces that sit in column one', () => {
+    const written = `Like this:
+
+function isEmpty(value) {
+  return value == null
+}
+
+And that is all.`
+
+    expect(speakable(written)).toEqual({
+      script: 'Like this: And that is all.',
+      hasCode: true,
+    })
+  })
+})
+
+describe('questionScript', () => {
+  it('is the prompt for a question with nothing else to say', () => {
+    expect(questionScript(base)).toBe('What is a closure?')
+  })
+
+  it('says the code is on screen rather than trying to read it', () => {
+    expect(questionScript({ ...base, type: 'output', code: 'console.log(1)' })).toBe(
+      'What is a closure? The code for this is on screen.',
+    )
+  })
+
+  it('reads the options in order and letters them, so it can be answered by ear', () => {
+    const script = questionScript({
+      ...base,
+      type: 'mcq',
+      options: ['The binding', 'The value'],
+      correctOption: 0,
+      expectedAnswer: undefined,
+    })
+
+    expect(script).toBe('What is a closure? Your choices are. A. The binding. B. The value.')
+  })
+})
+
+describe('answerScript', () => {
+  it('reads the expected answer and then the explanation', () => {
+    expect(answerScript(base)).toBe(
+      'The expected answer. A function plus the scope it was defined in. Why this is the answer. The binding is shared.',
+    )
+  })
+
+  it('names the correct option for a multiple choice question', () => {
+    const script = answerScript({
+      ...base,
+      type: 'mcq',
+      options: ['The binding', 'The value'],
+      correctOption: 1,
+      expectedAnswer: undefined,
+    })
+
+    expect(script).toBe(
+      'The answer is B. The value. Why this is the answer. The binding is shared.',
+    )
+  })
+
+  it('points at the printed output rather than spelling it out', () => {
+    const script = answerScript({
+      ...base,
+      type: 'output',
+      expectedAnswer: undefined,
+      expectedOutput: '1 2 1',
+    })
+
+    expect(script).toBe(
+      'The expected output is on screen. Why this is the answer. The binding is shared.',
+    )
+  })
+
+  it('mentions the code it had to leave out of a written answer', () => {
+    const script = answerScript({
+      ...base,
+      expectedAnswer: 'Do this:\n\n  const a = 1\n\nAnd that is it.',
+    })
+
+    expect(script).toBe(
+      'The expected answer. Do this: And that is it. The code for this is on screen. Why this is the answer. The binding is shared.',
+    )
+  })
+})

@@ -17,6 +17,7 @@ import {
 import { Button, buttonClass } from '@/components/ui/button'
 import { Card, SectionLabel } from '@/components/ui/card'
 import { CheckIcon, LightbulbIcon } from '@/components/ui/icons'
+import { SpeakButton } from '@/components/speech/speak-button'
 import {
   CONFIDENCE_LABELS,
   RESULT_LABELS,
@@ -42,9 +43,15 @@ export type SessionQuestion = {
   options?: string[]
   /** Whether this question is checked against printed output rather than self graded. */
   checksOutput?: boolean
+  /**
+   * Where the recording of the prompt and, for a multiple choice question, its
+   * options lives. Built by `npm run narration:build`, so this is a key and not
+   * a script: there is no synthesis to fall back to.
+   */
+  questionAudioKey?: string
 }
 
-type Revealed = { expectedAnswer: string; explanation: string }
+type Revealed = { expectedAnswer: string; explanation: string; answerAudioKey: string }
 type Tally = Record<Result, number>
 
 const CONFIDENCES: Confidence[] = [1, 2, 3, 4, 5]
@@ -90,7 +97,14 @@ function QuestionPrompt({ question }: { question: SessionQuestion }) {
         <Chip>{question.difficulty}</Chip>
       </div>
 
-      <h2 className="mt-3 text-xl leading-relaxed font-medium text-pretty">{question.prompt}</h2>
+      <div className="mt-3 flex items-start gap-3">
+        <h2 className="text-xl leading-relaxed font-medium text-pretty">{question.prompt}</h2>
+        <SpeakButton
+          audioKey={question.questionAudioKey}
+          label="Listen to the question"
+          className="mt-1 shrink-0"
+        />
+      </div>
 
       {question.code ? (
         <pre className="mt-4 overflow-x-auto rounded-card border border-border bg-surface p-4 font-mono text-sm leading-6">
@@ -268,7 +282,13 @@ function WrittenQuestion({
           transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
         >
           <Card className="mt-6">
-            <SectionLabel>Expected answer</SectionLabel>
+            <div className="flex items-center justify-between gap-3">
+              <SectionLabel>Expected answer</SectionLabel>
+              <SpeakButton
+                audioKey={revealed.answerAudioKey}
+                label="Listen to the answer and explanation"
+              />
+            </div>
             <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
               {revealed.expectedAnswer}
             </p>
@@ -307,7 +327,12 @@ function WrittenQuestion({
   )
 }
 
-type OutputVerdict = { correct: boolean; expectedOutput: string; explanation: string }
+type OutputVerdict = {
+  correct: boolean
+  expectedOutput: string
+  explanation: string
+  answerAudioKey: string
+}
 
 /**
  * The output form: type what the program prints and have it checked. The answer
@@ -377,9 +402,15 @@ function OutputQuestion({
           transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
         >
           <Card className="mt-5">
-            <p className={cx('font-medium', verdict.correct ? 'text-pass' : 'text-fail')}>
-              {verdict.correct ? 'Correct' : 'Not this time'}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className={cx('font-medium', verdict.correct ? 'text-pass' : 'text-fail')}>
+                {verdict.correct ? 'Correct' : 'Not this time'}
+              </p>
+              <SpeakButton
+                audioKey={verdict.answerAudioKey}
+                label="Listen to the answer and explanation"
+              />
+            </div>
 
             <div className="mt-4 border-t border-border pt-4">
               <SectionLabel>Expected output</SectionLabel>
@@ -410,7 +441,12 @@ function OutputQuestion({
   )
 }
 
-type ChoiceVerdict = { correct: boolean; correctOption: number; explanation: string }
+type ChoiceVerdict = {
+  correct: boolean
+  correctOption: number
+  explanation: string
+  answerAudioKey: string
+}
 
 /**
  * The multiple choice form: pick one, find out immediately, move on. Grading
@@ -495,9 +531,15 @@ function ChoiceQuestion({
           transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
         >
           <Card className="mt-5">
-            <p className={cx('font-medium', verdict.correct ? 'text-pass' : 'text-fail')}>
-              {verdict.correct ? 'Correct' : 'Not this time'}
-            </p>
+            <div className="flex items-center justify-between gap-3">
+              <p className={cx('font-medium', verdict.correct ? 'text-pass' : 'text-fail')}>
+                {verdict.correct ? 'Correct' : 'Not this time'}
+              </p>
+              <SpeakButton
+                audioKey={verdict.answerAudioKey}
+                label="Listen to the answer and explanation"
+              />
+            </div>
             <div className="mt-4 border-t border-border pt-4">
               <SectionLabel>Explanation</SectionLabel>
               <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted">
