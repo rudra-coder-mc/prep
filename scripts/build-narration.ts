@@ -53,7 +53,12 @@ async function main() {
 
 main().catch((error: unknown) => {
   if (error instanceof SpeechServiceError) {
-    console.error(`${error.message}. Start it with: docker compose up -d tts`)
+    // npm run narration:build starts the engine itself, so reaching this means
+    // it stopped partway rather than never started. Recordings already made are
+    // kept, so running the command again picks up where this left off.
+    console.error(
+      `${error.message}. It is started by this command, so it has stopped mid-run: check "docker compose logs tts", then run this again to carry on.`,
+    )
   } else {
     console.error(error instanceof Error ? error.message : error)
   }

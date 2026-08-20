@@ -41,10 +41,15 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     if (error instanceof InvalidScriptError) return problem(400, error.message)
     if (error instanceof SpeechServiceError) {
-      // The engine is a separate container, so it being down is a gateway
-      // failure rather than a bug in this request.
+      // The engine is a separate container, and it is off unless somebody is
+      // recording, so this is a gateway failure rather than a bug in this
+      // request. Almost always it means the script was edited after the last
+      // build, so the message names the command rather than the container.
       console.error(error)
-      return problem(502, 'The speech engine is not answering')
+      return problem(
+        502,
+        'This section has no recording yet. Run npm run narration:build to make one.',
+      )
     }
     throw error
   }

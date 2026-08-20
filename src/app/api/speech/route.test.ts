@@ -84,11 +84,18 @@ describe('POST /api/speech', () => {
     await expect(response.json()).resolves.toEqual({ error: 'A narration script cannot be empty' })
   })
 
-  it('turns the engine being down into a 502, not a 500', async () => {
+  it('turns the engine being down into a 502 naming the command that fixes it', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     narrateMock.mockRejectedValue(new SpeechServiceError('unreachable'))
 
-    expect((await POST(post({ text: 'Say this.' }))).status).toBe(502)
+    const response = await POST(post({ text: 'Say this.' }))
+
+    // The engine is off by default, so a reader who hits this is looking at a
+    // section nobody has recorded rather than at a broken service.
+    expect(response.status).toBe(502)
+    await expect(response.json()).resolves.toEqual({
+      error: 'This section has no recording yet. Run npm run narration:build to make one.',
+    })
   })
 
   it('lets an unexpected failure through rather than dressing it as a gateway error', async () => {

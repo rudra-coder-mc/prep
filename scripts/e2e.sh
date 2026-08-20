@@ -6,7 +6,12 @@ set -e
 DB_NAME=${E2E_DB_NAME:-prep_e2e}
 SPEECH_CACHE_DIR=${E2E_SPEECH_CACHE_DIR:-.speech-cache-e2e}
 
+# The speech engine is off by default and the speech specs need it, so it is
+# started here and stopped again when the run ends, the same way
+# scripts/with-services.sh does it.
 docker compose up -d db tts >/dev/null
+trap 'docker compose stop tts >/dev/null 2>&1' EXIT INT TERM
+
 printf 'waiting for postgres'
 until docker compose exec -T db pg_isready -U "${POSTGRES_USER:-prep}" -d "${POSTGRES_DB:-prep}" >/dev/null 2>&1; do
   printf '.'
@@ -44,4 +49,5 @@ export SPEECH_SERVICE_URL="http://127.0.0.1:${TTS_PORT:-5001}"
 npm run db:migrate
 npm run db:seed
 
-exec npx playwright test "$@"
+# Not exec, because the trap above has to survive the run finishing.
+npx playwright test "$@"

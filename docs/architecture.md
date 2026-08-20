@@ -30,14 +30,23 @@ in the stack that exists because of what it can do rather than what it stores.
 ```
                 docker compose up
                         |
-        +---------------+---------------+---------------+
-        |                               |               |
-   app container                  postgres container    tts container
-   Next.js (standalone)           named volume: pgdata  Piper + its HTTP server
-   better-auth                    healthcheck gates     voice model baked in
-   drizzle-orm                    app start             named volume:
-        |                                               speech-cache
+        +---------------+---------------+
+        |                               |
+   app container                  postgres container
+   Next.js (standalone)           named volume: pgdata
+   better-auth                    healthcheck gates
+   drizzle-orm                    app start
+        |
    content/ baked into the image at build time
+        |
+   named volume: speech-cache
+
+
+                npm run narration:build
+                        |
+                   tts container          starts, records what has no
+                   Piper + HTTP server    recording yet, and stops again
+                   voice model baked in   writes into speech-cache
 ```
 
 ## The two halves: content and progress
@@ -239,8 +248,13 @@ dashboard did not change to accommodate any of them.
 ## Narration
 
 A topic can be listened to rather than read. The voice is Piper, a neural text to
-speech engine running in the `tts` container with its voice model baked into the
-image, so narration works offline and no lesson text leaves the machine.
+speech engine in the `tts` container with its voice model baked into the image,
+so narration works offline and no lesson text leaves the machine.
+
+That container is behind a compose profile and is off almost all the time. It is
+a tool the author runs, not a service the reader depends on: recordings are made
+ahead of time and served from a volume, so listening never touches it. See
+`docs/decisions/0020-the-speech-engine-runs-on-demand.md`.
 
 `src/lib/speech/` is the whole engine, and it has two entry points. Audio is
 cached by content, since the file's name is a hash of the script, so a script is
@@ -255,16 +269,21 @@ yet, and skips what has. The key is the hash of the words, so the bytes behind o
 can never change and the browser is told to keep it forever. The topic page
 computes each section's key on the server and hands it to the player.
 
-**`POST /api/speech` is the fallback, and the way a script is first heard.** A
-script in, a WAV out, synthesised and cached. The player asks for the built
-recording first and comes here when there isn't one, which is what makes editing
-a script and pressing play work with no build step in between.
+**`POST /api/speech` is the fallback for a script with no recording.** A script
+in, a WAV out, synthesised and cached. The player asks for the built recording
+first and comes here when there isn't one. With the engine off, that request
+answers 502 naming `npm run narration:build`, which is the honest answer: the
+section has not been recorded, and recording it is a command rather than
+something to wait for. Start the container by hand and the fallback works as it
+always did, which is what makes editing a script and pressing play immediately
+possible while authoring.
 
 Synthesis costs about a second of CPU for three and a half seconds of speech, so
 a request carries one section of a narration rather than a whole one, and a
 script over 3000 characters is refused rather than left to hang. Nothing about
-the audio gates the application starting. The engine being unready is a 502 on
-one endpoint, not a stack that will not boot.
+the audio gates the application starting, and with the engine out of the default
+stack there is nothing left to gate it: the app waits on the database and on
+nothing else.
 
 **What it says is separate text.** A lesson read verbatim sounds like a document
 being read, because it is one: code blocks become punctuation, tables become

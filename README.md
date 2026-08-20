@@ -29,9 +29,15 @@ docker compose up
 Then open http://localhost:3000 and log in with the seeded credentials
 (`dev@prep.test` / `dev`, overridable in `.env`).
 
-Nothing else to install. Postgres, migrations, the seed user and the speech
-engine are all handled inside the stack. The first build downloads a voice model
-and so takes a few minutes longer than the ones after it.
+Nothing else to install. Postgres, the migrations and the seed user are all
+handled inside the stack, and that stack is two containers: the app and the
+database.
+
+The speech engine is not one of them. Every narration script already has a
+recording, so nothing has to be synthesised while you listen, and a voice model
+sitting in memory to serve nothing is load for no reason. It starts only when
+`npm run narration:build` needs it and stops again afterwards. That first run
+builds its image, which downloads the voice model and takes a few minutes.
 
 ## Writing content or changing the app
 
@@ -67,7 +73,9 @@ npm run dev:docker -- --build
 - `src/lib/speech/` turns a narration script into audio and caches it by content.
   `services/tts/` is the Piper container it talks to, and no text leaves the
   machine. `npm run narration:build` makes every recording ahead of time, so no
-  lesson is ever synthesised while somebody is waiting for it.
+  lesson is ever synthesised while somebody is waiting for it. That command is
+  also the only thing that runs the container: it is behind a compose profile
+  and is off the rest of the time.
 - `src/components/speech/` is the player on a topic page. It reads that topic's
   `narration.ts` aloud a section at a time.
 
