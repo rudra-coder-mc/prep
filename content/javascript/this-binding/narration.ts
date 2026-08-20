@@ -3,6 +3,7 @@ import type { Narration } from '@/content/schema'
 export const narration: Narration = [
   {
     title: 'One sentence, then everything else',
+    heading: 'Why this matters',
     script: `This is the feature people work around rather than learn, usually
       by scattering arrow functions until the errors stop. That works right up
       until it does not, and it never survives an interview follow up.
@@ -15,6 +16,7 @@ export const narration: Narration = [
   },
   {
     title: 'The four call forms',
+    heading: 'The four call forms',
     script: `There is a precedence order, and knowing it answers almost every
       question you will be asked.
 
@@ -34,6 +36,7 @@ export const narration: Narration = [
   },
   {
     title: 'Losing the binding',
+    heading: 'Losing it',
     script: `The commonest bug in this topic is not exotic at all. It is taking
       a method out of its object.
 
@@ -51,6 +54,7 @@ export const narration: Narration = [
   },
   {
     title: 'Arrows close over this',
+    heading: 'Arrows close over `this`',
     script: `Because an arrow has no this of its own, the lookup continues
       outward, exactly like a closure over any other variable.
 
@@ -66,6 +70,7 @@ export const narration: Narration = [
   },
   {
     title: 'Call, apply and bind',
+    heading: '`call`, `apply`, `bind`',
     script: `Call invokes the function immediately, with the arguments listed
       one by one. Apply invokes immediately too, with the arguments as an array.
       Bind does not invoke anything. It returns a new function with this fixed,
@@ -81,6 +86,7 @@ export const narration: Narration = [
   },
   {
     title: 'The interview angle',
+    heading: 'The interview angle',
     script: `Asked what this is, answer with the precedence order rather than a
       definition. For a regular function, whatever the call site says: new, then
       explicit binding with call, apply or bind, then the object to the left of

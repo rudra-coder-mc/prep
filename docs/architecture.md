@@ -63,7 +63,8 @@ harmless in the meantime.
 ```
 content/javascript/closures/
   lesson.mdx        the explanation, importing visual components inline
-  narration.ts      the spoken script, in titled sections. Optional
+  narration.ts      the spoken script, in titled sections, each naming the
+                    lesson heading it covers. Optional
   questions.ts      typed question objects for this topic
   exercises.ts      practical exercises, solved locally in VS Code
   meta.ts           slug, title, order, difficulty, tags, prerequisites
@@ -276,11 +277,20 @@ content check names the topics that have no script.
 swapped per section, because playback permission belongs to the element and a
 new one created mid-narration would be refused. It plays a topic end to end from
 one press, fetches the next section while the current one plays, and remembers
-the chosen speed across topics. See
+the chosen speed across topics.
+
+**The lesson follows it.** Every narration section names the lesson heading it
+covers, so while a topic is being listened to the page lights up that part of the
+lesson, dims the rest, and scrolls to each section as the voice reaches it. The
+controls follow too: once the card at the top has scrolled away, the same player
+reappears as a bar at the bottom of the screen. None of this happens for a reader
+who has not pressed play. One `NarrationProvider` drives all three, because two
+audio elements would be two voices. See
 `docs/decisions/0015-piper-narration-engine.md` for the engine,
 `docs/decisions/0016-narration-is-written-not-read.md` for the script and the
-player, and `docs/decisions/0017-narration-is-built-once.md` for why the audio
-is made ahead of time.
+player, `docs/decisions/0017-narration-is-built-once.md` for why the audio is
+made ahead of time, and `docs/decisions/0018-the-lesson-follows-the-voice.md` for
+how a section of speech finds its section of lesson.
 
 ## Not in V1
 

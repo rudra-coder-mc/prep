@@ -53,8 +53,11 @@ The conventions the first group established, so the rest stay consistent:
   or four multiple choice, and two exercises.
 - Every topic ships a `narration.ts` as well, in sections that follow the
   lesson's own headings. Written to be heard, not read: no code spoken
-  character by character, and a section short enough to be one thought. See
-  `docs/decisions/0016-narration-is-written-not-read.md`.
+  character by character, and a section short enough to be one thought. Each
+  section carries the `heading` it covers, written exactly as the lesson writes
+  it, which is what makes the lesson follow the voice. See
+  `docs/decisions/0016-narration-is-written-not-read.md` and
+  `docs/decisions/0018-the-lesson-follows-the-voice.md`.
 - Output questions carry `expectedOutput` so they grade themselves, unless the
   answer is genuinely prose, in which case they carry `expectedAnswer`.
 - The correct multiple choice option is not always first.

@@ -3,6 +3,7 @@ import type { Narration } from '@/content/schema'
 export const narration: Narration = [
   {
     title: 'Two questions in disguise',
+    heading: 'Why this matters',
     script: `Scope is the question: which variable does this name refer to?
       Hoisting is the question: does it exist yet? Almost every confusing thing
       in JavaScript is one of those two underneath. Every closure question,
@@ -16,6 +17,7 @@ export const narration: Narration = [
   },
   {
     title: 'Scopes nest, and lookups go outward',
+    heading: 'Scopes nest, lookups go outward',
     script: `A new scope is created by the script or module itself, by every
       function, and by every block. A block is anything in curly braces,
       including the bodies of if, for and try.
@@ -33,6 +35,7 @@ export const narration: Narration = [
   },
   {
     title: 'What hoisting actually is',
+    heading: 'What hoisting actually is',
     script: `Before any code in a scope runs, the engine walks that scope and
       registers every declaration it finds. Nothing moves. What differs between
       the kinds of declaration is what each one is worth in the gap between
@@ -51,6 +54,7 @@ export const narration: Narration = [
   },
   {
     title: 'Why the dead zone is a feature',
+    heading: 'What hoisting actually is',
     script: `It is tempting to see the temporal dead zone as an inconvenience.
       It is the opposite. Consider what the alternative gives you.
 
@@ -69,6 +73,7 @@ export const narration: Narration = [
   },
   {
     title: 'Var is function scoped, and that is the whole difference',
+    heading: '`var` is function scoped, and that is the whole difference',
     script: `Take an if block inside a function, and declare a var inside that
       block. After the block, the var is still readable, because var ignores
       blocks entirely and belongs to the whole function. Do the same with let,
@@ -87,6 +92,7 @@ export const narration: Narration = [
   },
   {
     title: 'The interview angle',
+    heading: 'The interview angle',
     script: `Asked what hoisting is, the weak answer is that declarations move
       to the top. The strong answer is that declarations are registered before
       the code in a scope runs, and that what differs is the initial value: var

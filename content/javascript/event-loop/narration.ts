@@ -3,6 +3,7 @@ import type { Narration } from '@/content/schema'
 export const narration: Narration = [
   {
     title: 'One thread, and a schedule',
+    heading: 'Why this matters',
     script: `JavaScript runs your code on one thread. Everything you have ever
       heard about it being non blocking is a statement about how work is
       scheduled, not about work happening in parallel.
@@ -16,6 +17,7 @@ export const narration: Narration = [
   },
   {
     title: 'The model',
+    heading: 'The model',
     script: `There is one call stack. While anything is on it, nothing else can
       run. No timers, no promise callbacks, no clicks, no rendering.
 
@@ -32,6 +34,7 @@ export const narration: Narration = [
   },
   {
     title: 'Which is which',
+    heading: 'Which is which',
     script: `Macrotasks are what the loop picks up one at a time. Timeouts,
       intervals, input and output callbacks, and user interface events like
       clicks.
@@ -48,6 +51,7 @@ export const narration: Narration = [
   },
   {
     title: 'Where await splits a function',
+    heading: 'Where `await` splits a function',
     script: `Await is the part people get wrong under pressure, and it has a
       simple rule.
 
@@ -65,6 +69,7 @@ export const narration: Narration = [
   },
   {
     title: 'Rendering is in the loop, not above it',
+    heading: 'Rendering is in the loop, not above it',
     script: `A change to the page does not paint. It marks the page as needing
       work, and the browser does that work when it next gets the thread, between
       macrotasks.
@@ -85,6 +90,7 @@ export const narration: Narration = [
   },
   {
     title: 'The interview angle',
+    heading: 'The interview angle',
     script: `You will be given a snippet with a log, a timeout, a promise then,
       and possibly an async function, and asked for the output order. Do not
       pattern match. Walk it.

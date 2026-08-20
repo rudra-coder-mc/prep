@@ -3,6 +3,7 @@ import type { Narration } from '@/content/schema'
 export const narration: Narration = [
   {
     title: 'Why this one comes first',
+    heading: 'Why this matters',
     script: `Almost every example of JavaScript being weird is one of two rules,
       applied honestly. Values get converted before they are compared or
       combined. And which conversion happens depends on the operator, not on the
@@ -17,6 +18,7 @@ export const narration: Narration = [
   },
   {
     title: 'What there is',
+    heading: 'What there is',
     script: `There are seven primitive types. Undefined, null, boolean, number,
       string, symbol and bigint. Everything else is an object, and that includes
       arrays and functions. Primitives are immutable, so uppercasing a string
@@ -35,6 +37,7 @@ export const narration: Narration = [
   },
   {
     title: 'Truthiness, and the list worth memorising',
+    heading: 'Truthiness',
     script: `There are exactly eight falsy values. False, zero, minus zero, big
       integer zero, the empty string, null, undefined, and not a number.
       Everything else is truthy, including the empty array, the empty object,
@@ -49,6 +52,7 @@ export const narration: Narration = [
   },
   {
     title: 'Plus is two operators wearing one symbol',
+    heading: '`+` is two operators',
     script: `Plus is the only arithmetic operator that also joins text together.
       It converts both sides to primitives first. If either result is a string,
       it joins them. Otherwise it adds. Every other arithmetic operator converts
@@ -67,6 +71,7 @@ export const narration: Narration = [
   },
   {
     title: 'What loose equality actually does',
+    heading: 'What `==` actually does',
     script: `Loose equality is not random. It is a short list of conversions,
       applied until both sides are the same type.
 
@@ -86,6 +91,7 @@ export const narration: Narration = [
   },
   {
     title: 'Three ways to compare, and when each is right',
+    heading: 'Three ways to compare',
     script: `Strict equality compares type and value with no conversion at all,
       and it is your default. It has two gaps. Not a number is not strictly
       equal to itself, and zero is strictly equal to minus zero.
@@ -105,6 +111,7 @@ export const narration: Narration = [
   },
   {
     title: 'Saying it in an interview',
+    heading: 'The interview angle',
     script: `If you are asked why some coercion result is what it is, do not
       recite the answer. Walk the conversion out loud. Say which operator it is,
       say what that operator converts to, and then apply it one step at a time.

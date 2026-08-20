@@ -73,7 +73,11 @@ describe('validateTopic', () => {
   })
 
   describe('narration', () => {
-    const section = { title: 'Why this matters', script: 'Something worth hearing.' }
+    const section = {
+      title: 'Why this matters',
+      heading: 'Why this matters',
+      script: 'Something worth hearing.',
+    }
 
     it('is optional, and a topic without one simply shows no player', () => {
       expect(validateTopic(raw(), 'closures', BASE).narration).toBeNull()
@@ -88,6 +92,13 @@ describe('validateTopic', () => {
       expect(() =>
         validateTopic(raw({ narration: [{ ...section, script: '   \n  ' }] }), 'closures', BASE),
       ).toThrow(/narration\.ts[\s\S]*nothing to say/)
+    })
+
+    it('rejects a section that does not say which part of the lesson it is about', () => {
+      const { heading: _dropped, ...unanchored } = section
+      expect(() => validateTopic(raw({ narration: [unanchored] }), 'closures', BASE)).toThrow(
+        /narration\.ts[\s\S]*heading/,
+      )
     })
 
     it('rejects a narration with no sections at all', () => {

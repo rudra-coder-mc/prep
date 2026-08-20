@@ -2,12 +2,28 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SpokenSection } from './narration-audio'
+import { NarrationProvider } from './narration-player'
 import { TopicReader } from './topic-reader'
 
 const SECTIONS: SpokenSection[] = [
-  { title: 'Why this matters', script: 'The first thing to say out loud.', key: 'first' },
-  { title: 'The idea', script: 'The second thing to say out loud.', key: 'second' },
-  { title: 'The interview angle', script: 'The last thing to say out loud.', key: 'last' },
+  {
+    title: 'Why this matters',
+    heading: 'Why this matters',
+    script: 'The first thing to say out loud.',
+    key: 'first',
+  },
+  {
+    title: 'The idea',
+    heading: 'The idea',
+    script: 'The second thing to say out loud.',
+    key: 'second',
+  },
+  {
+    title: 'The interview angle',
+    heading: 'The interview angle',
+    script: 'The last thing to say out loud.',
+    key: 'last',
+  },
 ]
 
 let play: ReturnType<typeof vi.fn<() => Promise<void>>>
@@ -52,19 +68,31 @@ afterEach(() => {
 const requestedSections = () =>
   vi.mocked(fetch).mock.calls.map(([url]) => String(url).replace('/api/speech/', ''))
 
+/**
+ * The card is the player's face, so driving the player through it is what these
+ * assert on. Everything the buttons reach lives in the provider.
+ */
+function renderPlayer(sections: SpokenSection[], title: string) {
+  return render(
+    <NarrationProvider sections={sections} title={title}>
+      <TopicReader />
+    </NarrationProvider>,
+  )
+}
+
 const audioIn = (container: HTMLElement) =>
   container.querySelector('audio') as HTMLAudioElement | null
 
-describe('TopicReader', () => {
+describe('the narration player', () => {
   it('shows where the listener is before anything is played', () => {
-    render(<TopicReader sections={SECTIONS} title="Closures" />)
+    renderPlayer(SECTIONS, 'Closures')
 
     expect(screen.getByText('Why this matters')).toBeDefined()
     expect(screen.getByText('1 of 3')).toBeDefined()
   })
 
   it('plays the first section on the first press', async () => {
-    const { container } = render(<TopicReader sections={SECTIONS} title="Closures" />)
+    const { container } = renderPlayer(SECTIONS, 'Closures')
 
     await userEvent.click(screen.getByLabelText('Play narration'))
 
@@ -74,7 +102,7 @@ describe('TopicReader', () => {
   })
 
   it('fetches the next section while the current one plays', async () => {
-    render(<TopicReader sections={SECTIONS} title="Closures" />)
+    renderPlayer(SECTIONS, 'Closures')
 
     await userEvent.click(screen.getByLabelText('Play narration'))
 
@@ -83,7 +111,7 @@ describe('TopicReader', () => {
   })
 
   it('moves to the next section by itself when one ends', async () => {
-    const { container } = render(<TopicReader sections={SECTIONS} title="Closures" />)
+    const { container } = renderPlayer(SECTIONS, 'Closures')
 
     await userEvent.click(screen.getByLabelText('Play narration'))
     await waitFor(() => expect(play).toHaveBeenCalled())
@@ -96,7 +124,7 @@ describe('TopicReader', () => {
   })
 
   it('stops at the end rather than looping', async () => {
-    const { container } = render(<TopicReader sections={SECTIONS} title="Closures" />)
+    const { container } = renderPlayer(SECTIONS, 'Closures')
 
     await userEvent.click(screen.getByLabelText('Next section'))
     await userEvent.click(screen.getByLabelText('Next section'))
@@ -110,7 +138,7 @@ describe('TopicReader', () => {
   })
 
   it('will not step past either end', async () => {
-    render(<TopicReader sections={SECTIONS} title="Closures" />)
+    renderPlayer(SECTIONS, 'Closures')
 
     expect(screen.getByLabelText('Previous section')).toHaveProperty('disabled', true)
 
@@ -123,7 +151,7 @@ describe('TopicReader', () => {
   })
 
   it('resumes where it paused instead of asking for the audio again', async () => {
-    render(<TopicReader sections={SECTIONS} title="Closures" />)
+    renderPlayer(SECTIONS, 'Closures')
 
     await userEvent.click(screen.getByLabelText('Play narration'))
     await waitFor(() => expect(play).toHaveBeenCalledTimes(1))
@@ -139,13 +167,13 @@ describe('TopicReader', () => {
   })
 
   it('applies the chosen speed to the audio, and keeps it for the next topic', async () => {
-    const { container, unmount } = render(<TopicReader sections={SECTIONS} title="Closures" />)
+    const { container, unmount } = renderPlayer(SECTIONS, 'Closures')
 
     await userEvent.click(screen.getByLabelText('Narration speed, currently 1 times'))
     await waitFor(() => expect(audioIn(container)?.playbackRate).toBe(1.25))
 
     unmount()
-    render(<TopicReader sections={SECTIONS} title="Prototypes" />)
+    renderPlayer(SECTIONS, 'Prototypes')
 
     expect(screen.getByLabelText('Narration speed, currently 1.25 times')).toBeDefined()
   })
@@ -161,7 +189,7 @@ describe('TopicReader', () => {
       ),
     )
 
-    render(<TopicReader sections={SECTIONS} title="Closures" />)
+    renderPlayer(SECTIONS, 'Closures')
     await userEvent.click(screen.getByLabelText('Play narration'))
 
     await waitFor(() =>
@@ -175,7 +203,7 @@ describe('TopicReader', () => {
     const failing = vi.fn(async () => new Response('{}', { status: 502 }))
     vi.stubGlobal('fetch', failing)
 
-    render(<TopicReader sections={SECTIONS} title="Closures" />)
+    renderPlayer(SECTIONS, 'Closures')
     await userEvent.click(screen.getByLabelText('Play narration'))
     await waitFor(() =>
       expect(screen.getByText('The voice is not available right now.')).toBeDefined(),
@@ -191,7 +219,7 @@ describe('TopicReader', () => {
   })
 
   it('renders nothing rather than an empty player when there are no sections', () => {
-    const { container } = render(<TopicReader sections={[]} title="Closures" />)
+    const { container } = renderPlayer([], 'Closures')
     expect(container.querySelector('[data-topic-reader]')).toBeNull()
   })
 })

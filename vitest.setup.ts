@@ -52,3 +52,10 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
       dispatchEvent: () => false,
     }) as MediaQueryList
 }
+
+// jsdom has no layout, so it implements no scrolling at all. Anything that
+// brings part of a page into view needs the method to exist before it can be
+// spied on.
+if (typeof window !== 'undefined' && !window.HTMLElement.prototype.scrollIntoView) {
+  window.HTMLElement.prototype.scrollIntoView = () => {}
+}

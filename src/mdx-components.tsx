@@ -1,4 +1,6 @@
+import { isValidElement, type ReactNode } from 'react'
 import type { MDXComponents } from 'mdx/types'
+import { headingSlug } from '@/content/headings'
 import {
   CallStack,
   CodeWalkthrough,
@@ -11,13 +13,34 @@ import {
 } from '@/components/visuals'
 
 /**
+ * A heading's own words, with its markup dropped. MDX hands a heading its
+ * children rather than its text, so a heading with inline code in it arrives as
+ * a string, an element and another string rather than as one heading.
+ */
+function textOf(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(textOf).join('')
+  if (isValidElement<{ children?: ReactNode }>(node)) return textOf(node.props.children)
+  return ''
+}
+
+/**
  * Everything a lesson can use. Visuals are in scope automatically, so an MDX
  * file never imports anything.
  */
 export function useMDXComponents(components: MDXComponents = {}): MDXComponents {
   return {
-    h2: (props) => (
-      <h2 className="mt-12 scroll-mt-32 text-xl font-semibold tracking-tight" {...props} />
+    // The id is what a narration section points at, so the player can show
+    // which part of the lesson it is talking about. `scroll-mt` is what keeps
+    // that heading clear of the top bar when the page scrolls to it.
+    h2: ({ children, ...props }) => (
+      <h2
+        id={headingSlug(textOf(children))}
+        className="relative mt-12 scroll-mt-32 text-xl font-semibold tracking-tight"
+        {...props}
+      >
+        {children}
+      </h2>
     ),
     h3: (props) => <h3 className="mt-8 scroll-mt-32 font-medium" {...props} />,
     p: (props) => <p className="mt-4 leading-7 text-fg/90" {...props} />,
