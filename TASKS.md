@@ -19,68 +19,18 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 # Now: every question is answered, never typed
 
 Typing an explanation and then marking yourself is a self grade with extra
-steps, and typing exact output fails you over a quote character. Both go. Every
-question becomes a choice, an ordering, or an open question you answer in your
-head and mark yourself on.
+steps, and typing exact output fails you over a quote character. Both are gone.
+What is left is to add the ordering form, let the ladder climb now that nobody
+rates their own confidence, and convert the twelve topics onto the forms.
 
 Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
 `docs/glossary.md` defines the terms. Read those first.
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1. Split subject from form, and take the typing out
+## 1. Ordering questions
 
-Branch `feature/answer-forms`. Blocked by nothing.
-
-**What to build.** No session takes typed input any more. Every question
-declares a `form` of `choice` or `open`, separately from the `type` that says
-what it is about. Anything that cannot be answered by choosing is answered by
-revealing and marking yourself, with no textarea in front of it.
-
-**Why.** The two typed forms produce no evidence. Nothing reads a written answer
-back, and the output check keeps failing over indentation and quote characters
-rather than over the answer. See `0023`.
-
-**Areas touched.** The content schema and all twelve question files, the session
-component, the session actions and the attempt recording, the content check, the
-question audio scripts, and their tests.
-
-**Acceptance criteria.**
-
-- [ ] `type` holds only `concept`, `output`, `debugging`, `coding`, `scenario`
-      and `interview`. The 37 questions that were `mcq` carry a real subject.
-- [ ] A new `form` field holds `choice` or `open`, required on every question.
-- [ ] `expectedAnswer` is renamed `answerInFull` and is required on every
-      question whatever its form, including the 37 choice questions that have
-      never had one.
-- [ ] `explanation` is optional.
-- [ ] `expectedOutput`, `matchesExpectedOutput` and `normaliseOutput` are gone.
-- [ ] The written form, the typed output form and the confidence picker are
-      deleted, along with the free text path through `recordAttempt`. Revealing
-      an answer stays, because that is how an open question works.
-- [ ] An open question reveals its answer and records Passed, Weak or Failed,
-      with nothing to type before it. Its self grade sets the rung directly,
-      Passed 5 and Weak 3, because the picker cannot be deleted without
-      something to replace it. Task 3 does the rest of the ladder.
-- [ ] The 37 questions that were multiple choice have their existing
-      `explanation` moved into `answerInFull` rather than a new answer invented
-      for them. It is the only prose they carry, and moving it leaves nothing
-      duplicated. The topic conversions in tasks 4 to 15 rewrite it into a real
-      interview answer and give the question a fresh explanation.
-- [ ] The questions that were checked against printed output carry that output
-      as their `answerInFull` for now, with their explanation unchanged. Task 4
-      to 15 turn them into ordering or choice questions properly.
-- [ ] The 93 questions not yet authored as choice questions are `open`. The one
-      per topic rule is not enforced yet, which is task 16.
-- [ ] `npm run db:reset` drops the database, migrates and seeds, and the wipe
-      happens on this branch.
-
-**Done when** `npm run verify` passes and a practice session runs end to end
-with no input control anywhere except the option buttons and the self grade.
-
-## 2. Ordering questions
-
-Branch `feature/ordering-questions`. Blocked by 1.
+Branch `feature/ordering-questions`. Blocked by nothing.
 
 **What to build.** A third form. The question shows a pool of lines, some of
 which the program never prints, and you tap them in the order they are printed.
@@ -113,9 +63,9 @@ topic's content.
 **Done when** `npm run verify` passes and the event loop ordering question can
 be answered correctly, answered wrongly, and heard.
 
-## 3. The ladder climbs, and confidence is derived
+## 2. The ladder climbs, and confidence is derived
 
-Branch `improvement/derived-confidence`. Blocked by 1 and 2.
+Branch `improvement/derived-confidence`. Blocked by 1.
 
 **What to build.** Nothing asks for a confidence rating. The platform works it
 out from the answer form and the verdict, and a question that keeps being
@@ -141,9 +91,9 @@ text that describes a rung.
 **Done when** `npm run verify` passes and answering the same question correctly
 four times in a row moves it from four hours to fourteen days.
 
-## 4 to 15. Convert one topic
+## 3 to 14. Convert one topic
 
-One branch per topic, named `content/<topic-slug>`. Each blocked by 2.
+One branch per topic, named `content/<topic-slug>`. Each blocked by 1.
 
 The full brief is `docs/tasks/converting-a-topic.md`. Read it before starting.
 It covers the mix a converted topic ships, how each existing question shape
@@ -173,9 +123,9 @@ Delete a line below when its topic is merged.
 **Done when** the topic passes `npm run content:check`, its audio is built, and
 every wrong option in it is wrong for a reason you can say out loud.
 
-## 16. Enforce one open question per topic
+## 15. Enforce one open question per topic
 
-Branch `improvement/open-question-cap`. Blocked by 4 to 15.
+Branch `improvement/open-question-cap`. Blocked by 3 to 14.
 
 **What to build.** The content check stops accepting a second open question in a
 topic, which it could not do while 93 questions were waiting to be converted.
