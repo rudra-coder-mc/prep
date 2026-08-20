@@ -29,8 +29,8 @@ services:
   # docs/decisions/0020-the-speech-engine-runs-on-demand.md.
   #
   # A cache entry is addressed by the words in the script and not by the voice,
-  # so changing PIPER_VOICE means rebuilding this image *and* discarding the
-  # speech-cache volume, or old lines keep playing in the old voice. See
+  # so changing PIPER_VOICE means rebuilding this image *and* deleting
+  # .speech-cache, or old lines keep playing in the old voice. See
   # docs/decisions/0015-piper-narration-engine.md.
   tts:
     image: prep-tts
@@ -83,15 +83,19 @@ services:
     ports:
       - '${APP_PORT:-3000}:3000'
     volumes:
-      - speech-cache:/cache/speech
+      # The same directory `npm run narration:build` writes into, not a named
+      # volume. The build runs on the host and the app reads what it made, so
+      # there is one place recordings live rather than two that have to be kept
+      # in step. See docs/decisions/0022-one-place-for-recordings.md.
+      - ./.speech-cache:/cache/speech
     # The database is the only thing that gates startup, and the only other
     # container in the default set. The speech engine is not running at all
-    # under normal use, and the app does not need it to be: every narration
-    # script in content/ already has a recording in this volume.
+    # under normal use, and the app does not need it to be: everything in
+    # content/ that can be listened to already has a recording in the directory
+    # mounted below.
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   pgdata:
-  speech-cache:
