@@ -50,7 +50,7 @@ export const narration: Narration = [
       That is not a contrived example. The same thing happens every time a
       method is passed somewhere: to a timeout, to an array's map, to an event
       listener. The host calls your function plainly, and the binding you
-      assumed is simply gone.`,
+      assumed is gone.`,
   },
   {
     title: 'Arrows close over this',

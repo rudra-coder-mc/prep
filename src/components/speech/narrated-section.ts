@@ -16,8 +16,8 @@ export const NARRATED = 'data-narrated'
 
 /**
  * Marks everything from the heading with this id up to the next heading, and
- * unmarks everything else. A null slug clears the lesson, which is what a reader
- * who has never pressed play - or who has heard the topic out - sees.
+ * unmarks everything else. A null slug clears the lesson, which is what a
+ * reader who has never pressed play, or who has heard the topic out, sees.
  */
 export function markNarratedSection(lesson: HTMLElement, slug: string | null): void {
   let section: string | null = null

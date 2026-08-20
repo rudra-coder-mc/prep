@@ -1,4 +1,4 @@
-# 0018 — The lesson follows the voice
+# 0018. The lesson follows the voice
 
 ## Status
 
@@ -37,14 +37,14 @@ headings, paragraphs, code blocks and figures with nothing wrapping a section, s
 the marking walks from a heading to the next one and sets an attribute on
 everything between. One rule in `globals.css` then dims everything the voice is
 not on. This is done to the DOM rather than through React because the lesson is a
-compiled MDX component: mapping over its output would mean rendering it first,
+compiled MDX component. Mapping over its output would mean rendering it first,
 and re-rendering a whole lesson on every section change is a far worse trade than
 setting an attribute.
 
 **Following is only for someone listening.** It turns on when a section actually
 starts playing and off when the last one ends. A reader who never presses play,
-or who has heard the topic out, gets exactly the page that was there before —
-nothing about an ordinary read changed.
+or who has heard the topic out, gets exactly the page that was there before.
+Nothing about an ordinary read changed.
 
 **One player, three faces.** The card, the bar that follows the reader down the
 page, and the lesson itself all read from one `NarrationProvider`. Two audio
@@ -54,7 +54,7 @@ would be worse than no controls at all.
 ## Consequences
 
 `heading` is required on every narration section, so a new topic cannot ship a
-script that says nothing about where it is. That is deliberate: it is one line of
+script that says nothing about where it is. That is deliberate. It is one line of
 content, and the alternative is a feature that silently does nothing on the
 topics that forgot it.
 
@@ -62,7 +62,7 @@ The page scrolls itself when the narration moves on. Someone reading ahead while
 listening will be pulled back to the section being spoken. That is the point of
 the feature rather than a side effect of it, but it is the part most likely to
 want a way to turn it off, and the bar's "scroll to what is playing" button is
-the cheap version of that argument: it exists because the reader is allowed to
+the cheap version of that argument. It exists because the reader is allowed to
 wander.
 
 Dimming is opacity only. It changes no layout, so a lesson that is being narrated

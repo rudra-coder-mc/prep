@@ -48,8 +48,8 @@ export function useNarration(): NarrationPlayer {
  * the one audio element it all comes out of.
  *
  * It is a provider rather than a component with buttons because three things
- * need the same playback - the card on the page, the bar that follows you down
- * it, and the lesson highlighting the part being spoken - and two audio elements
+ * need the same playback. The card on the page, the bar that follows you down
+ * it, and the lesson highlighting the part being spoken. Two audio elements
  * would mean two voices.
  *
  * There is exactly one `<audio>` element and its `src` is swapped, rather than

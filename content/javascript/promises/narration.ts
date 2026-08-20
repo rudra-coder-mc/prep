@@ -30,7 +30,7 @@ export const narration: Narration = [
 
       One more thing follows, and it is the one people forget. A promise cannot
       be cancelled. There is no state to move it to. That is exactly why abort
-      controller exists as a separate mechanism: the promise interface has no
+      controller exists as a separate mechanism. The promise interface has no
       answer here, so cancellation had to be built beside it rather than into
       it.`,
   },
@@ -52,10 +52,9 @@ export const narration: Narration = [
       And promise any, when the first to succeed wins, and it only rejects if
       all of them do. That is for redundant sources.
 
-      One trap worth naming. Promise all rejecting does not stop the other work.
-      Those promises keep running, and their results are simply thrown away.
-      Their side effects still happen. If that matters, you need abort
-      controller, not a combinator.`,
+      One trap. Promise all rejecting does not stop the other work. Those promises
+      keep running, and their results are thrown away. Their side effects still
+      happen. If that matters, you need abort controller, not a combinator.`,
   },
   {
     title: 'Where the time goes',
@@ -73,8 +72,8 @@ export const narration: Narration = [
       limiting concurrency, because firing ten thousand requests at once is its
       own kind of bug.
 
-      Outside those two, it is a bottleneck you did not mean to write, and it is
-      worth training your eye to spot it.`,
+      Outside those two, it is a bottleneck you did not mean to write. Train your
+      eye to spot it.`,
   },
   {
     title: 'The return that is easy to forget',

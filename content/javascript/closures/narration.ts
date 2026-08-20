@@ -20,18 +20,18 @@ export const narration: Narration = [
     title: 'The idea',
     heading: 'The idea',
     script: `Every function carries a hidden reference to the scope it was
-      defined in. Defined in, not called from. That is the whole mechanism.
+      defined in. Defined in, not called from. That is the mechanism.
 
       Normally, when a function returns, its local variables become unreachable
       and go away. But if an inner function survives the return, then so does
       the scope it points at, because the inner function is still holding a
       reference to it.
 
-      Now the crucial word, and it is the word that separates a shallow answer
-      from a real one. A closure captures the variable, not the value. It
-      captures the binding itself. So if that variable changes later, every
-      closure over it sees the new value. Nothing was copied at the moment the
-      closure was created.`,
+      Now the word that matters, the one that separates a shallow answer from a
+      real one. A closure captures the variable, not the value. It captures the
+      binding itself. So if that variable changes later, every closure over it
+      sees the new value. Nothing was copied at the moment the closure was
+      created.`,
   },
   {
     title: 'Two counters, two scopes',
@@ -48,10 +48,10 @@ export const narration: Narration = [
       So calling the first counter twice and the second counter once prints one,
       two, one.
 
-      Here is the change worth making by hand, because it is the entire concept
-      in one edit. Move the count declaration above the factory instead of
-      inside it. Now there is one variable rather than one per call, both
-      counters share it, and the same three calls print one, two, three.`,
+      Make this one change by hand, because it is the concept in a single edit.
+      Move the count declaration above the factory instead of inside it. Now
+      there is one variable rather than one per call, both counters share it,
+      and the same three calls print one, two, three.`,
   },
   {
     title: 'Captured, not copied',
@@ -64,10 +64,10 @@ export const narration: Narration = [
       capture a reference to that same single box. And nothing runs until the
       loop has finished, by which point the loop has written three into the box.
 
-      Switching to let fixes it, and it is worth knowing exactly why rather than
-      just knowing that it works. The specification creates a new binding for
-      each iteration, and copies the previous value into it. So there are three
-      variables, and each closure gets its own.
+      Switching to let fixes it. Knowing exactly why matters more than knowing
+      that it works. The specification creates a new binding for each iteration,
+      and copies the previous value into it. So there are three variables, and
+      each closure gets its own.
 
       One caveat that catches people. That per iteration binding is a loop
       feature, not a block feature. A single let declared outside the loop

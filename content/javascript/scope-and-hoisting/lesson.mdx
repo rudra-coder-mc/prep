@@ -12,9 +12,9 @@ picture stops explaining anything.
 ## Scopes nest, lookups go outward
 
 A scope is created by the script or module, by every function, and by every
-block - `{ ... }`, including the bodies of `if`, `for` and `try`. A name is
-resolved by looking in the current scope, then the one enclosing it, and so on
-until the global scope. The first scope that has the name wins; if none does,
+block, meaning any `{ ... }`, including the bodies of `if`, `for` and `try`. A
+name is resolved by looking in the current scope, then the one enclosing it, and
+so on until the global scope. The first scope that has the name wins; if none does,
 reading it throws a `ReferenceError`.
 
 <ScopeChain
@@ -106,7 +106,7 @@ output: ['undefined', 'function'],
 },
 {
 lines: [4],
-note: 'label exists but has no value yet. typeof does not protect you here - it throws like any other read.',
+note: 'label exists but has no value yet. typeof does not protect you here. It throws like any other read.',
 variables: { thrown: "ReferenceError: Cannot access 'label' before initialization" },
 output: ['undefined', 'function'],
 },

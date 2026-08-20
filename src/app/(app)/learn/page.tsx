@@ -22,7 +22,7 @@ export default async function LearningPage() {
         <PageHeader
           eyebrow="Coming soon"
           title="Learning"
-          description="Prep is built for interview preparation first. Learning is the other half: working through a technology to understand it, rather than drilling it before an interview."
+          description="Prep is built for interview preparation first. Learning is the other half. It means working through a technology to understand it, rather than drilling it before an interview."
         />
       </Rise>
 

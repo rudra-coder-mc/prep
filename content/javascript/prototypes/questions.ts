@@ -78,7 +78,7 @@ So for a constructor Dog:
     type: 'debugging',
     difficulty: 'medium',
     prompt:
-      'This function is meant to list an object’s own keys, but it includes inherited ones. What is wrong and how would you fix it?',
+      "This function is meant to list an object's own keys, but it includes inherited ones. What is wrong and how would you fix it?",
     code: `function ownKeys(obj) {
   const keys = []
   for (const key in obj) {
@@ -175,7 +175,7 @@ A Map is usually the better answer for a dictionary, because it accepts any key 
 }`,
     explanation: `instanceof is exactly a walk up the prototype chain looking for the constructor's prototype object, which is why it can be fooled by reassigning Constructor.prototype and why it fails across realms such as iframes.
 
-The primitive guard at the top matters: primitives have prototypes conceptually but instanceof is always false for them.`,
+The primitive guard at the top matters, because primitives have prototypes conceptually but instanceof is always false for them.`,
     hints: ['What is instanceof actually comparing?', 'What should it do for a primitive?'],
     tags: ['objects', 'prototype'],
   },

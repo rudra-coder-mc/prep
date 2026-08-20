@@ -39,8 +39,8 @@ export type NarrationRequest = {
  *
  * A missing key is not an error worth showing. It means the script has been
  * edited since the last build, or never built, and the endpoint below will make
- * the recording and keep it - so the fallback is silent by design and every play
- * after it takes the fast path.
+ * the recording and keep it. So the fallback is silent by design, and every
+ * play after it takes the fast path.
  */
 export async function fetchNarrationAudio(
   script: string,
@@ -64,8 +64,8 @@ async function fetchPrebuilt(key: string, signal?: AbortSignal): Promise<Blob | 
     return null
   }
 
-  // Anything other than the audio - a 404, an expired session, a proxy's error
-  // page - is left to the synthesis request to run into and report properly,
+  // Anything other than the audio, a 404, an expired session, a proxy's error
+  // page, is left to the synthesis request to run into and report properly,
   // rather than reported twice in two different ways.
   return response.ok ? response.blob() : null
 }

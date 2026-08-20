@@ -16,7 +16,7 @@ export const QUICK: Transition = { duration: 0.16, ease: EASE_SOFT }
 
 /**
  * A token travels between regions by keeping one `layoutId` across them, and
- * `layoutId` matches globally - so two visuals on the same page would swap
+ * `layoutId` matches globally, so two visuals on the same page would swap
  * items if they happened to label them the same. Every visual namespaces its
  * ids with this.
  */
@@ -28,9 +28,9 @@ export function useVisualNamespace(): string {
 const PROBE_MS = 420
 
 /**
- * Walks a search one position at a time, so the animation performs the rule -
- * lookups go outward, prototype lookups go down the chain - rather than
- * illustrating its conclusion. Callers still render the answer from their step
+ * Walks a search one position at a time, so the animation performs the rule,
+ * scope lookups going outward and prototype lookups going down the chain,
+ * rather than illustrating its conclusion. Callers still render the answer from their step
  * data, so a reader who skips ahead is never shown a search that is mid-flight
  * as if it were the result.
  */
@@ -375,7 +375,7 @@ export function Region({
 
 /**
  * Console output. Lines are appended rather than redrawn, and the newest one
- * arrives late enough to be seen arriving - printing is the payoff of most of
+ * arrives late enough to be seen arriving. Printing is the payoff of most of
  * these animations, so it gets its own beat.
  */
 export function OutputLog({

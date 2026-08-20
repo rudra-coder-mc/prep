@@ -8,12 +8,12 @@ export const questions: Question[] = [
     prompt: 'What is a closure, and when is one created?',
     expectedAnswer: `A closure is a function together with the lexical environment it was defined in. Whenever a function is created it keeps a reference to the scope around it, so it can still read and write those variables after the outer function has returned.
 
-The key points worth saying:
+The points to say out loud:
 - It captures the variable itself, not a copy of its value.
 - It is created at function definition time, not at call time.
 - The captured scope stays alive as long as the closure does, which is why closures keep memory reachable.`,
-    explanation: `People often describe a closure as "a function that remembers its variables", which is right but incomplete. The important consequence is that the binding is shared: if the outer variable changes, every closure over it sees the new value. That single fact explains most closure interview questions, including the classic setTimeout-in-a-loop puzzle.`,
-    hints: ['Think about what a function needs in order to resolve a name that is not its own.'],
+    explanation: `People often describe a closure as "a function that remembers its variables", which is right but incomplete. The important consequence is that the binding is shared. If the outer variable changes, every closure over it sees the new value. That single fact explains most closure interview questions, including the classic setTimeout-in-a-loop puzzle.`,
+    hints: ['Think about what a function needs to resolve a name that is not its own.'],
     tags: ['closure', 'scope'],
   },
   {
@@ -36,7 +36,7 @@ console.log(a(), a(), b())`,
     expectedOutput: '1 2 1',
     explanation: `Each call to makeCounter creates a new execution context with its own count binding, so a and b close over different variables. a increments its own count twice, reaching 2, while b starts fresh at 1.
 
-If they had shared a count, the answer would be 1 2 3 - which is what you get if count is declared outside makeCounter.`,
+If they had shared a count, the answer would be 1 2 3, which is what you get if count is declared outside makeCounter.`,
     hints: ['How many times is makeCounter called, and what does each call create?'],
     tags: ['closure'],
   },
@@ -121,7 +121,7 @@ Things to check and do:
 - Whether handlers are removed when their elements are removed.
 - Whether the large data is actually needed by the handler, or just happens to share a scope with it.
 - Move the handler out of that scope, or null out the large reference once it is no longer needed.`,
-    explanation: `Engines do optimise this - V8 will often drop variables a closure demonstrably never references - but you cannot rely on it, particularly when eval or a debugger statement is present, or when several closures share one scope and one of them does use the big variable. Sharing a scope is what couples their lifetimes.`,
+    explanation: `Engines do optimise this. V8 will often drop variables a closure demonstrably never references. But you cannot rely on it, particularly when eval or a debugger statement is present, or when several closures share one scope and one of them does use the big variable. Sharing a scope is what couples their lifetimes.`,
     hints: ['What keeps the array reachable?'],
     tags: ['closure', 'performance'],
   },
@@ -131,7 +131,7 @@ Things to check and do:
     difficulty: 'medium',
     prompt:
       'How do closures give you private state, and how does that compare with private class fields?',
-    expectedAnswer: `A closure makes state private by construction: the variable lives in a scope nobody outside can name, so there is no syntax that reaches it. This is the module pattern - return an object of functions that all close over the same variables.
+    expectedAnswer: `A closure makes state private by construction: the variable lives in a scope nobody outside can name, so there is no syntax that reaches it. This is the module pattern: return an object of functions that all close over the same variables.
 
 Compared with #private class fields:
 - Closures allocate their state per instance created by the factory, and each function is a new object, so many instances cost more memory than prototype methods.
@@ -160,7 +160,7 @@ m.increment()
 const { read } = m
 console.log(read())`,
     expectedOutput: '2',
-    explanation: `Both functions close over the same value binding, so increment and read stay in sync. Destructuring read off the object does not break anything, because a closure captures its scope rather than its this. That is the practical difference between closure-based privacy and methods that depend on this - the latter would break here.`,
+    explanation: `Both functions close over the same value binding, so increment and read stay in sync. Destructuring read off the object does not break anything, because a closure captures its scope rather than its this. That is the practical difference between closure-based privacy and methods that depend on this. The latter would break here.`,
     hints: ['Does pulling read out of the object change what it can see?'],
     tags: ['closure', 'objects'],
   },

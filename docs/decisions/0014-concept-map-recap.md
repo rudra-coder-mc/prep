@@ -1,4 +1,4 @@
-# 0014 - Every lesson ends with a map of itself
+# 0014. Every lesson ends with a map of itself
 
 ## Status
 
@@ -7,7 +7,7 @@ Accepted.
 ## Context
 
 A lesson is prose with visuals inside it. Each visual explains one mechanism
-well - how a lookup walks, how a queue drains - and none of them says what the
+well, how a lookup walks or how a queue drains, and none of them says what the
 topic _is_. Reading closures end to end leaves five good pictures and no single
 one to recall under pressure, which is the moment the material is actually
 needed.
@@ -37,7 +37,7 @@ produces a table of contents rather than a summary. Headings are written to
 introduce a section, not to be the sentence you carry away from it.
 
 **A single map per track instead of per topic.** Useful later as navigation, and
-useless as recall: the unit being tested is the topic, so that is the unit that
+useless as recall. The unit being tested is the topic, so that is the unit that
 needs a picture.
 
 **Leave the recap as prose.** The lessons already end with a "Traps" list, which
@@ -47,9 +47,9 @@ only.
 ## Consequences
 
 Every topic now carries a third authoring cost, after the lesson and its
-questions. It is small - five branches - but it is per topic, and a map that
+questions. It is small, five branches, but it is per topic, and a map that
 disagrees with its lesson is worse than no map, so it has to be revisited
 whenever the lesson changes.
 
 The map duplicates content by design. That duplication is the feature, and it is
-also the maintenance burden: nothing checks that the two agree.
+also the maintenance burden. Nothing checks that the two agree.

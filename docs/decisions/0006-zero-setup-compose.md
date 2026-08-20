@@ -1,6 +1,6 @@
-# 6. `docker compose up` is the only setup step
+# 0006. `docker compose up` is the only setup step
 
-**Status:** accepted — 2026-08-19
+**Status:** accepted, 2026-08-19
 
 ## Context
 

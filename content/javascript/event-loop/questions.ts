@@ -15,7 +15,7 @@ console.log('4')`,
 Synchronous code runs to completion first, so 1 and 4 print immediately. When the
 call stack empties, the microtask queue is drained before anything else, so the
 promise callback prints 3. Only then does the loop take a macrotask, printing 2.`,
-    explanation: `The rule worth remembering is that microtasks are not a queue the loop visits in turn. They are drained completely after every task, before rendering and before the next macrotask. A zero-millisecond timer is not "as soon as possible"; it is "on the next macrotask turn, at the earliest".`,
+    explanation: `The rule is that microtasks are not a queue the loop visits in turn. They are drained completely after every task, before rendering and before the next macrotask. A zero-millisecond timer is not "as soon as possible"; it is "on the next macrotask turn, at the earliest".`,
     hints: ['What has to be true before any queued callback can run at all?'],
     tags: ['event-loop', 'async'],
   },
@@ -114,7 +114,7 @@ Promise.resolve().then(() => {
     prompt: 'Does setTimeout(fn, 1000) guarantee fn runs in exactly one second? Explain.',
     expectedAnswer: `No. It guarantees a minimum delay, not an exact time. After 1000ms the callback becomes eligible, and it runs when the loop next takes a macrotask and the stack is empty. If synchronous work is running, or a long queue is ahead of it, it runs later.
 
-Two extra details worth knowing:
+Two more details:
 - Nested timers are clamped to a minimum of about 4ms after several levels of nesting.
 - Background or hidden tabs throttle timers heavily, often to once per second or worse.`,
     explanation: `The practical consequence is that timers are unsuitable for animation or precise scheduling. requestAnimationFrame exists for the former, and for measuring elapsed time you read the clock rather than counting timer fires.`,

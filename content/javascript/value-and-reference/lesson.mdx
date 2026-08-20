@@ -1,9 +1,8 @@
 ## Why this matters
 
-Two variables can hold the same object, and changing one changes "both" - which
-is not a quirk, it is the only way objects could work without copying them on
-every assignment. The bugs come from not knowing which of your variables are
-sharing.
+Two variables can hold the same object, and changing one changes "both". That is
+not a quirk. It is the only way objects could work without copying them on every
+assignment. The bugs come from not knowing which of your variables are sharing.
 
 This is also the topic underneath every state management library. "Return a new
 object instead of mutating the old one" is advice that only makes sense once you
@@ -12,7 +11,7 @@ know what identity means and what `===` compares for objects.
 ## What a variable holds
 
 A variable holding a primitive holds the value itself. A variable holding an
-object holds a reference to it - the object lives elsewhere, and any number of
+object holds a reference to it. The object lives elsewhere, and any number of
 variables can point at the same one.
 
 <MemoryModel
@@ -28,7 +27,7 @@ variables can point at the same one.
       highlight: ['obj#1'],
     },
     {
-      note: 'Assigning box to alias copies what box holds - the reference. There is still one object.',
+      note: 'Assigning box to alias copies what box holds, the reference. There is still one object.',
       stack: [
         { name: 'count', value: '1' },
         { name: 'box', ref: 'obj#1' },
@@ -95,11 +94,11 @@ x === x                 // true
 ```
 
 That is what makes `Set` and `Map` keys, `WeakMap` lookups and React's render
-checks work the way they do: they compare identity, cheaply, instead of walking
+checks work the way they do. They compare identity, cheaply, instead of walking
 two structures. If you want to compare contents, you have to say how deep and
-what to do about `NaN`, key order, `undefined` values and prototypes - which is
-why every codebase either imports a deep equality function or writes a
-narrow one for its own shapes.
+what to do about `NaN`, key order, `undefined` values and prototypes. That is why
+every codebase either imports a deep equality function or writes a narrow one for
+its own shapes.
 
 ## How deep is a copy
 
@@ -113,8 +112,8 @@ config.timeout.ms = 50 // defaults.timeout.ms is now 50 as well
 
 For a real copy, `structuredClone` is the built-in answer. It handles nested
 objects, arrays, `Date`, `Map`, `Set`, `RegExp` and cycles. It also throws on
-functions, and it produces plain objects rather than instances - the prototype is
-not carried across.
+functions, and it produces plain objects rather than instances, because the
+prototype is not carried across.
 
 `JSON.parse(JSON.stringify(value))` is the old trick and it is lossy in ways that
 bite quietly: `undefined` values and functions disappear, `Date` becomes a
@@ -171,7 +170,7 @@ cycle throws.
     },
     {
       label: 'Arguments',
-      summary: 'Always passed by value - and for an object, that value is a reference.',
+      summary: 'Always passed by value, and for an object that value is a reference.',
       nodes: ['mutation reaches the caller', 'reassignment does not'],
     },
     {

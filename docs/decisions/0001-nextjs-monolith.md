@@ -1,6 +1,6 @@
-# 1. One Next.js application, not a split frontend and backend
+# 0001. One Next.js application, not a split frontend and backend
 
-**Status:** accepted — 2026-08-19
+**Status:** accepted, 2026-08-19
 
 ## Context
 
@@ -17,7 +17,7 @@ directly; Server Actions write it. No separate API service.
 
 **Next.js frontend + NestJS API.** Rejected. It is a more "production" shape and
 would double as NestJS practice, but it means two services, two deployments, two
-sets of CI, and a network boundary with serialisation on both sides — for an
+sets of CI, and a network boundary with serialisation on both sides, all for an
 application with one user. The NestJS practice is better served by a project
 where a separate API is actually warranted.
 
@@ -28,6 +28,6 @@ baseline.
 ## Consequences
 
 One repository, one image, one deploy. Data access is not reusable by a future
-mobile client without extracting it — accepted, since mobile is explicitly out of
-scope. Building on Next.js and Postgres also means the tool exercises two of the
+mobile client without extracting it, which is fine, since mobile is explicitly
+out of scope. Building on Next.js and Postgres also means the tool exercises two of the
 technologies it exists to teach.

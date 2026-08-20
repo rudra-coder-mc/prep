@@ -9,13 +9,13 @@ export const questions: Question[] = [
     expectedAnswer: `Coercion is converting a value from one type to another. It is explicit when you call Number(), String() or Boolean(), and implicit when an operator or a statement needs a type it was not given.
 
 The places it happens implicitly:
-- Arithmetic and comparison operators, which convert to number - except +, which concatenates if either side ends up a string.
+- Arithmetic and comparison operators, which convert to number. The exception is +, which concatenates if either side ends up a string.
 - ==, which converts until both sides share a type.
 - Anything that tests a value: if, while, ||, &&, !, the ternary.
 - Template literals and string concatenation, which convert to string.
 - Property keys, which become strings unless they are symbols.`,
     explanation: `The useful framing is that the operator decides the conversion, not the values. The same pair of operands behaves differently under + and -, which is why "3" - 1 is 2 and 1 + "2" is "12". Once you ask "what does this operator want?" rather than "what are these values?", the surprising cases stop being surprising.`,
-    hints: ['Think about which operators need a specific type in order to mean anything.'],
+    hints: ['Think about which operators need a specific type to mean anything.'],
     tags: ['coercion', 'types'],
   },
   {
@@ -96,7 +96,7 @@ If input.perPage can arrive as an empty string from a form, converting and valid
 }`,
     explanation: `The point of the question is that "empty" and "falsy" are different sets, and only one of them has a language operator. 0 and false are falsy but not empty; [] and {} are empty but truthy. Anything that reaches for !value here gets both halves wrong.
 
-Two details worth saying out loud: the null check has to come before typeof, because typeof null is 'object', and Object.keys ignores symbol keys and inherited properties, which is usually what you want but is worth knowing.`,
+Two details to say out loud. The null check has to come before typeof, because typeof null is 'object'. And Object.keys ignores symbol keys and inherited properties, which is usually what you want, but say that you know it.`,
     hints: [
       'Which of these values are falsy, and does that line up with being empty?',
       'What does typeof null return?',
@@ -115,9 +115,9 @@ What I would do:
 - Normalise at the boundary: convert ids to one representation as they enter the system, and compare with === everywhere after that.
 - Choose string as that representation if ids are opaque identifiers, since converting to number can lose precision and cannot round trip leading zeroes.
 - Add a parse step that rejects anything that is not a valid id, rather than letting a bad value become NaN and compare unequal to everything.`,
-    explanation: `The general principle is that coercion at the point of comparison is a decision made in the wrong place: every call site has to get it right, and none of them are the place that knows what the data means. Converting once at the boundary means the rest of the code never has to think about it.
+    explanation: `The general principle is that coercion at the point of comparison is a decision made in the wrong place. Every call site has to get it right, and none of them are the place that knows what the data means. Converting once at the boundary means the rest of the code never has to think about it.
 
-The precision point is worth remembering. Ids from a database bigint column exceed what a JavaScript number can hold exactly, and the failure is silent - two different ids can convert to the same number.`,
+The precision point matters in practice. Ids from a database bigint column exceed what a JavaScript number can hold exactly, and the failure is silent. Two different ids can convert to the same number.`,
     hints: ['What happens to this comparison for an id like "0012"?'],
     tags: ['coercion', 'equality', 'api'],
   },
@@ -129,7 +129,7 @@ The precision point is worth remembering. Ids from a database bigint column exce
     expectedAnswer: `One: value == null, which is true for exactly null and undefined and false for everything else, including 0, '' and NaN. It is the idiomatic way to ask "is this missing" when either can appear, and it is shorter than value === null || value === undefined.
 
 Everywhere else ===, because == needs the reader to reconstruct a conversion table to know what the line does.`,
-    explanation: `The honest answer includes the fact that linters generally allow this exception - ESLint's eqeqeq has a "smart" option and an explicit null exception - which is a decent signal that it is accepted practice rather than a personal preference.
+    explanation: `The honest answer includes the fact that linters generally allow this exception. ESLint's eqeqeq has a "smart" option and an explicit null exception, which is a decent signal that it is accepted practice rather than a personal preference.
 
 Saying "never use ==" is a defensible answer too, but knowing the one exception and why it is safe is a better one.`,
     hints: [],
@@ -155,7 +155,7 @@ Saying "never use ==" is a defensible answer too, but knowing the one exception 
     options: ['0n', "''", "'0'", 'NaN'],
     correctOption: 2,
     explanation:
-      "The string '0' is a non-empty string, and every non-empty string is truthy regardless of what it contains. The falsy values are exactly false, 0, -0, 0n, '', null, undefined and NaN - which means [] and {} are truthy too.",
+      "The string '0' is a non-empty string, and every non-empty string is truthy regardless of what it contains. The falsy values are exactly false, 0, -0, 0n, '', null, undefined and NaN, which means [] and {} are truthy too.",
     hints: [],
     tags: ['coercion'],
   },

@@ -10,8 +10,8 @@ import { useNarration } from './narration-player'
  *
  * While a topic is being listened to, the section the voice is on is the only
  * part of the page at full strength and the page scrolls to it as the narration
- * moves on. Every other time - not listening, or the topic heard out - this is
- * an ordinary article and nothing on the page has changed.
+ * The rest of the time, when nobody is listening or the topic has been heard
+ * out, this is an ordinary article and nothing on the page has changed.
  *
  * Which section that is comes from the narration itself: every section names the
  * lesson heading it covers, and the heading's id is the tie between them. See

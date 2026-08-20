@@ -10,7 +10,7 @@ export const exercises: Exercise[] = [
     requirements: [
       "'12' returns 12, and ' 12 ' returns 12.",
       "'', '   ', 'abc' and '12px' all return null.",
-      "'0' returns 0, not null - a valid zero is not a failure.",
+      "'0' returns 0, not null. A valid zero is not a failure.",
       'Say in a comment why Number and parseInt disagree about "12px", and which one you chose.',
     ],
   },

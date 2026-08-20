@@ -5,8 +5,8 @@ import type { Audio } from './audio'
 import { normaliseScript } from './script'
 
 /**
- * Synthesis is the expensive part - about a second of CPU for every three and a
- * half seconds of speech - and a narration script changes far less often than it
+ * Synthesis is the expensive part, about a second of CPU for every three and a
+ * half seconds of speech, and a narration script changes far less often than it
  * is played, so audio is written once and read from disk forever after.
  *
  * In the stack this is a named volume. Outside it, a directory beside the

@@ -1,4 +1,4 @@
-# 0015 - Narration is synthesised locally by Piper, and cached by content
+# 0015. Narration is synthesised locally by Piper, and cached by content
 
 ## Status
 
@@ -8,7 +8,7 @@ Accepted.
 
 Every topic is to get a button that explains it aloud, and the thing being
 optimised for is ten unbroken minutes of listening. That rules out a voice that
-is merely intelligible: a robotic one is not listened to twice, and the feature
+is merely intelligible. A robotic one is not listened to twice, and the feature
 is then dead weight.
 
 Three engines were on the table, and the difference between them is not really
@@ -60,7 +60,7 @@ engine is ready gets a 502 saying so and can be retried.
 ## Alternatives considered
 
 **The browser's `speechSynthesis`.** No container, no cache, no volume, no
-endpoint - by a distance the smallest thing that speaks, and it was seriously
+endpoint. By a distance the smallest thing that speaks, and it was seriously
 considered on that basis alone.
 
 Rejected because what it sounds like is not a property of this project. It is a
@@ -72,20 +72,20 @@ being handed over. It is also the one option that could not be improved later
 without being replaced.
 
 **A cloud API.** Better than Piper, and by enough to notice. Rejected on the
-project's own hard rule rather than on cost: it is the only option that sends
+project's own hard rule rather than on cost. It is the only option that sends
 lesson text off this machine, and it makes the platform stop working when the
 network does or when a key expires. A learning tool that is unavailable on a
 train is worse than one with a slightly flatter voice.
 
 **Pre-rendering every script at build time.** Tempting, because it moves all the
-waiting to the build and needs no engine at runtime. Rejected: it would put tens
-of megabytes of WAV into the image for every topic, and the narration scripts
-are authored in the same session as the lesson they belong to. Waiting minutes
+waiting to the build and needs no engine at runtime. Rejected, because it would
+put tens of megabytes of WAV into the image for every topic, and the narration
+scripts are authored in the same session as the lesson they belong to. Waiting minutes
 to hear a sentence read back is the friction `0006` exists to avoid. The cache
 gets the same result for everything except the very first play.
 
 **Compressing the cached audio.** WAV at 44 KB per second is about 26 MB for ten
-minutes, where Opus would be under 2 MB. Rejected for now, not on principle: it
+minutes, where Opus would be under 2 MB. Rejected for now, not on principle. It
 needs an encoder in the image, and this is a local tool serving one listener over
 a loopback interface, where the bytes cost nothing. If the volume becomes a
 nuisance, encoding in the `tts` container is the place to do it.
@@ -93,8 +93,8 @@ nuisance, encoding in the `tts` container is the place to do it.
 ## Consequences
 
 The stack is three containers, which is one more than `docs/architecture.md`
-said it would ever be. `0006`'s promise still holds - `docker compose up` is
-still the only step - but the first build is several minutes longer because it
+said it would ever be. `0006`'s promise still holds, and `docker compose up` is
+still the only step. But the first build is several minutes longer because it
 downloads a voice model, and the integration tests inherit that cost the first
 time they run. `scripts/with-db.sh` became `scripts/with-services.sh` and now
 brings up the engine alongside Postgres, because the test worth having is one

@@ -6,7 +6,7 @@ export const narration: Narration = [
     heading: 'Why this matters',
     script: `You can write JavaScript for years using class syntax and never
       think about prototypes. Then something inherited shows up in a for in
-      loop, or a deleted property mysteriously comes back with an older value,
+      loop, or a deleted property comes back with an older value,
       or an interviewer asks what class actually compiles to, and the
       abstraction stops holding.
 
@@ -51,8 +51,8 @@ export const narration: Narration = [
   {
     title: 'Prototype versus the link itself',
     heading: '`prototype` versus `__proto__`',
-    script: `The naming here is genuinely bad, and it is worth stating as an
-      equation so it stops being confusing.
+    script: `The naming here is genuinely bad. State it as an equation and it
+      stops being confusing.
 
       The word prototype, as a property, lives on a constructor function. It is
       the object that the instances that function creates will link to. The link
@@ -83,8 +83,8 @@ export const narration: Narration = [
       than shared on the prototype, which is exactly why a method written as a
       class field gets a bound this and a normal method does not.
 
-      So the accurate answer is: class is syntax over prototypes, plus a handful
-      of real semantic differences. Naming even two of those differences is what
+      So the accurate answer is that class is syntax over prototypes, plus a
+      handful of real semantic differences. Naming even two of those differences is what
       separates a good answer from a rehearsed one.`,
   },
   {
@@ -100,8 +100,8 @@ export const narration: Narration = [
       Expect follow ups on why for in sees inherited properties while Object dot
       keys does not, on what has own property is for and why you would call it
       through Object dot prototype rather than directly, and on the difference
-      between the instance of operator and comparing prototypes. All three are
-      the same idea seen from different angles: inheritance in this language is
-      a chain of live objects, not a copy made at construction time.`,
+      between the instance of operator and comparing prototypes. All three are the
+      same idea seen from different angles. Inheritance in this language is a
+      chain of live objects, not a copy made at construction time.`,
   },
 ]
