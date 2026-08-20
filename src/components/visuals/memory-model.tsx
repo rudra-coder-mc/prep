@@ -38,7 +38,10 @@ export function MemoryModel({ title = 'Memory', steps }: { title?: string; steps
 
   return (
     <VisualFrame title={title} player={player}>
-      <div ref={containerRef} className="relative grid gap-8 sm:grid-cols-2">
+      {/* Two columns at every width: the arrow from a binding to the object it
+          points at is the point, and stacking them puts the boxes in the way of
+          their own links. */}
+      <div ref={containerRef} className="relative grid grid-cols-2 gap-4 sm:gap-8">
         <LinkLayer links={drawn} reducedMotion={reducedMotion} />
 
         <Region label="Stack" empty={bindings.length === 0 ? 'nothing declared' : undefined}>
