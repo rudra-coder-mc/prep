@@ -176,3 +176,36 @@ Expect follow-ups on `hasOwnProperty` versus `for...in`, on implementing
   `instanceof Array` in the parent document. Use `Array.isArray`.
 - **Changing a prototype after objects exist is slow.** `Object.setPrototypeOf`
   deoptimises every object involved. Build the chain up front.
+
+## In one picture
+
+<ConceptMap
+  center={'Prototype chain'}
+  branches={[
+    {
+      label: 'Reading a property',
+      summary: 'Own property first, then each __proto__ in turn, until undefined.',
+      nodes: ['first match wins', 'the chain ends at null'],
+    },
+    {
+      label: 'Where methods live',
+      summary: 'On the prototype, shared by every instance rather than copied into them.',
+      nodes: ['one function, many objects', 'found at call time'],
+    },
+    {
+      label: 'Writing does not walk',
+      summary: 'A write always lands on the object itself, shadowing what it inherited.',
+      nodes: ['the prototype is untouched', 'except for a setter'],
+    },
+    {
+      label: 'prototype vs __proto__',
+      summary: 'One is a property of a constructor, the other is the link an object follows.',
+      nodes: ['Fn.prototype: what instances get', 'obj.__proto__: what obj follows'],
+    },
+    {
+      label: 'class is syntax',
+      summary: 'A constructor function and a prototype object, with the wiring done for you.',
+      nodes: ['extends links two chains', 'super walks up one'],
+    },
+  ]}
+/>

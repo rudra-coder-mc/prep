@@ -151,3 +151,41 @@ the prototype at all, so subclass overriding and `super` stop working normally.
 - **`this` in a plain function differs by mode.** `undefined` in modules and
   strict mode, `globalThis` in sloppy scripts, so the same code fails loudly in
   one place and silently corrupts a global in another.
+
+## In one picture
+
+<ConceptMap
+  center={'this'}
+  branches={[
+    {
+      label: 'Decided at the call site',
+      summary: 'Not by where the function is written, but by how it is called.',
+      nodes: ['four forms, checked in order'],
+    },
+    {
+      label: 'The four forms',
+      summary: 'new, then call/apply/bind, then a method call, then a plain call.',
+      nodes: [
+        'new: the fresh object',
+        'explicit: what you passed',
+        'method: the object before the dot',
+        'plain: undefined in strict code',
+      ],
+    },
+    {
+      label: 'Arrow functions',
+      summary: 'An arrow has no this of its own and takes it from the enclosing scope.',
+      nodes: ['cannot be rebound', 'wrong choice for a method'],
+    },
+    {
+      label: 'Losing it',
+      summary: 'Pulling a method off its object throws away the object before the dot.',
+      nodes: ['callbacks and setTimeout', 'bind, or wrap it in an arrow'],
+    },
+    {
+      label: 'call, apply, bind',
+      summary: 'Two call now and differ only in how arguments are passed; bind returns a function.',
+      nodes: ['call: comma separated', 'apply: an array', 'bind: a new function'],
+    },
+  ]}
+/>

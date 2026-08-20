@@ -165,3 +165,40 @@ a property on `globalThis`. `let` and `const` do neither.
   a shadow. In the body, the parameter is already that scope's binding.
 - **Loop bodies are blocks, so a `const` in one is fine.** `for (const item of
 list)` works because each iteration gets its own binding.
+
+## In one picture
+
+<ConceptMap
+  center={'Scope'}
+  branches={[
+    {
+      label: 'Where names live',
+      summary: 'A scope is created by the script, by every function and by every block.',
+      nodes: ['var ignores blocks', 'let and const do not'],
+    },
+    {
+      label: 'How a name resolves',
+      summary: 'Inner scope first, then outward, until something has it or nothing does.',
+      nodes: ['lexical, not by caller', 'first match wins', 'ReferenceError at the end'],
+    },
+    {
+      label: 'Hoisting is registration',
+      summary: 'Nothing moves. Declarations are registered before the first line runs.',
+      nodes: [
+        'var starts as undefined',
+        'function declarations are complete',
+        'assignments stay put',
+      ],
+    },
+    {
+      label: 'The temporal dead zone',
+      summary: 'let, const and class exist but have no value until their line runs.',
+      nodes: ['reading one throws', 'typeof throws too', 'names the bug at its line'],
+    },
+    {
+      label: 'Choosing a declaration',
+      summary: 'const by default, let when the binding genuinely changes, var never.',
+      nodes: ['var redeclares silently', 'var at top level hits globalThis'],
+    },
+  ]}
+/>

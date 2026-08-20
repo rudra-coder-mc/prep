@@ -156,3 +156,36 @@ the losers, and on implementing a promise from scratch.
   own bugs alongside the expected errors.
 - **`catch` returning a default is a silent failure.** It is the wrong trade
   anywhere data correctness matters.
+
+## In one picture
+
+<ConceptMap
+  center={'Promise'}
+  branches={[
+    {
+      label: 'States',
+      summary: 'Pending until it settles, and once settled it never changes again.',
+      nodes: ['fulfilled with a value', 'rejected with a reason', 'settles exactly once'],
+    },
+    {
+      label: 'Chaining',
+      summary: 'then returns a new promise, and a promise you return from it is adopted.',
+      nodes: ['a throw becomes a rejection', 'forgetting return breaks the chain'],
+    },
+    {
+      label: 'await',
+      summary: 'The same machinery, written top to bottom, resuming as a microtask.',
+      nodes: ['runs after the current drain reaches it', 'try/catch works again'],
+    },
+    {
+      label: 'Combinators',
+      summary: 'Pick by what should happen when one of them fails.',
+      nodes: ['all: fails fast', 'allSettled: never rejects', 'race and any'],
+    },
+    {
+      label: 'Errors',
+      summary: 'An unhandled rejection is a bug that used to be silent.',
+      nodes: ['catch at the end of the chain', 'finally does not swallow'],
+    },
+  ]}
+/>

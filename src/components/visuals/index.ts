@@ -1,5 +1,6 @@
 export { CodeWalkthrough, type WalkthroughStep } from './code-walkthrough'
 export { CallStack, type CallStackStep } from './call-stack'
+export { ConceptMap, type ConceptBranch, type ConceptMapProps } from './concept-map'
 export { EventLoop, type EventLoopItem, type EventLoopStep } from './event-loop'
 export { MemoryModel, type MemoryStep } from './memory-model'
 export { ScopeChain, type ScopeStep } from './scope-chain'

@@ -13,12 +13,20 @@ test('a lesson renders with its animated visuals', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Closures', level: 1 })).toBeVisible()
   await expect(page.getByText('Why this matters')).toBeVisible()
 
-  const walkthrough = page.locator('figure', { hasText: 'Two counters, two scopes' })
+  // By accessible name, since a figure's caption is its name and lesson text
+  // elsewhere on the page can contain the same words.
+  const walkthrough = page.getByRole('figure', { name: 'Two counters, two scopes' })
   await expect(walkthrough).toBeVisible()
   await expect(walkthrough.getByText('1/5')).toBeVisible()
 
   await walkthrough.getByLabel('Next step').click()
   await expect(walkthrough.getByText('2/5')).toBeVisible()
+
+  // The recap map at the end shows the shape of the topic before it is stepped
+  // through, so every branch is there from the start.
+  const map = page.getByRole('figure', { name: 'The whole topic' })
+  await expect(map.getByText('What it captures')).toBeVisible()
+  await expect(map.getByText('The classic question')).toBeVisible()
 })
 
 test('marking a topic learned enrols its questions into recall', async ({ page }) => {
@@ -49,7 +57,9 @@ test.describe('with motion allowed', () => {
   test('a visual starts playing itself once it is on screen', async ({ page }) => {
     await page.goto('/topics/javascript/closures')
 
-    const walkthrough = page.locator('figure', { hasText: 'Two counters, two scopes' })
+    // By accessible name, since a figure's caption is its name and lesson text
+    // elsewhere on the page can contain the same words.
+    const walkthrough = page.getByRole('figure', { name: 'Two counters, two scopes' })
     await walkthrough.scrollIntoViewIfNeeded()
 
     // Nothing is clicked here: the visual is expected to run on its own, which
@@ -63,7 +73,7 @@ test('the event loop lesson renders its queue visual', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Event loop and microtasks' })).toBeVisible()
 
-  const loop = page.locator('figure', { hasText: 'One turn of the loop' })
+  const loop = page.getByRole('figure', { name: 'One turn of the loop' })
   await expect(loop).toBeVisible()
   // By role, because the phase rail above the lanes also says "microtasks".
   await expect(loop.getByRole('heading', { name: 'Microtasks' })).toBeVisible()
