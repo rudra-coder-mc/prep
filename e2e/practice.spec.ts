@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { answerCurrent, optionsList, revealButton, walkToForm } from './answering'
+import { answerCurrent, movedOn, optionsList, revealButton, walkToForm } from './answering'
 
 test('the answer is not in the page before it is given', async ({ page }) => {
   await page.goto('/topics/javascript/closures/practice')
@@ -27,7 +27,8 @@ test('an open question is revealed and marked, with nothing to type', async ({ p
   await expect(page.getByText('The answer', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Passed' }).click()
 
-  await expect(page.getByText(/^2 of \d+$/)).toBeVisible()
+  await expect(movedOn(page)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Passed' })).toHaveCount(0)
 })
 
 test('hints are opt-in and revealed one at a time', async ({ page }) => {
@@ -41,13 +42,15 @@ test('hints are opt-in and revealed one at a time', async ({ page }) => {
 test('a choice question grades itself, without a self assessment', async ({ page }) => {
   await page.goto('/topics/javascript/closures/practice')
 
-  await walkToForm(page, 'choice')
+  // Driven from the first closures question, what-is-a-closure, whose correct
+  // option is B. Which option is right varies from question to question on
+  // purpose, so that is a fact about this one and not a rule to lean on.
+  await expect(page.getByText(/^1 of \d+$/)).toBeVisible()
 
   // Nothing about grading yourself belongs on a question with one right answer.
   await expect(page.getByRole('button', { name: 'Passed' })).toHaveCount(0)
 
-  // The correct option is first in every closures choice question, so this is wrong.
-  await optionsList(page).getByRole('button').last().click()
+  await optionsList(page).getByRole('button').first().click()
 
   await expect(page.getByText('Not this time')).toBeVisible()
 
@@ -60,8 +63,10 @@ test('a choice question grades itself, without a self assessment', async ({ page
 test('a choice question shows the full answer once it is answered', async ({ page }) => {
   await page.goto('/topics/javascript/closures/practice')
 
-  await walkToForm(page, 'choice')
-  await optionsList(page).getByRole('button').first().click()
+  // Same question, answered right this time, so the correct verdict is covered
+  // as well as the wrong one.
+  await expect(page.getByText(/^1 of \d+$/)).toBeVisible()
+  await optionsList(page).getByRole('button').nth(1).click()
 
   await expect(page.getByText('Correct')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Listen to the answer' })).toBeVisible()
