@@ -1,0 +1,263 @@
+## Why this matters
+
+Nothing in JavaScript checks that a call matches the function it lands in. Pass
+two arguments to a function that declares four and it runs anyway. Pass six and
+it runs anyway. Every bug at the boundary between two pieces of code lives in
+that gap: a value that arrived `undefined` and quietly took a default, a
+callback handed three arguments when it was written for one, an options object
+the callee decided to modify.
+
+Interviewers reach for this because one line settles it. `['1', '2', '3'].map(parseInt)`
+does not return `[1, 2, 3]`, and explaining why means explaining how a call is
+wired.
+
+## Parameters against arguments
+
+Parameters are the names in the declaration. Arguments are the values at the
+call. They are two different lists that meet by position, and the language is
+happy when they are different lengths.
+
+A parameter with no argument opposite it is `undefined`. An argument with no
+parameter opposite it is accepted, evaluated, and dropped on the floor.
+
+<CodeWalkthrough
+  title="A call that does not match its declaration"
+  code={`function box(width, height, label) {
+  return { width, height, label }
+}
+
+box(10)
+box(10, 20, 'crate', 'extra')`}
+steps={[
+{
+lines: [1, 5],
+note: 'One argument for three parameters. Position decides: width gets 10, and the other two names exist but hold undefined.',
+variables: { width: '10', height: 'undefined', label: 'undefined' },
+},
+{
+lines: [1, 6],
+note: 'Four arguments for three parameters. The first three bind by position and the fourth has no name to bind to.',
+variables: { width: '10', height: '20', label: "'crate'" },
+},
+{
+lines: [6],
+note: "The extra argument is not an error and it is not lost either. It was evaluated before the call and it is still in arguments, it just has no parameter name.",
+variables: { width: '10', height: '20', label: "'crate'", 'arguments.length': '4' },
+},
+]}
+/>
+
+This is why a function you wrote for one argument breaks when an array method
+hands it three. Nothing warned you, because from the language's point of view
+nothing went wrong.
+
+## Defaults are expressions
+
+A default is not a constant. It is an arbitrary expression, evaluated at call
+time, and only when the argument for it is `undefined`.
+
+Two consequences follow. `null` does not trigger a default, because `null` is a
+value somebody chose to pass. And a default that builds an object builds a new
+one on every call, which is what makes `options = {}` safe and a shared constant
+dangerous.
+
+A later parameter can use an earlier one, because the parameter list is
+evaluated left to right:
+
+```js
+function slice(text, start = 0, end = text.length) {
+  return text.slice(start, end)
+}
+```
+
+The parameter list is also its own scope, sitting between the enclosing scope
+and the function body. A default can see the parameters before it and everything
+outside the function. It cannot see anything the body declares.
+
+<ScopeChain
+  title="Where a default looks up a name"
+  steps={[
+    {
+      note: 'A default is evaluated in the parameter scope, so it resolves value in the enclosing scope and never reaches the body.',
+      scopes: [
+        { name: 'module', bindings: { value: "'outer'" } },
+        { name: 'show (parameters)', bindings: { input: 'value' } },
+        { name: 'show (body)', bindings: { value: "'inner'" } },
+      ],
+      lookup: { name: 'value', foundIn: 'module' },
+    },
+    {
+      note: 'The body runs afterwards with its own value, which shadows the outer one from here on. The parameter already holds what it resolved to.',
+      scopes: [
+        { name: 'module', bindings: { value: "'outer'" } },
+        { name: 'show (parameters)', bindings: { input: "'outer'" } },
+        { name: 'show (body)', bindings: { value: "'inner'" } },
+      ],
+      lookup: { name: 'value', foundIn: 'show (body)' },
+    },
+    {
+      note: 'A default that reads a parameter declared after it finds that name uninitialised, which is a ReferenceError rather than undefined.',
+      scopes: [
+        { name: 'module', bindings: {} },
+        { name: 'pair (parameters)', bindings: { a: 'b', b: '(not yet)' } },
+        { name: 'pair (body)', bindings: {} },
+      ],
+      lookup: { name: 'b' },
+    },
+  ]}
+/>
+
+## Rest, spread and `arguments`
+
+A rest parameter collects everything left over into a real array. It has to be
+last, and there can only be one.
+
+```js
+function log(level, ...messages) {
+  console.log(level, messages.join(' '))
+}
+```
+
+Spread at a call site is the mirror image: it takes an array apart into separate
+arguments. Same three dots, opposite direction, and which one you are looking at
+depends on whether you are reading a declaration or a call.
+
+`arguments` is the version that predates both. Every non-arrow function gets one
+for free, holding every argument the call passed, including the ones with no
+parameter name. It is array-like rather than an array: it has `length` and
+indices, and none of the array methods.
+
+<MemoryModel
+  title="A rest array against the arguments object"
+  steps={[
+    {
+      note: 'Both hold the same three values from the same call, so it is tempting to treat them as the same thing.',
+      stack: [
+        { name: 'messages', ref: '#rest' },
+        { name: 'arguments', ref: '#args' },
+      ],
+      heap: [
+        { id: '#rest', label: 'Array', fields: { '0': "'a'", '1': "'b'", length: '2' } },
+        { id: '#args', label: 'Arguments', fields: { '0': "'warn'", '1': "'a'", length: '3' } },
+      ],
+    },
+    {
+      note: 'The rest array skips the named parameters and starts from the first unnamed one. The arguments object holds every argument, level included.',
+      stack: [
+        { name: 'messages', ref: '#rest' },
+        { name: 'arguments', ref: '#args' },
+      ],
+      heap: [
+        { id: '#rest', label: 'Array', fields: { '0': "'a'", '1': "'b'", length: '2' } },
+        { id: '#args', label: 'Arguments', fields: { '0': "'warn'", '1': "'a'", length: '3' } },
+      ],
+      highlight: ['#args'],
+    },
+    {
+      note: 'Only one of them inherits from Array.prototype, so map and join work on the rest array and throw on the other.',
+      stack: [{ name: 'messages', ref: '#rest' }],
+      heap: [
+        { id: '#rest', label: 'Array', fields: { proto: 'Array.prototype', join: 'inherited' } },
+      ],
+      highlight: ['#rest'],
+    },
+  ]}
+/>
+
+Prefer rest in anything you write now. `arguments` still matters for reading
+older code, and for two facts interviewers like: an arrow function does not have
+one of its own, so `arguments` inside an arrow refers to the enclosing
+function's; and in sloppy mode `arguments[0]` and the first parameter are the
+same storage, so assigning to one changes the other. Strict mode, modules, and
+any function that uses defaults or rest all switch that aliasing off.
+
+## What `length` counts
+
+A function's `length` is the number of parameters before the first one with a
+default and before any rest parameter.
+
+```js
+function a(x, y) {} // 2
+function b(x, y = 1) {} // 1
+function c(x, ...rest) {} // 1
+```
+
+This looks like trivia until you meet code that depends on it. Express decides
+whether a middleware is an error handler by whether it declares four parameters.
+Curry implementations use it to know how many arguments they are still waiting
+for. Anything that inspects a function you pass it is reading this number.
+
+## The interview angle
+
+The question is usually `map(parseInt)`, and the answer has two halves.
+
+> `map` calls its callback with three arguments: the element, the index and the
+> array. `parseInt` takes two, the string and a radix. So the index is passed as
+> the radix. Radix 0 is treated as unspecified and gives 1, radix 1 is invalid
+> and gives `NaN`, and `'3'` in base 2 is invalid too, so the result is
+> `[1, NaN, NaN]`.
+
+Then the part that shows judgement: the fix is not to memorise `parseInt`. It is
+that any function passed as a callback should be one you control the arity of.
+`.map((n) => parseInt(n, 10))` says what it means and cannot be surprised.
+
+Expect these follow-ups:
+
+- Why does `null` not trigger a default?
+- Rest or `arguments`, and what is actually different?
+- When would you take an options object instead of positional parameters?
+- What does `fn.length` report, and who reads it?
+
+## Traps
+
+- **Only `undefined` triggers a default.** `null`, `0`, `''` and `NaN` are all
+  values that were passed on purpose, and they are kept.
+- **A destructured parameter with no default throws.** `function f({ id })`
+  called as `f()` cannot read `id` of `undefined`. Write `f({ id } = {})`.
+- **Arrow functions have no `arguments`.** Inside one, the name resolves to the
+  enclosing function's object, or is a `ReferenceError` at the top level.
+- **A default object is per call; a shared one is not.** `items = []` is a new
+  array each time. `items = EMPTY` hands every caller the same array, and one
+  caller pushing into it changes what the next one gets.
+- **Adding a parameter changes `fn.length`.** Anything reading that number
+  changes behaviour with it, which is how an Express middleware silently
+  becomes an error handler.
+
+## In one picture
+
+<ConceptMap
+  center={'A call meeting a function'}
+  branches={[
+    {
+      label: 'They meet by position',
+      summary:
+        'Nothing checks the counts, so extra arguments are dropped and missing ones are undefined.',
+      nodes: ['no arity error, ever', 'a callback gets whatever the caller sends'],
+    },
+    {
+      label: 'Defaults are expressions',
+      summary: 'Evaluated at call time, and only when the argument is undefined.',
+      nodes: [
+        'null keeps null',
+        'a later default can read an earlier parameter',
+        'the parameter list is its own scope',
+      ],
+    },
+    {
+      label: 'Rest against arguments',
+      summary:
+        'Rest is a real array of the leftovers. arguments is array-like and holds everything.',
+      nodes: ['rest goes last, and there is one', 'no arguments in an arrow function'],
+    },
+    {
+      label: 'Spread is the mirror',
+      summary: 'The same three dots at a call site take an array apart into arguments.',
+      nodes: ['declaration collects', 'call site spreads'],
+    },
+    {
+      label: 'length is a real signal',
+      summary: 'Parameters before the first default or rest, and libraries read it.',
+      nodes: ['Express error middleware', 'curry knows when to stop'],
+    },
+  ]}
+/>

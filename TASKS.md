@@ -44,6 +44,12 @@ task and one branch.** They are listed in a deliberate order, since each group
 leans on the ones above it, but a group can be pulled forward if an interview is
 coming and it is the gap that matters.
 
+A group is a unit of work, not a block of the syllabus. Its topics take whatever
+positions in the teaching order they belong in, which can mean splitting the
+group across the track and renumbering what is already there. The functions
+group did exactly that. See
+`docs/decisions/0019-a-group-is-a-branch-not-a-block-of-the-track.md`.
+
 The conventions the first group established, so the rest stay consistent:
 
 - `order` runs in tens, in teaching order across the whole track, leaving room
@@ -65,27 +71,22 @@ The conventions the first group established, so the rest stay consistent:
 Done when every group below has shipped. Each group is done when its topics
 pass the content check and read as one lesson each, not as a list of facts.
 
-### Group 2: functions
-
-Parameters and arguments, higher order functions, currying and partial
-application, recursion and the call stack.
-
-### Group 3: objects
+### Objects
 
 Property descriptors with getters and setters, destructuring, optional chaining
 and nullish handling, JSON serialisation and its edges.
 
-### Group 4: collections and iteration
+### Collections and iteration
 
 The array methods worth knowing cold, the iterable protocol, generators,
 `Map`, `Set` and their weak counterparts.
 
-### Group 5: classes
+### Classes
 
 Class syntax and fields, `extends` and `super`, static and private members,
 composition against inheritance.
 
-### Group 6: async in practice
+### Async in practice
 
 Promise combinators, error handling across async boundaries, cancellation with
 `AbortController`, async iteration.
@@ -93,22 +94,22 @@ Promise combinators, error handling across async boundaries, cancellation with
 Sits after the existing event loop and promises topics rather than replacing
 them: those two explain the model, this group is what you do with it.
 
-### Group 7: modules and the runtime
+### Modules and the runtime
 
 ES modules against CommonJS, resolution and side effects, strict mode and
 `globalThis`, what a bundler changes.
 
-### Group 8: errors
+### Errors
 
 The built-in error types, custom errors, `try`/`catch`/`finally` semantics
 including the return value trap, and errors that cross an async boundary.
 
-### Group 9: memory and performance
+### Memory and performance
 
 Garbage collection and the shapes of a leak, `WeakMap` and `WeakRef`, debounce
 and throttle, the real cost of common collection operations.
 
-### Group 10: the browser, not the language
+### The browser, not the language
 
 The DOM, events and delegation, `fetch` and the network, storage.
 

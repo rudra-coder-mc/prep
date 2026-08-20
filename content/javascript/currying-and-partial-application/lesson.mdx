@@ -1,0 +1,223 @@
+## Why this matters
+
+Two reasons, and they pull in opposite directions.
+
+One is that "implement `curry`" is a standard interview question, and a good
+one. It needs closures, rest and spread, recursion and `fn.length` at the same
+time, so a correct answer proves four topics at once.
+
+The other is that the technique you will genuinely use most days is the simpler
+half: fixing an argument now and supplying the rest later. Every `bind`, every
+factory that returns a configured logger, every handler built for one row of a
+table is that. Knowing which of the two names describes which thing is most of
+the interview answer.
+
+## Two different things
+
+They get used interchangeably and they are not the same.
+
+**Partial application** fixes some of a function's arguments and gives back a
+function that takes the rest. It happens once. A three-argument function with
+one argument fixed becomes a two-argument function.
+
+**Currying** rewrites an n-argument function as a chain of n functions, each
+taking exactly one argument. `f(a, b, c)` becomes `f(a)(b)(c)`, and every step
+in that chain has an arity of one.
+
+```js
+const volume = (l, w, h) => l * w * h
+
+const partial = volume.bind(null, 2) // one step: partial(3, 4)
+const curried = (l) => (w) => (h) => l * w * h // three steps: curried(2)(3)(4)
+```
+
+Most JavaScript libraries ship something they call `curry` that accepts
+arguments in any grouping, so `curried(2, 3)(4)` works too. That is a hybrid,
+and it is closer to automatic partial application than to real currying. Saying
+so is a good sign in an interview, because it means you know the difference
+rather than having learned one word for both.
+
+## Currying by hand
+
+The hand-written version is just nested functions, and every arrow in the chain
+is a closure holding one argument until the last one arrives.
+
+<CodeWalkthrough
+  title="Where the arguments wait"
+  code={`const join = (a) => (b) => (c) => a + b + c
+
+const withA = join('x')
+const withAB = withA('y')
+const result = withAB('z')`}
+steps={[
+{
+lines: [3],
+note: 'Calling join runs the outermost function and returns the middle one. Nothing has been joined yet, and a is being held by a closure.',
+variables: { 'withA.[[scope]].a': "'x'" },
+},
+{
+lines: [4],
+note: 'Calling that returns the innermost function. Its scope chain now reaches two scopes outward, so it can see both a and b.',
+variables: { 'withAB.[[scope]].b': "'y'", 'withAB.[[scope]].a': "'x'" },
+},
+{
+lines: [5],
+note: 'The last call finally has all three, so the body runs. This is the only call that does any work; the other two only built scopes.',
+variables: { result: "'xyz'" },
+output: ['xyz'],
+},
+]}
+/>
+
+Two things fall out of that picture. Each intermediate function is a value you
+can keep and reuse, and reusing it does not accumulate anything: `withA('y')`
+and `withA('q')` both start from the same `'x'` and know nothing about each
+other.
+
+## A curry that counts
+
+The general version cannot use nested arrows, because it does not know how many
+arguments the function takes. It asks the function.
+
+```js
+function curry(fn) {
+  return function curried(...args) {
+    if (args.length >= fn.length) return fn(...args)
+    return (...rest) => curried(...args, ...rest)
+  }
+}
+```
+
+`fn.length` is the whole mechanism: collect arguments until there are enough,
+then call through. Every intermediate step holds its own copy of what has been
+collected so far, which is why two partials taken from the same point stay
+independent.
+
+<MemoryModel
+  title="Two partials from one starting point"
+  steps={[
+    {
+      note: 'curry returns curried, which has collected nothing yet. fn is the original three-argument function.',
+      stack: [{ name: 'join', ref: '#c0' }],
+      heap: [{ id: '#c0', label: 'curried', fields: { collected: '[]', 'fn.length': '3' } }],
+    },
+    {
+      note: "Calling it with one argument is not enough, so it returns a new function holding ['x'].",
+      stack: [
+        { name: 'join', ref: '#c0' },
+        { name: 'start', ref: '#c1' },
+      ],
+      heap: [
+        { id: '#c0', label: 'curried', fields: { collected: '[]', 'fn.length': '3' } },
+        { id: '#c1', label: 'partial', fields: { collected: "['x']" } },
+      ],
+      highlight: ['#c1'],
+    },
+    {
+      note: "Calling start twice creates two separate continuations. Each one starts again from ['x'], because start was never modified, only read.",
+      stack: [
+        { name: 'start', ref: '#c1' },
+        { name: 'first', ref: '#c2' },
+        { name: 'second', ref: '#c3' },
+      ],
+      heap: [
+        { id: '#c1', label: 'partial', fields: { collected: "['x']" } },
+        { id: '#c2', label: 'call', fields: { args: "['x','y','z']" } },
+        { id: '#c3', label: 'call', fields: { args: "['x','1','2']" } },
+      ],
+      highlight: ['#c2', '#c3'],
+    },
+  ]}
+/>
+
+## `bind` is partial application
+
+The language already has partial application built in, and it is the method
+people think of as being about `this`:
+
+```js
+const log = (level, scope, message) => `${level} [${scope}] ${message}`
+const warn = log.bind(null, 'WARN')
+const warnAuth = warn.bind(null, 'auth')
+
+warnAuth('token expired') // WARN [auth] token expired
+```
+
+`bind` takes a `this` value and then any number of arguments to fix from the
+left. Three details are worth carrying into an interview. The bound function's
+`length` is the original minus however many arguments were fixed. Its `name` is
+the original prefixed with `bound `. And `bind` returns a new function object
+every single time it is called, so binding inside a render or a loop creates a
+new identity on each pass, which is the listener bug from the previous topic
+wearing a different hat.
+
+## The interview angle
+
+Asked to implement `curry`, narrate the mechanism rather than the code:
+
+> Return a function that gathers arguments. If it has at least as many as
+> `fn.length`, call `fn`. Otherwise return another gatherer that remembers what
+> it has so far and waits for more.
+
+Then volunteer the limitation without being asked, because it is what separates
+a memorised answer from an understood one: this depends entirely on `fn.length`,
+and `fn.length` stops counting at the first default or rest parameter. So a
+variadic function cannot be curried this way at all, and a function with a
+default in the middle of its list reports a length that will make `curry` fire
+early.
+
+Expect these follow-ups:
+
+- What is the difference between this and partial application?
+- What does `fn.length` return, and when does it lie?
+- Make it work with placeholders, so an argument can be skipped.
+- When would you not do this?
+
+## Traps
+
+- **`fn.length` lies more often than you think.** Defaults and rest parameters
+  stop the count, so `curry` on `(a, b = 1, c)` sees a length of 1 and calls the
+  function after a single argument.
+- **Variadic functions cannot be curried by arity.** There is no number of
+  arguments at which `Math.max` is finished, so any arity-driven `curry` has to
+  be told explicitly how many to wait for.
+- **Currying drops `this`.** The nested functions are called plain, so a curried
+  method loses its receiver unless you bind first or forward `this` deliberately.
+- **A zero-argument call is not progress.** `curried()` adds nothing, and a naive
+  implementation that returns another gatherer will do that forever.
+- **Deep chains are hard to debug.** A stack trace through five anonymous
+  gatherers tells you nothing about which call site was wrong. Two levels reads
+  well, five does not.
+
+## In one picture
+
+<ConceptMap
+  center={'Fixing arguments early'}
+  branches={[
+    {
+      label: 'Partial application',
+      summary: 'Fix some arguments now, in one step, and take the rest later.',
+      nodes: ['bind is the built-in version', 'arity drops by what you supplied'],
+    },
+    {
+      label: 'Currying',
+      summary: 'One function of n arguments becomes n functions of one argument.',
+      nodes: ['f(a)(b)(c)', 'every step has arity one'],
+    },
+    {
+      label: 'How curry knows',
+      summary: 'It collects arguments until it has fn.length of them, then calls through.',
+      nodes: ['closures hold what is collected', 'each partial is independent'],
+    },
+    {
+      label: 'Where it breaks',
+      summary: 'Everything rests on fn.length, which stops at the first default or rest.',
+      nodes: ['variadic functions cannot be curried by arity', 'this is lost unless bound'],
+    },
+    {
+      label: 'When to reach for it',
+      summary: 'One or two fixed arguments that a call site would otherwise repeat.',
+      nodes: ['configured loggers and handlers', 'not five levels deep'],
+    },
+  ]}
+/>
