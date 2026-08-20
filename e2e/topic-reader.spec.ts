@@ -92,3 +92,62 @@ test('the next section plays, and the chosen speed follows to the next topic', a
       .getByLabel('Narration speed, currently 1.25 times'),
   ).toBeVisible()
 })
+
+test('the lesson shows which part of it is being read', async ({ page }) => {
+  await page.goto('/topics/javascript/closures')
+
+  const article = page.locator('article')
+  await expect(article).not.toHaveAttribute('data-narrated-lesson', 'true')
+
+  await page.getByRole('group', { name: READER }).getByLabel('Play narration').click()
+  await waitUntilPlaying(page)
+
+  // The first section of the closures narration is about "Why this matters".
+  await expect(article).toHaveAttribute('data-narrated-lesson', 'true')
+  await expect(page.locator('h2#why-this-matters')).toHaveAttribute('data-narrated', 'true')
+  await expect(page.locator('h2#the-idea')).not.toHaveAttribute('data-narrated', 'true')
+
+  // And the reader was taken to it rather than left at the top of the page.
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+})
+
+test('the controls follow the reader once the player has scrolled away', async ({ page }) => {
+  await page.goto('/topics/javascript/closures')
+
+  const following = page.getByRole('group', { name: 'Narration controls' })
+  await expect(following).toBeHidden()
+
+  await page.getByRole('group', { name: READER }).getByLabel('Play narration').click()
+  await waitUntilPlaying(page)
+  await page.mouse.wheel(0, 1200)
+
+  await expect(following).toBeVisible()
+  await expect(following.getByText('1 of 6')).toBeVisible()
+
+  await following.getByLabel('Pause narration').click()
+  expect((await audioState(page))?.paused).toBe(true)
+})
+
+test('a section that has been built is played rather than synthesised again', async ({ page }) => {
+  const asked: string[] = []
+  await page.route(/\/api\/speech/, async (route) => {
+    asked.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`)
+    await route.continue()
+  })
+
+  // Whether this first play has to synthesise depends on what the rest of the
+  // suite has already said out loud, and that is the point: from here on it must
+  // not matter.
+  await page.goto('/topics/javascript/closures')
+  await page.getByRole('group', { name: READER }).getByLabel('Play narration').click()
+  await waitUntilPlaying(page)
+
+  asked.length = 0
+  await page.reload()
+  await page.getByRole('group', { name: READER }).getByLabel('Play narration').click()
+  await waitUntilPlaying(page)
+
+  // A recording that exists is a file to fetch, not work to do again.
+  expect(asked[0]).toMatch(/^GET \/api\/speech\/[0-9a-f]{64}$/)
+  expect(asked).not.toContain('POST /api/speech')
+})

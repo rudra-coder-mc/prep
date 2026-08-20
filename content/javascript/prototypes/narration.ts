@@ -3,6 +3,7 @@ import type { Narration } from '@/content/schema'
 export const narration: Narration = [
   {
     title: 'Why bother, if classes exist',
+    heading: 'Why this matters',
     script: `You can write JavaScript for years using class syntax and never
       think about prototypes. Then something inherited shows up in a for in
       loop, or a deleted property mysteriously comes back with an older value,
@@ -15,6 +16,7 @@ export const narration: Narration = [
   },
   {
     title: 'The chain',
+    heading: 'The chain',
     script: `Every object has a hidden link to another object, or to null.
 
       Reading a property checks the object itself first. If it is not there, the
@@ -31,6 +33,7 @@ export const narration: Narration = [
   },
   {
     title: 'Reading walks, writing does not',
+    heading: 'Reading walks, writing does not',
     script: `This asymmetry is the single most useful thing to know in this
       topic, because it explains several behaviours that otherwise look
       arbitrary.
@@ -47,6 +50,7 @@ export const narration: Narration = [
   },
   {
     title: 'Prototype versus the link itself',
+    heading: '`prototype` versus `__proto__`',
     script: `The naming here is genuinely bad, and it is worth stating as an
       equation so it stops being confusing.
 
@@ -67,6 +71,7 @@ export const narration: Narration = [
   },
   {
     title: 'What class really is',
+    heading: 'What `class` really is',
     script: `Mostly the same mechanism, with much better syntax. Methods go on
       the prototype. Extends links the two prototypes together. Super reaches up
       the chain.
@@ -84,6 +89,7 @@ export const narration: Narration = [
   },
   {
     title: 'The interview angle',
+    heading: 'The interview angle',
     script: `Asked how property lookup works, describe the walk. Own property
       first, then up the chain link by link, until found or until null.
 

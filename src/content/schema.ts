@@ -170,9 +170,19 @@ export const questionSchema = z
  * being read, because it is one: code blocks become nonsense, tables become
  * nothing, and the reader has no idea where they are. The script is separate
  * text, written to be heard.
+ *
+ * Separate text still has to say where it is, which is what `heading` is for:
+ * the lesson heading the section covers, so the page can show the reader the
+ * part being talked about.
  */
 export const narrationSectionSchema = z.object({
   title: z.string().min(1).describe('Shown in the player, and how a listener finds their place.'),
+  heading: z
+    .string()
+    .min(1)
+    .describe(
+      'The lesson heading this section is talking about, written exactly as the lesson writes it. The page highlights that part of the lesson while the section plays, and the content check refuses a heading the lesson does not have.',
+    ),
   script: z
     .string()
     .refine((value) => normaliseScript(value).length > 0, 'has a title but nothing to say')

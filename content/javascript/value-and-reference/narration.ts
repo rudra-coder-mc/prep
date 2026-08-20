@@ -3,6 +3,7 @@ import type { Narration } from '@/content/schema'
 export const narration: Narration = [
   {
     title: 'Why this matters',
+    heading: 'Why this matters',
     script: `Two variables can hold the same object, and changing one appears to
       change both. That is not a quirk. It is the only way objects could work
       without copying them on every single assignment. The bugs come from not
@@ -15,6 +16,7 @@ export const narration: Narration = [
   },
   {
     title: 'What a variable holds',
+    heading: 'What a variable holds',
     script: `A variable holding a primitive holds the value itself. A variable
       holding an object does not hold the object. It holds a reference to it.
       The object lives somewhere else, and any number of variables can point at
@@ -32,6 +34,7 @@ export const narration: Narration = [
   },
   {
     title: 'Arguments work exactly the same way',
+    heading: 'Arguments work the same way',
     script: `JavaScript is pass by value. Always. There is no exception.
 
       What makes people say otherwise is that the value passed for an object
@@ -47,6 +50,7 @@ export const narration: Narration = [
   },
   {
     title: 'Identity, not contents',
+    heading: 'Identity, not contents',
     script: `Strict equality on objects asks one question: is this the same
       object? It never asks whether two objects look alike. Two separately
       created arrays holding one and two are not equal, and never will be.
@@ -64,6 +68,7 @@ export const narration: Narration = [
   },
   {
     title: 'How deep is a copy',
+    heading: 'How deep is a copy',
     script: `Spread and Object dot assign copy one level. Everything nested is
       still shared. So spreading a settings object gives you a new outer object
       whose nested timeout object is the very same one as before, and changing a
@@ -86,6 +91,7 @@ export const narration: Narration = [
   },
   {
     title: 'The interview angle',
+    heading: 'The interview angle',
     script: `Asked whether JavaScript is pass by value or pass by reference, the
       answer is pass by value. Then immediately add the clause that shows you
       understand it: for objects the value is a reference, so mutations are

@@ -6,7 +6,10 @@ import { Rise } from '@/components/motion/rise'
 import { buttonClass } from '@/components/ui/button'
 import { Card, SectionLabel } from '@/components/ui/card'
 import { PageShell } from '@/components/ui/page'
+import { FollowingReader } from '@/components/speech/following-reader'
 import type { SpokenSection } from '@/components/speech/narration-audio'
+import { NarratedLesson } from '@/components/speech/narrated-lesson'
+import { NarrationProvider } from '@/components/speech/narration-player'
 import { TopicReader } from '@/components/speech/topic-reader'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { getTopic } from '@/content'
@@ -22,8 +25,8 @@ type Params = { technology: string; topic: string }
  * recording that `npm run narration:build` has already made rather than having
  * to hash the same words again in the browser.
  */
-function spokenSections(narration: Narration): SpokenSection[] {
-  return narration.map((section) => ({ ...section, key: scriptKey(section.script) }))
+function spokenSections(narration: Narration | null): SpokenSection[] {
+  return (narration ?? []).map((section) => ({ ...section, key: scriptKey(section.script) }))
 }
 
 /** Lessons live beside their topic in content/, so they are loaded by path. */
@@ -68,19 +71,25 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
         </header>
       </Rise>
 
-      {topic.narration ? (
-        <Rise delay={0.04}>
-          <div className="mt-8">
-            <TopicReader sections={spokenSections(topic.narration)} title={topic.title} />
-          </div>
-        </Rise>
-      ) : null}
+      {/* The player, the lesson and the bar that follows the reader down it are
+          one thing: the same playback drives all three. */}
+      <NarrationProvider sections={spokenSections(topic.narration)} title={topic.title}>
+        {topic.narration ? (
+          <Rise delay={0.04}>
+            <div className="mt-8">
+              <TopicReader />
+            </div>
+          </Rise>
+        ) : null}
 
-      <Rise delay={0.06}>
-        <article className="mt-10 text-[0.975rem] leading-7">
-          <Lesson />
-        </article>
-      </Rise>
+        <Rise delay={0.06}>
+          <NarratedLesson>
+            <Lesson />
+          </NarratedLesson>
+        </Rise>
+
+        <FollowingReader />
+      </NarrationProvider>
 
       <Rise delay={0.1}>
         <Card className="mt-16 border-accent/25 bg-gradient-to-br from-accent-dim to-transparent">

@@ -3,6 +3,7 @@ import type { Narration } from '@/content/schema'
 export const narration: Narration = [
   {
     title: 'Easy syntax, hard failure modes',
+    heading: 'Why this matters',
     script: `Promises are the part of JavaScript most people use correctly by
       imitation, and incorrectly under pressure. The syntax is easy. The failure
       modes are not.
@@ -17,6 +18,7 @@ export const narration: Narration = [
   },
   {
     title: 'Settling, once',
+    heading: 'Settling, once',
     script: `A promise is pending until it is either fulfilled with a value, or
       rejected with a reason. That move happens once, and it cannot be undone.
       Later calls to resolve or reject do nothing at all.
@@ -34,6 +36,7 @@ export const narration: Narration = [
   },
   {
     title: 'Choosing a combinator',
+    heading: 'Choosing a combinator',
     script: `There are four, and choosing between them is a question about
       failure, not about speed.
 
@@ -56,6 +59,7 @@ export const narration: Narration = [
   },
   {
     title: 'Where the time goes',
+    heading: 'Where the time goes',
     script: `The most common real performance bug in async code is an await
       inside a loop, over work that has no ordering requirement.
 
@@ -74,6 +78,7 @@ export const narration: Narration = [
   },
   {
     title: 'The return that is easy to forget',
+    heading: 'The `return` that is easy to forget',
     script: `Inside a then callback, if you start another asynchronous
       operation and forget to return it, two things go wrong at once.
 
@@ -93,6 +98,7 @@ export const narration: Narration = [
   },
   {
     title: 'The interview angle',
+    heading: 'The interview angle',
     script: `Asked about promise all versus all settled, answer in terms of
       failure. All is all or nothing and rejects at the first failure. All
       settled never rejects and reports each outcome. Use all when a partial

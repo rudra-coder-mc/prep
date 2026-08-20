@@ -3,6 +3,7 @@ import type { Narration } from '@/content/schema'
 export const narration: Narration = [
   {
     title: 'Why this matters',
+    heading: 'Why this matters',
     script: `Closures are not an advanced feature you reach for occasionally.
       They are how every callback, every event handler, every module and every
       hook in React keeps hold of the data it needs.
@@ -17,6 +18,7 @@ export const narration: Narration = [
   },
   {
     title: 'The idea',
+    heading: 'The idea',
     script: `Every function carries a hidden reference to the scope it was
       defined in. Defined in, not called from. That is the whole mechanism.
 
@@ -33,6 +35,7 @@ export const narration: Narration = [
   },
   {
     title: 'Two counters, two scopes',
+    heading: 'Watching one run',
     script: `Picture a factory function that declares a count starting at zero,
       and returns an inner function that increments it and hands it back.
 
@@ -52,6 +55,7 @@ export const narration: Narration = [
   },
   {
     title: 'Captured, not copied',
+    heading: 'Captured, not copied',
     script: `This is why the classic loop puzzle behaves the way it does.
 
       Take a loop using var, scheduling a timeout on each pass that prints the
@@ -71,6 +75,7 @@ export const narration: Narration = [
   },
   {
     title: 'What it costs',
+    heading: 'Traps',
     script: `Closures are not free, and the cost is the thing interviewers probe
       when they ask about memory.
 
@@ -86,6 +91,7 @@ export const narration: Narration = [
   },
   {
     title: 'The sentence to have ready',
+    heading: 'The interview angle',
     script: `Asked what a closure is, a weak answer stops at: a function that
       remembers its variables. A strong answer adds the consequence.
 

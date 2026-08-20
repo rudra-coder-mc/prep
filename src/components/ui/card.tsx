@@ -1,9 +1,6 @@
 import { cx } from '@/lib/cx'
 
-export function Card({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement> & { className?: string }) {
+export function Card({ className, ...props }: React.ComponentPropsWithRef<'div'>) {
   return (
     <div className={cx('rounded-card border border-border bg-surface p-5', className)} {...props} />
   )
