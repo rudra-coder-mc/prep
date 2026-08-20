@@ -1,9 +1,11 @@
 import type { ZodType } from 'zod'
 import {
   exerciseSchema,
+  narrationSchema,
   questionSchema,
   topicMetaSchema,
   type Exercise,
+  type Narration,
   type Question,
   type TopicMeta,
 } from './schema'
@@ -19,8 +21,19 @@ export function parseContent<T>(schema: ZodType<T>, value: unknown, file: string
   throw new Error(`Invalid content in ${file}:\n${problems}`)
 }
 
-export type RawTopic = { meta: unknown; questions: unknown; exercises: unknown }
-export type ValidatedTopic = { meta: TopicMeta; questions: Question[]; exercises: Exercise[] }
+export type RawTopic = {
+  meta: unknown
+  questions: unknown
+  exercises: unknown
+  /** Absent when the topic has no narration.ts, which is allowed. */
+  narration?: unknown
+}
+export type ValidatedTopic = {
+  meta: TopicMeta
+  questions: Question[]
+  exercises: Exercise[]
+  narration: Narration | null
+}
 
 export function validateTopic(raw: RawTopic, directory: string, base: string): ValidatedTopic {
   const meta = parseContent(topicMetaSchema, raw.meta, `${base}/meta.ts`)
@@ -43,5 +56,12 @@ export function validateTopic(raw: RawTopic, directory: string, base: string): V
 
   const exercises = parseContent(exerciseSchema.array(), raw.exercises, `${base}/exercises.ts`)
 
-  return { meta, questions, exercises }
+  // A topic without narration shows no player. A topic with a broken one fails
+  // here, rather than offering a play button that turns out to say nothing.
+  const narration =
+    raw.narration === undefined
+      ? null
+      : parseContent(narrationSchema, raw.narration, `${base}/narration.ts`)
+
+  return { meta, questions, exercises, narration }
 }

@@ -71,4 +71,46 @@ describe('validateTopic', () => {
       validateTopic(raw({ exercises: [{ ...validExercise, requirements: [] }] }), 'closures', BASE),
     ).toThrow(/exercises\.ts[\s\S]*requirements/)
   })
+
+  describe('narration', () => {
+    const section = { title: 'Why this matters', script: 'Something worth hearing.' }
+
+    it('is optional, and a topic without one simply shows no player', () => {
+      expect(validateTopic(raw(), 'closures', BASE).narration).toBeNull()
+    })
+
+    it('is kept when a topic has one', () => {
+      const result = validateTopic(raw({ narration: [section] }), 'closures', BASE)
+      expect(result.narration).toEqual([section])
+    })
+
+    it('rejects a section with a title and nothing to say', () => {
+      expect(() =>
+        validateTopic(raw({ narration: [{ ...section, script: '   \n  ' }] }), 'closures', BASE),
+      ).toThrow(/narration\.ts[\s\S]*nothing to say/)
+    })
+
+    it('rejects a narration with no sections at all', () => {
+      expect(() => validateTopic(raw({ narration: [] }), 'closures', BASE)).toThrow(
+        /narration\.ts[\s\S]*no sections/,
+      )
+    })
+
+    it('rejects a section too long for the engine to speak in one request', () => {
+      expect(() =>
+        validateTopic(
+          raw({ narration: [{ ...section, script: 'a'.repeat(3001) }] }),
+          'closures',
+          BASE,
+        ),
+      ).toThrow(/narration\.ts[\s\S]*at most 3000 characters/)
+    })
+
+    it('measures a section after collapsing the whitespace it was written with', () => {
+      const script = `${'a'.repeat(3000)}\n\n   `
+      expect(() =>
+        validateTopic(raw({ narration: [{ ...section, script }] }), 'closures', BASE),
+      ).not.toThrow()
+    })
+  })
 })

@@ -11,7 +11,9 @@ test('a lesson renders with its animated visuals', async ({ page }) => {
   await page.getByRole('link', { name: /Closures/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Closures', level: 1 })).toBeVisible()
-  await expect(page.getByText('Why this matters')).toBeVisible()
+  // As a heading, not as text. A narration section is titled after the lesson
+  // heading it covers, so the plain words appear twice on this page.
+  await expect(page.getByRole('heading', { name: 'Why this matters' })).toBeVisible()
 
   // By accessible name, since a figure's caption is its name and lesson text
   // elsewhere on the page can contain the same words.

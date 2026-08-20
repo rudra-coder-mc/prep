@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MAX_SCRIPT_LENGTH, normaliseScript } from '@/lib/speech/script'
 
 export const QUESTION_TYPES = [
   'concept',
@@ -160,6 +161,31 @@ export const questionSchema = z
     }
   })
 
+/**
+ * One stretch of spoken narration. Sections are what the player moves between,
+ * and they are also the unit the engine speaks in one request, which is why the
+ * length is bounded here rather than discovered at play time.
+ *
+ * A narration is not the lesson. A lesson read out loud sounds like a document
+ * being read, because it is one: code blocks become nonsense, tables become
+ * nothing, and the reader has no idea where they are. The script is separate
+ * text, written to be heard.
+ */
+export const narrationSectionSchema = z.object({
+  title: z.string().min(1).describe('Shown in the player, and how a listener finds their place.'),
+  script: z
+    .string()
+    .refine((value) => normaliseScript(value).length > 0, 'has a title but nothing to say')
+    .refine(
+      (value) => normaliseScript(value).length <= MAX_SCRIPT_LENGTH,
+      `must be at most ${MAX_SCRIPT_LENGTH} characters once whitespace is collapsed, which is what the engine speaks in one request`,
+    ),
+})
+
+export const narrationSchema = z
+  .array(narrationSectionSchema)
+  .min(1, 'a narration with no sections would render a player with nothing in it')
+
 export const exerciseSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/, 'must be lowercase words separated by hyphens'),
   title: z.string().min(1),
@@ -171,6 +197,8 @@ export const exerciseSchema = z.object({
 export type TopicMeta = z.infer<typeof topicMetaSchema>
 export type Question = z.infer<typeof questionSchema>
 export type Exercise = z.infer<typeof exerciseSchema>
+export type NarrationSection = z.infer<typeof narrationSectionSchema>
+export type Narration = z.infer<typeof narrationSchema>
 export type QuestionType = (typeof QUESTION_TYPES)[number]
 export type Difficulty = (typeof DIFFICULTIES)[number]
 

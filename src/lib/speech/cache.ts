@@ -1,7 +1,8 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Audio } from './audio'
+import { normaliseScript } from './script'
 
 /**
  * Synthesis is the expensive part - about a second of CPU for every three and a
@@ -13,6 +14,20 @@ import type { Audio } from './audio'
  */
 export function cacheDirectory(): string {
   return process.env.SPEECH_CACHE_DIR ?? '.speech-cache'
+}
+
+/**
+ * How a script is addressed. Content addressed, so the same words always land on
+ * the same file, editing a script leaves its old audio behind rather than
+ * serving it, and moving a script between topics reuses what was synthesised.
+ *
+ * The voice is deliberately not part of the key. It is baked into the engine
+ * image at build time, so a cache directory belongs to one voice; changing the
+ * voice means rebuilding that image and discarding the volume. See
+ * docs/decisions/0015-piper-narration-engine.md.
+ */
+export function scriptKey(text: string): string {
+  return createHash('sha256').update(normaliseScript(text), 'utf8').digest('hex')
 }
 
 function audioPath(directory: string, key: string): string {

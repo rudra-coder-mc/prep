@@ -3,7 +3,8 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { InvalidScriptError, narrate } from './narrate'
-import { scriptKey, MAX_SCRIPT_LENGTH } from './script'
+import { scriptKey } from './cache'
+import { MAX_SCRIPT_LENGTH } from './script'
 
 const WAV = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45, 7])
 
