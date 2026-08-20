@@ -1,11 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Narration } from '@/content/schema'
 import { Card, SectionLabel } from '@/components/ui/card'
 import { ArrowLeftIcon, ArrowRightIcon, PauseIcon, PlayIcon } from '@/components/ui/icons'
 import { cx } from '@/lib/cx'
-import { fetchNarrationAudio, NarrationUnavailableError } from './narration-audio'
+import {
+  fetchNarrationAudio,
+  NarrationUnavailableError,
+  type SpokenSection,
+} from './narration-audio'
 import { nextSpeed, useNarrationSpeed } from './playback-speed'
 
 const ICON_BUTTON =
@@ -21,7 +24,7 @@ const ICON_BUTTON =
  * when a section ends would be refused, and the narration would stop after the
  * first part.
  */
-export function TopicReader({ sections, title }: { sections: Narration; title: string }) {
+export function TopicReader({ sections, title }: { sections: SpokenSection[]; title: string }) {
   const audio = useRef<HTMLAudioElement>(null)
   /**
    * Section index to a request for its audio. Holding the request rather than
@@ -50,7 +53,7 @@ export function TopicReader({ sections, title }: { sections: Narration; title: s
       const section = sections[target]
       if (!section) return Promise.reject(new Error(`There is no narration section ${target}`))
 
-      const request = fetchNarrationAudio(section.script)
+      const request = fetchNarrationAudio(section.script, { key: section.key })
         .then((blob) => URL.createObjectURL(blob))
         .catch((failure: unknown) => {
           // Dropped so pressing play again is a real retry rather than a replay

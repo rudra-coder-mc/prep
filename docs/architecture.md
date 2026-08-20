@@ -241,12 +241,23 @@ A topic can be listened to rather than read. The voice is Piper, a neural text t
 speech engine running in the `tts` container with its voice model baked into the
 image, so narration works offline and no lesson text leaves the machine.
 
-`src/lib/speech/` is the whole engine and `POST /api/speech` is its only entry
-point: a script in, a WAV out, gated by the same session as everything else.
-Audio is cached by content — the file's name is a hash of the script — so a
-script is synthesised once and read from a volume every time after. Editing a
-script is therefore a new recording rather than a stale one, and the old entry
-is orphaned rather than served.
+`src/lib/speech/` is the whole engine, and it has two entry points. Audio is
+cached by content — the file's name is a hash of the script — so a script is
+synthesised once and read from a volume every time after. Editing a script is
+therefore a new recording rather than a stale one, and the old entry is orphaned
+rather than served.
+
+**`npm run narration:build` makes the recordings, and `GET /api/speech/<key>`
+plays them.** The scripts are static text in git, so nothing is synthesised while
+a listener waits: the build walks every topic, synthesises what has no recording
+yet, and skips what has. The key is the hash of the words, so the bytes behind one
+can never change and the browser is told to keep it forever. The topic page
+computes each section's key on the server and hands it to the player.
+
+**`POST /api/speech` is the fallback, and the way a script is first heard.** A
+script in, a WAV out, synthesised and cached. The player asks for the built
+recording first and comes here when there isn't one, which is what makes editing
+a script and pressing play work with no build step in between.
 
 Synthesis costs about a second of CPU for three and a half seconds of speech, so
 a request carries one section of a narration rather than a whole one, and a
@@ -266,9 +277,10 @@ swapped per section, because playback permission belongs to the element and a
 new one created mid-narration would be refused. It plays a topic end to end from
 one press, fetches the next section while the current one plays, and remembers
 the chosen speed across topics. See
-`docs/decisions/0015-piper-narration-engine.md` for the engine, and
+`docs/decisions/0015-piper-narration-engine.md` for the engine,
 `docs/decisions/0016-narration-is-written-not-read.md` for the script and the
-player.
+player, and `docs/decisions/0017-narration-is-built-once.md` for why the audio
+is made ahead of time.
 
 ## Not in V1
 

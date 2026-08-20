@@ -62,6 +62,8 @@ npm run dev:docker -- --build
 - `src/db/` — Drizzle schema and migrations. Stores users and their progress only.
 - `src/lib/speech/` — turns a narration script into audio, cached by content.
   `services/tts/` is the Piper container it talks to; no text leaves the machine.
+  `npm run narration:build` makes every recording ahead of time, so no lesson is
+  ever synthesised while somebody is waiting for it.
 - `src/components/speech/` — the player on a topic page, which reads that topic's
   `narration.ts` aloud a section at a time.
 

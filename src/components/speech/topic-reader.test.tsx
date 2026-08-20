@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Narration } from '@/content/schema'
+import type { SpokenSection } from './narration-audio'
 import { TopicReader } from './topic-reader'
 
-const SECTIONS: Narration = [
-  { title: 'Why this matters', script: 'The first thing to say out loud.' },
-  { title: 'The idea', script: 'The second thing to say out loud.' },
-  { title: 'The interview angle', script: 'The last thing to say out loud.' },
+const SECTIONS: SpokenSection[] = [
+  { title: 'Why this matters', script: 'The first thing to say out loud.', key: 'first' },
+  { title: 'The idea', script: 'The second thing to say out loud.', key: 'second' },
+  { title: 'The interview angle', script: 'The last thing to say out loud.', key: 'last' },
 ]
 
 let play: ReturnType<typeof vi.fn<() => Promise<void>>>
@@ -44,8 +44,13 @@ afterEach(() => {
   window.localStorage.clear()
 })
 
-const spokenScripts = () =>
-  vi.mocked(fetch).mock.calls.map(([, init]) => JSON.parse(String(init?.body)).text as string)
+/**
+ * Which sections were asked for, in order. Playback goes for the recording that
+ * was built for a section, so a section is named by its key rather than by the
+ * script that would have to be synthesised without one.
+ */
+const requestedSections = () =>
+  vi.mocked(fetch).mock.calls.map(([url]) => String(url).replace('/api/speech/', ''))
 
 const audioIn = (container: HTMLElement) =>
   container.querySelector('audio') as HTMLAudioElement | null
@@ -64,7 +69,7 @@ describe('TopicReader', () => {
     await userEvent.click(screen.getByLabelText('Play narration'))
 
     await waitFor(() => expect(play).toHaveBeenCalled())
-    expect(spokenScripts()[0]).toBe('The first thing to say out loud.')
+    expect(requestedSections()[0]).toBe('first')
     expect(audioIn(container)?.src).toContain('blob:section-0')
   })
 
@@ -73,8 +78,8 @@ describe('TopicReader', () => {
 
     await userEvent.click(screen.getByLabelText('Play narration'))
 
-    await waitFor(() => expect(spokenScripts()).toHaveLength(2))
-    expect(spokenScripts()[1]).toBe('The second thing to say out loud.')
+    await waitFor(() => expect(requestedSections()).toHaveLength(2))
+    expect(requestedSections()[1]).toBe('second')
   })
 
   it('moves to the next section by itself when one ends', async () => {
@@ -122,7 +127,7 @@ describe('TopicReader', () => {
 
     await userEvent.click(screen.getByLabelText('Play narration'))
     await waitFor(() => expect(play).toHaveBeenCalledTimes(1))
-    const fetchedWhilePlaying = spokenScripts().length
+    const fetchedWhilePlaying = requestedSections().length
 
     await userEvent.click(screen.getByLabelText('Pause narration'))
     expect(pause).toHaveBeenCalled()
@@ -130,7 +135,7 @@ describe('TopicReader', () => {
     await userEvent.click(screen.getByLabelText('Play narration'))
 
     await waitFor(() => expect(play).toHaveBeenCalledTimes(2))
-    expect(spokenScripts()).toHaveLength(fetchedWhilePlaying)
+    expect(requestedSections()).toHaveLength(fetchedWhilePlaying)
   })
 
   it('applies the chosen speed to the audio, and keeps it for the next topic', async () => {
@@ -172,7 +177,9 @@ describe('TopicReader', () => {
 
     render(<TopicReader sections={SECTIONS} title="Closures" />)
     await userEvent.click(screen.getByLabelText('Play narration'))
-    await waitFor(() => expect(failing).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(screen.getByText('The voice is not available right now.')).toBeDefined(),
+    )
 
     vi.stubGlobal(
       'fetch',
