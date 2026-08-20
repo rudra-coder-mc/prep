@@ -100,6 +100,11 @@ time they run. `scripts/with-db.sh` became `scripts/with-services.sh` and now
 brings up the engine alongside Postgres, because the test worth having is one
 that proves the bytes coming back are audio a browser will play.
 
+The end-to-end suite needs the engine for the same reason, and gets its own
+speech cache, emptied at the start of every run exactly as its database is
+dropped. A cache that survived the run would make "this had to be synthesised"
+an assertion about the previous run rather than this one.
+
 Two identical requests arriving at once both miss the cache and both synthesise,
 and the second to finish wins. Wasteful rather than wrong, and with one listener
 it is not worth an in-flight registry to prevent. If the player ever starts
