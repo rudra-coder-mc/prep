@@ -4,7 +4,7 @@ export const meta: TopicMeta = {
   slug: 'prototypes',
   title: 'Prototypes and the prototype chain',
   summary: 'How property lookup actually works, and what a class is underneath.',
-  order: 60,
+  order: 90,
   difficulty: 'medium',
   tags: ['objects', 'prototype', 'classes'],
   prerequisites: [],

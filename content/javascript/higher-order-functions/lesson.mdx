@@ -1,0 +1,229 @@
+## Why this matters
+
+Almost every API you use in JavaScript takes a function. `map`, `filter` and
+`sort`. `addEventListener`. `setTimeout`. `.then`. Express middleware. React
+hooks. Learning the language means learning to hand a step of work to somebody
+else and let them decide when to run it.
+
+The interview version is always "implement `map`", or `once`, or `debounce`, or
+a `retry` wrapper. None of those questions are about the specific helper. They
+are asking whether you can look at two pieces of code that differ in one step
+and pull that step out into a parameter.
+
+## A function is a value
+
+There is no special category of function that can be passed around. Functions
+are objects. They can be assigned to a variable, stored in an array, set as a
+property, passed to a call and returned from one, and they carry properties of
+their own like `name` and `length`.
+
+A higher order function is any function that takes a function as an argument,
+returns one, or both. That is the whole definition, and it means you have been
+writing them since the first `addEventListener`.
+
+Two identical-looking functions are still two different objects, which matters
+more than it sounds:
+
+```js
+const a = () => {}
+const b = () => {}
+a === b // false
+```
+
+That single fact is why `removeEventListener` fails when it is handed a fresh
+arrow function, and why a dependency array full of inline callbacks never
+settles.
+
+## Taking a function
+
+When you pass a callback, you hand over three things you no longer control:
+when it runs, what arguments it gets, and what `this` is. The caller decides all
+three, and it decides for its own reasons rather than yours.
+
+You do keep one thing: the call stack. A callback runs on top of the function
+that invoked it, so a `throw` travels back out through the higher order
+function, and a `return` returns from the callback and nothing further.
+
+<CallStack
+  title="Where a callback runs from"
+  steps={[
+    {
+      frames: ['saveAll'],
+      note: 'saveAll is running its own code. Nothing about the callback exists on the stack yet.',
+    },
+    {
+      frames: ['saveAll', 'forEach'],
+      note: 'It calls forEach, which is a normal function call and gets a normal frame.',
+    },
+    {
+      frames: ['saveAll', 'forEach', 'callback'],
+      note: 'forEach calls the callback, which sits on top of forEach. This is why return inside the callback returns from the callback and leaves forEach to carry on with the next element.',
+    },
+    {
+      frames: ['saveAll', 'forEach'],
+      note: 'The callback returns and its frame is gone. forEach moves to the next element and calls it again.',
+      output: ['iteration 1 done'],
+    },
+    {
+      frames: [],
+      note: 'A throw inside the callback would have unwound all three frames together, which is why a try around forEach does catch an error raised inside the callback.',
+      output: ['iteration 1 done', 'iteration 2 done'],
+    },
+  ]}
+/>
+
+Writing one of these yourself is the fastest way to see that there is no magic
+in it. `reduce` is the interesting one, because the callback's first argument is
+whatever the last call returned:
+
+<CodeWalkthrough
+  title="reduce, one call at a time"
+  code={`function reduce(array, fn, initial) {
+  let acc = initial
+  let start = 0
+
+if (acc === undefined) {
+acc = array[0]
+start = 1
+}
+
+for (let i = start; i < array.length; i++) {
+acc = fn(acc, array[i], i, array)
+}
+
+return acc
+}
+
+reduce([2, 3, 4], (a, b) => a + b)`}
+steps={[
+{
+lines: [6, 7, 8],
+note: 'No initial value was passed, so the first element becomes the accumulator and the loop starts at the second. The callback is never called with the first element on its own.',
+variables: { acc: '2', start: '1' },
+},
+{
+lines: [11, 12],
+note: 'First call: the accumulator and the element at index 1. What it returns becomes the accumulator.',
+variables: { acc: '5', i: '1' },
+},
+{
+lines: [11, 12],
+note: 'Second call, same shape. The accumulator is now carrying the running total rather than an element.',
+variables: { acc: '9', i: '2' },
+},
+{
+lines: [15],
+note: 'The loop ends and the accumulator is the answer. Give reduce an initial value and this whole first branch never runs, which also makes an empty array safe.',
+variables: { acc: '9' },
+output: ['9'],
+},
+]}
+/>
+
+One thing that version gets wrong on purpose, and an interviewer will find it:
+checking `acc === undefined` cannot tell "no initial value was passed" from "the
+initial value passed was `undefined`". The real `reduce` counts its arguments
+instead. That is the previous topic turning up here, and it is the difference
+between a helper that works and one that works for everybody.
+
+## Returning a function
+
+The other half is a function that builds a function. The one you return closes
+over the configuration it was built with, so the caller gets something already
+specialised.
+
+```js
+function retry(fn, times) {
+  return async function (...args) {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await fn(...args)
+      } catch (error) {
+        if (attempt === times) throw error
+      }
+    }
+  }
+}
+```
+
+`retry` knows nothing about the work. `fn` knows nothing about retrying. That
+separation is the reason to write it this way, and it is what makes wrappers
+stack: a retried, logged, rate limited version of a function is three wrappers
+and no edits to the original.
+
+This shape has a name in every codebase you will read. Express calls them
+middleware, React calls them higher order components, decorators in other
+languages do the same job. They are all a function that takes a function and
+returns a modified one.
+
+## The interview angle
+
+Asked why higher order functions matter, the weak answer is "they make code
+reusable". The stronger one names the mechanism:
+
+> They let the varying part of an algorithm be an argument. Once the step is a
+> parameter, one implementation covers every case that differs only by that
+> step, and the wrapper and the work stop knowing about each other.
+
+Then be ready for the follow-up, which is usually a request to implement one.
+`map`, `filter` and `reduce` by hand cover most of it. Say out loud that the
+callback receives the element, the index and the array, because that is the
+detail candidates leave out and the one that connects to `map(parseInt)`.
+
+Expect these follow-ups:
+
+- Implement `map`, `filter` or `reduce` without using the built-in.
+- Write `once`, `memoize`, `debounce` or `throttle`.
+- Why does `array.forEach(async ...)` not wait?
+- What is the cost of passing a new function on every call?
+
+## Traps
+
+- **`return` in a `forEach` callback skips one element, it does not break.**
+  There is no way to stop a `forEach` early. Use `for...of`, or `some`, or
+  `find`.
+- **`forEach` ignores what the callback returns**, including a promise. An
+  `async` callback starts the work and `forEach` moves on, so the loop finishes
+  long before the work does. `for...of` with `await`, or `Promise.all` over
+  `map`, are the two fixes.
+- **Passing a method loses its receiver.** `items.map(obj.format)` calls
+  `format` with no `this`. Pass `(x) => obj.format(x)` or bind it.
+- **The callback gets more arguments than you asked for.** This is the
+  `map(parseInt)` problem, and it applies to any named function you pass
+  straight through.
+- **A new function every call is a new identity.** Anything comparing functions,
+  `removeEventListener`, a cache key, a dependency array, sees a different one
+  each time and behaves as though nothing was ever registered.
+
+## In one picture
+
+<ConceptMap
+  center={'Higher order function'}
+  branches={[
+    {
+      label: 'What it is',
+      summary: 'A function that takes a function, returns one, or both.',
+      nodes: ['functions are ordinary values', 'setTimeout and map already are one'],
+    },
+    {
+      label: 'Taking one',
+      summary: 'You hand over when it runs, what arguments it gets and what this is.',
+      nodes: ['the callback runs on top of the caller', 'return exits the callback, not the loop'],
+    },
+    {
+      label: 'Returning one',
+      summary: 'The returned function closes over the configuration it was built with.',
+      nodes: ['once, retry, memoize', 'middleware and decorators are this shape'],
+    },
+    {
+      label: 'Why it pays',
+      summary: 'The varying step becomes a parameter, so one implementation covers every case.',
+      nodes: ['wrapper and work stay ignorant of each other', 'wrappers stack'],
+    },
+    {
+      label: 'What it costs',
+      summary: 'A function built per call is a new object with a new identity every time.',
+      nodes: ['removeEventListener misses', 'comparisons never match'],
+    },
+  ]}
+/>

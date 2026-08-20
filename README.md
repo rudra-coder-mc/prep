@@ -7,12 +7,14 @@ mark it learned, and from then on answer active-recall questions about it on a
 schedule until you can explain and apply it without help. Every topic can also be
 listened to, in a voice synthesised on the machine it runs on.
 
-The JavaScript track covers eight topics, in teaching order: types and
-coercion, scope and hoisting, values and references, closures, `this` and
-binding, prototypes, the event loop and microtasks, and promises with
-async/await. Each has an animated lesson, ten or so questions in the forms
-interviews actually use, and two practical exercises. The remaining groups
-needed for full interview coverage are listed in `TASKS.md`.
+The JavaScript track covers twelve topics, in teaching order: types and
+coercion, scope and hoisting, values and references, parameters and arguments,
+closures, higher order functions, currying and partial application, `this` and
+binding, prototypes, recursion and the call stack, the event loop and
+microtasks, and promises with async/await. Each has an animated lesson, ten or
+eleven questions in the forms interviews actually use, and two practical
+exercises. The remaining groups needed for full interview coverage are listed
+in `TASKS.md`.
 
 The architecture supports adding TypeScript, React, Next.js, Node, Express,
 NestJS, MongoDB and PostgreSQL later without schema changes. Adding a topic is
