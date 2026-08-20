@@ -6,13 +6,25 @@ import { Rise } from '@/components/motion/rise'
 import { buttonClass } from '@/components/ui/button'
 import { Card, SectionLabel } from '@/components/ui/card'
 import { PageShell } from '@/components/ui/page'
+import type { SpokenSection } from '@/components/speech/narration-audio'
 import { TopicReader } from '@/components/speech/topic-reader'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { getTopic } from '@/content'
+import type { Narration } from '@/content/schema'
 import { getTopicProgress } from '@/lib/progress'
+import { scriptKey } from '@/lib/speech'
 import { requireSession } from '@/lib/session'
 
 type Params = { technology: string; topic: string }
+
+/**
+ * Addresses each section's audio here, on the server, so the player asks for a
+ * recording that `npm run narration:build` has already made rather than having
+ * to hash the same words again in the browser.
+ */
+function spokenSections(narration: Narration): SpokenSection[] {
+  return narration.map((section) => ({ ...section, key: scriptKey(section.script) }))
+}
 
 /** Lessons live beside their topic in content/, so they are loaded by path. */
 async function loadLesson(technology: string, directory: string) {
@@ -59,7 +71,7 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
       {topic.narration ? (
         <Rise delay={0.04}>
           <div className="mt-8">
-            <TopicReader sections={topic.narration} title={topic.title} />
+            <TopicReader sections={spokenSections(topic.narration)} title={topic.title} />
           </div>
         </Rise>
       ) : null}

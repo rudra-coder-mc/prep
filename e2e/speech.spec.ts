@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { SIGNED_OUT_STATE } from './constants'
-import { speak } from './speaking'
+import { playBuilt, speak } from './speaking'
 
 /**
  * The narration engine has unit tests for its parts and an integration test
@@ -8,10 +8,9 @@ import { speak } from './speaking'
  * application. This spec is the layer that does: a page in a browser, holding
  * the session it signed in with, asking the running server for audio.
  *
- * There is no player yet - that is the next task - so this is the highest level
- * the feature can be driven at. When the player lands it belongs on top of this
- * rather than instead of it, because everything here is about the endpoint's
- * contract, which the player depends on and cannot itself prove.
+ * The player has its own spec on top of this one rather than instead of it,
+ * because everything here is about the two endpoints' contract, which the player
+ * depends on and cannot itself prove.
  *
  * Every test brings its own script. The suite shares one speech cache for the
  * whole run, the same way it shares one database, so a test that reused another
@@ -73,6 +72,30 @@ test('an unspeakable script is refused rather than left to hang', async ({ page 
   expect((await speak(page, 'a'.repeat(3001))).status).toBe(400)
 })
 
+test('a recording that has been built is served by its key', async ({ page }) => {
+  await page.goto('/')
+
+  const built = await speak(page, 'A script that has been built is a file, not a synthesis.')
+  const played = await playBuilt(page, built.key ?? '')
+
+  expect(played.status).toBe(200)
+  expect(played.contentType).toBe('audio/wav')
+  expect(played.byteLength).toBe(built.byteLength)
+  // A key is the hash of the words, so the browser can hold on to it for good.
+  expect(played.cacheControl).toContain('immutable')
+})
+
+test('a key with nothing behind it is refused, which is what the player falls back from', async ({
+  page,
+}) => {
+  await page.goto('/')
+
+  const missing = await playBuilt(page, 'b'.repeat(64))
+
+  expect(missing.status).toBe(404)
+  expect(missing.contentType).toContain('application/json')
+})
+
 test.describe('signed out', () => {
   test.use({ storageState: SIGNED_OUT_STATE })
 
@@ -86,5 +109,14 @@ test.describe('signed out', () => {
     // The failure this guards against is not a wrong status. It is the login
     // page arriving with a 200 and being handed to an audio element.
     expect(spoken.header).not.toMatch(/^RIFF/)
+  })
+
+  test('a request for a built recording is refused the same way', async ({ page }) => {
+    await page.goto('/login')
+
+    const played = await playBuilt(page, 'c'.repeat(64))
+
+    expect(played.status).toBe(401)
+    expect(played.header).not.toMatch(/^RIFF/)
   })
 })

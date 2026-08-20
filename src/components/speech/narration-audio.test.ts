@@ -11,7 +11,38 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+const KEY = 'f'.repeat(64)
+
 describe('fetchNarrationAudio', () => {
+  it('plays the recording that was built for the section, without synthesising', async () => {
+    const fetchMock = respond('RIFF....WAVE', { headers: { 'Content-Type': 'audio/wav' } })
+
+    const audio = await fetchNarrationAudio('Say this section.', { key: KEY })
+
+    expect(await audio.text()).toBe('RIFF....WAVE')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url] = fetchMock.mock.calls[0] as unknown as [string]
+    expect(url).toBe(`/api/speech/${KEY}`)
+  })
+
+  it('synthesises a script whose recording has not been built', async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      url === '/api/speech'
+        ? new Response('RIFF....WAVE', { headers: { 'Content-Type': 'audio/wav' } })
+        : new Response(JSON.stringify({ error: 'That narration has not been built yet' }), {
+            status: 404,
+          }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const audio = await fetchNarrationAudio('A script edited since the last build.', { key: KEY })
+
+    // The 404 is not what the listener hears about: it is answered by building
+    // the recording, which is the whole point of the fallback.
+    expect(await audio.text()).toBe('RIFF....WAVE')
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([`/api/speech/${KEY}`, '/api/speech'])
+  })
+
   it('posts the script and returns the audio', async () => {
     const fetchMock = respond('RIFF....WAVE', { headers: { 'Content-Type': 'audio/wav' } })
 

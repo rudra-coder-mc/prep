@@ -12,5 +12,6 @@ import 'server-only'
 
 export { InvalidScriptError, narrate, type Narration } from './narrate'
 export type { Audio } from './audio'
+export { readCachedAudio, scriptKey } from './cache'
 export { SpeechServiceError } from './piper'
 export { MAX_SCRIPT_LENGTH } from './script'
