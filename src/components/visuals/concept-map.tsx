@@ -38,7 +38,9 @@ export function ConceptMap({ title = 'The whole topic', center, branches }: Conc
     accent: i <= player.index,
   }))
 
-  const { containerRef, register, drawn } = useMeasuredLinks(links, player.index)
+  // Stacked, the branches sit under the centre rather than beside it, so the
+  // links run down the margin instead of cutting across the boxes between.
+  const { containerRef, register, drawn } = useMeasuredLinks(links, player.index, 'gutter')
 
   return (
     <VisualFrame title={title} player={player}>
@@ -61,12 +63,12 @@ export function ConceptMap({ title = 'The whole topic', center, branches }: Conc
               : '0 0 0 1px var(--color-accent)',
           }}
           transition={player.isPlaying ? { duration: 2.4, repeat: Infinity } : QUICK}
-          className="justify-self-center rounded-xl border border-accent bg-accent-dim px-4 py-3 text-center text-sm font-medium text-fg"
+          className="justify-self-start rounded-xl border border-accent bg-accent-dim px-4 py-3 text-center text-sm font-medium text-fg sm:justify-self-center"
         >
           {center}
         </motion.div>
 
-        <ul className="space-y-2">
+        <ul className="space-y-2 pl-5 sm:pl-0">
           {branches.map((branch, i) => {
             const reached = i <= player.index
             const isCurrent = i === player.index

@@ -71,12 +71,25 @@ export type DrawnLink = { id: string; d: string; accent: boolean }
 const TRACK_MS = 700
 
 /**
+ * How a link is drawn once the layout has stacked and the target is no longer
+ * to the right of its source. `vertical` drops straight from one box to the one
+ * under it; `gutter` runs down the left margin and turns in, which is what a
+ * map with one source and several targets needs so the lines do not cut across
+ * everything between them.
+ */
+export type StackedRoute = 'vertical' | 'gutter'
+
+/**
  * Draws a curve between two elements and keeps drawing it while either of them
  * is still moving. Positions come from the DOM rather than from a layout the
  * component computes, so a link survives wrapping, resizing and whatever the
  * surrounding animation is doing to its endpoints.
  */
-export function useMeasuredLinks(links: Link[], stepKey: number) {
+export function useMeasuredLinks(
+  links: Link[],
+  stepKey: number,
+  stackedRoute: StackedRoute = 'vertical',
+) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const nodes = useRef(new Map<string, HTMLElement | null>())
   const [drawn, setDrawn] = useState<DrawnLink[]>([])
@@ -115,15 +128,10 @@ export function useMeasuredLinks(links: Link[], stepKey: number) {
 
         const a = start.getBoundingClientRect()
         const b = end.getBoundingClientRect()
-        const x1 = a.right - base.left
-        const y1 = a.top + a.height / 2 - base.top
-        const x2 = b.left - base.left
-        const y2 = b.top + b.height / 2 - base.top
-        const bend = Math.max((x2 - x1) / 2, 12)
 
         next.push({
           id,
-          d: `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`,
+          d: linkPath(a, b, base, stackedRoute),
           accent: accent === 'true',
         })
       }
@@ -140,9 +148,60 @@ export function useMeasuredLinks(links: Link[], stepKey: number) {
 
     frame = requestAnimationFrame(measure)
     return () => cancelAnimationFrame(frame)
-  }, [signature, stepKey])
+  }, [signature, stepKey, stackedRoute])
 
   return { containerRef, register, drawn }
+}
+
+/**
+ * The curve from one box to another, in the coordinates of their container.
+ * Which edges it leaves and enters is decided by where the boxes actually ended
+ * up, so the same links read correctly whether the layout is side by side or
+ * stacked on a narrow screen.
+ */
+export function linkPath(
+  a: DOMRect,
+  b: DOMRect,
+  base: DOMRect,
+  stackedRoute: StackedRoute,
+): string {
+  const sideBySide = b.left >= a.right - 4
+
+  if (sideBySide) {
+    const x1 = a.right - base.left
+    const y1 = a.top + a.height / 2 - base.top
+    const x2 = b.left - base.left
+    const y2 = b.top + b.height / 2 - base.top
+    const bend = Math.max((x2 - x1) / 2, 12)
+    return `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`
+  }
+
+  const fromY = a.bottom - base.top
+
+  if (stackedRoute === 'vertical') {
+    const fromX = a.left + a.width / 2 - base.left
+    const toX = b.left + b.width / 2 - base.left
+    const toY = b.top - base.top
+    const bend = Math.max((toY - fromY) / 2, 10)
+    return `M ${fromX} ${fromY} C ${fromX} ${fromY + bend}, ${toX} ${toY - bend}, ${toX} ${toY}`
+  }
+
+  const toX = b.left - base.left
+  const toY = b.top + b.height / 2 - base.top
+  // Leave from the source's left, drop into the margin beside the targets, run
+  // down it, and turn in. Every link shares the vertical, so five of them read
+  // as one spine rather than five lines crossing the same boxes.
+  const gutter = Math.max(toX - 14, 4)
+  const exit = a.left - base.left + Math.min(16, a.width / 2)
+  const spineTop = fromY + 26
+  const turnIn = Math.max(toY - 12, spineTop)
+
+  return [
+    `M ${exit} ${fromY}`,
+    `C ${exit} ${fromY + 12}, ${gutter} ${fromY + 12}, ${gutter} ${spineTop}`,
+    `L ${gutter} ${turnIn}`,
+    `Q ${gutter} ${toY}, ${toX} ${toY}`,
+  ].join(' ')
 }
 
 /** The svg layer the drawn links live in, sized to its positioned parent. */
