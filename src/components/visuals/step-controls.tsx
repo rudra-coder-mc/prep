@@ -1,13 +1,15 @@
 'use client'
 
+import { motion } from 'motion/react'
 import { ArrowLeftIcon, ArrowRightIcon, PauseIcon, PlayIcon } from '@/components/ui/icons'
 import { cx } from '@/lib/cx'
-import type { StepPlayer } from './use-step-player'
+import { QUICK } from './flow'
+import { useAutoPlayInView, usePrefersReducedMotion, type StepPlayer } from './use-step-player'
 
 const ICON_BUTTON =
   'grid size-8 place-items-center rounded-lg border border-border text-muted transition hover:border-edge hover:bg-raised hover:text-fg active:scale-95 disabled:pointer-events-none disabled:opacity-35'
 
-/** Shared transport for every visual: play, step, and a keyboard-reachable timeline. */
+/** Shared transport for every visual: play, step, speed, and a keyboard-reachable timeline. */
 export function StepControls({ player, label }: { player: StepPlayer; label: string }) {
   if (player.count === 0) return null
 
@@ -41,6 +43,15 @@ export function StepControls({ player, label }: { player: StepPlayer; label: str
         <ArrowRightIcon className="size-3.5" />
       </button>
 
+      <button
+        type="button"
+        onClick={player.cycleSpeed}
+        aria-label={`Playback speed, currently ${player.speed} times`}
+        className={cx(ICON_BUTTON, 'w-auto px-2 font-mono text-xs tabular-nums')}
+      >
+        {player.speed}&times;
+      </button>
+
       <label className="flex flex-1 items-center gap-3 text-xs text-faint">
         <span className="sr-only">{label} timeline</span>
         <input
@@ -59,6 +70,11 @@ export function StepControls({ player, label }: { player: StepPlayer; label: str
   )
 }
 
+/**
+ * The frame every visual sits in. It owns the transport, the step markers and
+ * the one thing that makes these read as animations rather than slideshows:
+ * playing itself the first time it is scrolled into view.
+ */
 export function VisualFrame({
   title,
   player,
@@ -68,11 +84,43 @@ export function VisualFrame({
   player: StepPlayer
   children: React.ReactNode
 }) {
+  const reducedMotion = usePrefersReducedMotion()
+  const frame = useAutoPlayInView(player.play, !reducedMotion)
+
   return (
-    <figure className="my-8 overflow-hidden rounded-card border border-border bg-surface">
+    <figure
+      ref={frame}
+      className="my-8 overflow-hidden rounded-card border border-border bg-surface"
+    >
       <figcaption className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-xs font-medium tracking-wider text-faint uppercase">
-        <span className="size-1.5 rounded-full bg-accent" />
+        <motion.span
+          animate={
+            player.isPlaying
+              ? { scale: [1, 1.5, 1], opacity: [1, 0.5, 1] }
+              : { scale: 1, opacity: 1 }
+          }
+          transition={player.isPlaying ? { duration: 1.6, repeat: Infinity } : QUICK}
+          className="size-1.5 rounded-full bg-accent"
+        />
         {title}
+        <span className="ml-auto flex gap-1" aria-hidden>
+          {Array.from({ length: player.count }, (_, i) => (
+            <motion.span
+              key={i}
+              animate={{
+                backgroundColor:
+                  i === player.index
+                    ? 'var(--color-accent)'
+                    : i < player.index
+                      ? 'var(--color-edge)'
+                      : 'var(--color-border)',
+                width: i === player.index ? 14 : 6,
+              }}
+              transition={QUICK}
+              className="h-1 rounded-full"
+            />
+          ))}
+        </span>
       </figcaption>
       <div className="p-4">{children}</div>
       <StepControls player={player} label={title} />

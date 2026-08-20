@@ -1,6 +1,6 @@
 'use client'
 
-import { motion } from 'motion/react'
+import { OutputLog, Region, StepNote, Token, useVisualNamespace } from './flow'
 import { VisualFrame } from './step-controls'
 import { usePrefersReducedMotion, useStepPlayer } from './use-step-player'
 
@@ -9,6 +9,11 @@ export type CallStackStep = {
   frames: string[]
   note: string
   output?: string[]
+}
+
+/** Frames repeat in recursion, so identity is the name plus how deep it sits. */
+function frameKey(frame: string, depth: number): string {
+  return `${frame}@${depth}`
 }
 
 export function CallStack({
@@ -20,49 +25,46 @@ export function CallStack({
 }) {
   const player = useStepPlayer(steps.length)
   const reducedMotion = usePrefersReducedMotion()
+  const namespace = useVisualNamespace()
   const step = steps[player.index]
   const frames = step?.frames ?? []
 
   return (
     <VisualFrame title={title} player={player}>
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div>
-          <h4 className="text-xs tracking-wide text-[var(--color-muted)] uppercase">Stack</h4>
-          <div className="mt-2 flex min-h-40 flex-col-reverse justify-start gap-1 rounded-lg bg-[var(--color-bg)] p-2">
-            {frames.length === 0 ? (
-              <p className="self-center py-6 text-xs text-[var(--color-muted)]">empty</p>
-            ) : (
-              frames.map((frame, depth) => (
-                <motion.div
-                  key={`${frame}-${depth}`}
-                  layout={!reducedMotion}
-                  initial={reducedMotion ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.18 }}
-                  data-frame={frame}
-                  className={`rounded border px-2 py-1 font-mono text-xs ${
-                    depth === frames.length - 1
-                      ? 'border-[var(--color-accent)] text-[var(--color-fg)]'
-                      : 'border-[var(--color-border)] text-[var(--color-muted)]'
-                  }`}
-                >
-                  {frame}
-                </motion.div>
-              ))
-            )}
-          </div>
-        </div>
+        <Region
+          label="Stack"
+          direction="up"
+          active={frames.length > 0}
+          empty={frames.length === 0 ? 'empty' : undefined}
+          attributes={{ 'data-depth': String(frames.length) }}
+          className="min-h-44"
+        >
+          {frames.map((frame, depth) => (
+            <Token
+              key={frameKey(frame, depth)}
+              layoutId={`${namespace}-${frameKey(frame, depth)}`}
+              label={frame}
+              detail={depth === frames.length - 1 ? 'running' : undefined}
+              // A pushed frame arrives from below and a popped one leaves the
+              // same way, so the stack visibly grows and shrinks downward.
+              enterFrom="below"
+              tone={depth === frames.length - 1 ? 'accent' : 'dim'}
+              emphasis={depth === frames.length - 1}
+              reducedMotion={reducedMotion}
+              attributes={{ 'data-frame': frame }}
+            />
+          ))}
+        </Region>
 
         <div className="space-y-3 text-sm">
-          <p className="leading-relaxed">{step?.note}</p>
-          {step?.output && step.output.length > 0 ? (
-            <div>
-              <h4 className="text-xs tracking-wide text-[var(--color-muted)] uppercase">Output</h4>
-              <pre className="mt-1 rounded bg-[var(--color-bg)] p-2 font-mono text-xs">
-                {step.output.join('\n')}
-              </pre>
-            </div>
-          ) : null}
+          <StepNote
+            note={step?.note ?? ''}
+            stepKey={player.index}
+            direction={player.direction}
+            reducedMotion={reducedMotion}
+          />
+          <OutputLog lines={step?.output ?? []} reducedMotion={reducedMotion} />
         </div>
       </div>
     </VisualFrame>
