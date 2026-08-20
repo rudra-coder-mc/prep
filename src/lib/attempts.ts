@@ -4,10 +4,15 @@ import { db } from '@/db'
 import { attempts, reviewSchedule, topicProgress } from '@/db/schema'
 import { getTopic } from '@/content/loader'
 import { questionKey } from '@/content/schema'
-import { nextDueDate, nextStep, type Confidence, type Result } from '@/lib/interval-ladder'
-import { gradeMcq } from '@/lib/mcq'
+import {
+  nextDueDate,
+  nextStep,
+  SELF_GRADE_CONFIDENCE,
+  type Confidence,
+  type Result,
+} from '@/lib/interval-ladder'
+import { gradeChoice } from '@/lib/choice'
 import { answerAudioKey } from '@/lib/speech'
-import { matchesExpectedOutput, OUTPUT_CONFIDENCE } from '@/lib/output-answer'
 
 export type AttemptInput = {
   topicSlug: string
@@ -34,33 +39,37 @@ async function loadQuestion(topicSlug: string, questionId: string) {
 
 /**
  * Loads a question's answer on demand. The session never sends it to the
- * browser up front, so there is nothing to peek at before submitting.
+ * browser up front, so there is nothing to peek at before answering. This is how
+ * an open question works: reveal, then mark yourself against what you said.
  */
 export async function revealQuestion(
   topicSlug: string,
   questionId: string,
-): Promise<{ expectedAnswer: string; explanation: string; answerAudioKey: string }> {
+): Promise<{ answerInFull: string; explanation?: string; answerAudioKey: string }> {
   const question = await loadQuestion(topicSlug, questionId)
 
-  if (question.expectedAnswer === undefined) {
+  // The answer in full names the correct option, so serving it for a choice
+  // question would be a way to read the answer without answering. Only an open
+  // question is revealed, and only it has a reveal button.
+  if (question.form !== 'open') {
     throw new Error(
       `Question ${topicSlug}#${questionId} is answered by choosing an option, not by revealing text`,
     )
   }
 
   return {
-    expectedAnswer: question.expectedAnswer,
+    answerInFull: question.answerInFull,
     explanation: question.explanation,
     answerAudioKey: answerAudioKey(question),
   }
 }
 
 /**
- * Grades a multiple choice answer on the server and records it in one step.
- * The correct option is never sent to the browser beforehand, so submitting is
- * the only way to find out, and there is nothing to self assess afterwards.
+ * Grades a choice answer on the server and records it in one step. The correct
+ * option is never sent to the browser beforehand, so submitting is the only way
+ * to find out, and there is nothing to self assess afterwards.
  */
-export async function answerMultipleChoice(
+export async function answerChoice(
   userId: string,
   topicSlug: string,
   questionId: string,
@@ -68,7 +77,7 @@ export async function answerMultipleChoice(
   now = new Date(),
 ) {
   const question = await loadQuestion(topicSlug, questionId)
-  const verdict = gradeMcq(question, chosen)
+  const verdict = gradeChoice(question, chosen)
 
   await recordAttempt(
     userId,
@@ -86,10 +95,44 @@ export async function answerMultipleChoice(
   return {
     correct: verdict.correct,
     correctOption: verdict.correctOption,
+    answerInFull: question.answerInFull,
     explanation: question.explanation,
     answerAudioKey: answerAudioKey(question),
     result: verdict.result,
   }
+}
+
+/**
+ * Records the self grade on an open question, the one form the platform cannot
+ * grade itself. Nothing was submitted, so the attempt stores no answer: what
+ * happened is the grade, and the reader already has the answer in front of them.
+ */
+export async function recordSelfGrade(
+  userId: string,
+  topicSlug: string,
+  questionId: string,
+  result: Result,
+  hintsUsed: number,
+  now = new Date(),
+) {
+  const question = await loadQuestion(topicSlug, questionId)
+
+  if (question.form !== 'open') {
+    throw new Error(`Question ${topicSlug}#${questionId} is graded by the platform, not by hand`)
+  }
+
+  return recordAttempt(
+    userId,
+    {
+      topicSlug,
+      questionId,
+      answer: '',
+      result,
+      confidence: SELF_GRADE_CONFIDENCE[result],
+      hintsUsed,
+    },
+    now,
+  )
 }
 
 /**
@@ -151,50 +194,5 @@ export async function countAttempts(userId: string, topicSlug: string) {
     passed: rows.filter((r) => r.result === 'passed').length,
     weak: rows.filter((r) => r.result === 'weak').length,
     failed: rows.filter((r) => r.result === 'failed').length,
-  }
-}
-
-/**
- * Checks a typed output against what the program actually prints, and records
- * the attempt. Nothing is self graded here: the answer is exact, so reading the
- * expected value and then marking yourself correct is the weakest possible way
- * to find out whether you were.
- */
-export async function answerOutputQuestion(
-  userId: string,
-  topicSlug: string,
-  questionId: string,
-  answer: string,
-  hintsUsed: number,
-  now = new Date(),
-) {
-  const question = await loadQuestion(topicSlug, questionId)
-
-  if (question.expectedOutput === undefined) {
-    throw new Error(`Question ${topicSlug}#${questionId} is not checked against printed output`)
-  }
-
-  const correct = matchesExpectedOutput(answer, question.expectedOutput)
-  const result: Result = correct ? 'passed' : 'failed'
-
-  await recordAttempt(
-    userId,
-    {
-      topicSlug,
-      questionId,
-      answer,
-      result,
-      confidence: OUTPUT_CONFIDENCE,
-      hintsUsed,
-    },
-    now,
-  )
-
-  return {
-    correct,
-    expectedOutput: question.expectedOutput,
-    explanation: question.explanation,
-    answerAudioKey: answerAudioKey(question),
-    result,
   }
 }

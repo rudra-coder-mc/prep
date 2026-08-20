@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   daysUntilDue,
-  isConfidence,
   nextDueDate,
   nextStep,
   type Confidence,
@@ -59,12 +58,5 @@ describe('nextDueDate', () => {
   it('crosses a month boundary correctly', () => {
     const due = nextDueDate(4, new Date('2026-08-25T09:00:00.000Z'))
     expect(due.toISOString().slice(0, 10)).toBe('2026-09-08')
-  })
-})
-
-describe('isConfidence', () => {
-  it('accepts only the five ratings', () => {
-    expect([1, 2, 3, 4, 5].every(isConfidence)).toBe(true)
-    expect([0, 6, 2.5, -1].some(isConfidence)).toBe(false)
   })
 })

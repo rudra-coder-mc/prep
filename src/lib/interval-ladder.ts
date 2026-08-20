@@ -36,8 +36,17 @@ export function nextDueDate(step: LadderStep, from: Date): Date {
   return due
 }
 
-export function isConfidence(value: number): value is Confidence {
-  return Number.isInteger(value) && value >= 1 && value <= 5
+/**
+ * What a self grade is worth on the ladder.
+ *
+ * An open question is the only form with a person's judgement behind it, so the
+ * grade sets the rung outright. A failed result resets whatever this says, so
+ * its entry only ever reaches the stored attempt.
+ */
+export const SELF_GRADE_CONFIDENCE: Record<Result, Confidence> = {
+  passed: 5,
+  weak: 3,
+  failed: 1,
 }
 
 export const CONFIDENCE_LABELS: Record<Confidence, string> = {

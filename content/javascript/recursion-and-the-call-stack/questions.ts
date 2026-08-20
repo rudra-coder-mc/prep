@@ -4,10 +4,11 @@ export const questions: Question[] = [
   {
     id: 'what-a-frame-holds',
     type: 'concept',
+    form: 'open',
     difficulty: 'easy',
     prompt:
       'What is the call stack, what does one frame hold, and why does recursion run out of it when a loop does not?',
-    expectedAnswer: `The call stack is the engine's record of which calls are currently in progress. Every call pushes a frame holding that call's parameters, its local variables, and the position to return to. The frame is popped when the function returns, and not before.
+    answerInFull: `The call stack is the engine's record of which calls are currently in progress. Every call pushes a frame holding that call's parameters, its local variables, and the position to return to. The frame is popped when the function returns, and not before.
 
 Recursion runs out because none of the frames can return until the innermost one does, so a recursion a thousand deep has a thousand frames alive at once, each with its own copy of the locals. A loop doing the same work enters and leaves one frame repeatedly, so only one is ever alive.
 
@@ -19,6 +20,7 @@ When there is no room for another frame the engine throws RangeError: Maximum ca
   {
     id: 'countdown-order',
     type: 'output',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What does this print, in order?',
     code: `function countdown(n) {
@@ -29,7 +31,7 @@ When there is no room for another frame the engine throws RangeError: Maximum ca
 }
 
 countdown(3)`,
-    expectedOutput: `down 3
+    answerInFull: `down 3
 down 2
 down 1
 up 1
@@ -46,6 +48,7 @@ Anything you write after the recursive call happens on the way back up, and that
   {
     id: 'base-case-missing',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'This throws RangeError: Maximum call stack size exceeded for every input, including a two-element array. Explain why and fix it.',
@@ -54,7 +57,7 @@ Anything you write after the recursive call happens on the way back up, and that
   if (list.length === 0) return 0
   return total
 }`,
-    expectedAnswer: `There are two problems and they compound.
+    answerInFull: `There are two problems and they compound.
 
 The base case is written after the recursive call, so it is unreachable. The first line of every invocation calls sum again, and slicing an empty array gives another empty array, so the descent never stops.
 
@@ -73,10 +76,11 @@ That is correct, but it is still a poor use of recursion. Each level allocates a
   {
     id: 'flatten-both-ways',
     type: 'coding',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'Write flatten(list), which flattens an arbitrarily nested array into a single level, first recursively and then iteratively, without using Array.prototype.flat.',
-    expectedAnswer: `// Recursive: reads well, and its depth is the nesting depth of the input.
+    answerInFull: `// Recursive: reads well, and its depth is the nesting depth of the input.
 function flatten(list) {
   const out = []
   for (const item of list) {
@@ -115,6 +119,7 @@ Worth mentioning either way: out.push(...flatten(item)) spreads an array into ar
   {
     id: 'fib-call-count',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `let calls = 0
@@ -126,7 +131,7 @@ function fib(n) {
 
 fib(10)
 console.log(calls)`,
-    expectedOutput: '177',
+    answerInFull: '177',
     explanation: `Each call above the base case makes two more, so the number of calls follows the same recurrence as the sequence itself: calls(n) = 1 + calls(n - 1) + calls(n - 2). That gives 1, 1, 3, 5, 9, 15, 25, 41, 67, 109, 177.
 
 The growth is exponential, roughly 1.6 to the n, because the same subtrees are recomputed over and over. fib(8) alone is calculated twice, fib(7) three times, and so on down.
@@ -138,10 +143,11 @@ The important part is that this is not a stack depth problem. The deepest the st
   {
     id: 'deep-json-walker',
     type: 'scenario',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'A recursive function that walks API responses to redact fields has started throwing RangeError in production. It has worked for a year. What do you do?',
-    expectedAnswer: `The function is almost certainly fine and the data has changed. Something upstream is now returning a document nested deeper than the stack allows, or nested in a way that never ends.
+    answerInFull: `The function is almost certainly fine and the data has changed. Something upstream is now returning a document nested deeper than the stack allows, or nested in a way that never ends.
 
 What I would check first:
 
@@ -157,9 +163,10 @@ For an immediate mitigation, catching the RangeError lets the request fail clean
   {
     id: 'recursion-or-loop',
     type: 'interview',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'How do you decide between recursion and a loop?',
-    expectedAnswer: `The shape of the data decides it more than taste does.
+    answerInFull: `The shape of the data decides it more than taste does.
 
 Recursion when the data is a tree or a graph. A tree walk written as a loop has to carry its own stack, so the recursive version is shorter and reads much closer to the problem. Parsers, traversals and divide-and-conquer algorithms are all this case.
 
@@ -178,6 +185,7 @@ And the practical note: JavaScript has no reliable tail call elimination, so a r
   {
     id: 'catching-the-overflow',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `function depth(n) {
@@ -189,7 +197,7 @@ And the practical note: JavaScript has no reliable tail call elimination, so a r
 }
 
 console.log(typeof depth(0))`,
-    expectedOutput: 'number',
+    answerInFull: 'number',
     explanation: `Each call recurses until pushing another frame fails, at which point the engine throws a RangeError. That error is an ordinary throwable, so the catch in the frame that was trying to make the call handles it and returns n.
 
 That number then travels back up through every waiting frame, because each one returns the result of its own call unchanged, so depth(0) evaluates to the depth that was reached.
@@ -200,7 +208,8 @@ The reason the question asks for the type is that the number itself is not fixed
   },
   {
     id: 'overflow-error-mcq',
-    type: 'mcq',
+    type: 'debugging',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'What does a runaway recursion throw?',
     options: [
@@ -210,14 +219,15 @@ The reason the question asks for the type is that the number itself is not fixed
       'StackOverflowError',
     ],
     correctOption: 1,
-    explanation:
+    answerInFull:
       'V8 reports a RangeError with that message. SpiderMonkey throws an InternalError with a different wording, so the message is not something to match on, but RangeError is the answer expected. A frozen tab is what an infinite loop does, and it is a useful contrast: a loop never runs out of stack because it never pushes a frame.',
     hints: [],
     tags: ['recursion', 'errors'],
   },
   {
     id: 'tail-call-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What is the state of tail call optimisation in JavaScript?',
     options: [
@@ -227,14 +237,15 @@ The reason the question asks for the type is that the number itself is not fixed
       'It applies automatically to any function whose last statement is a call',
     ],
     correctOption: 2,
-    explanation:
+    answerInFull:
       'Proper tail calls landed in ES2015, and JavaScriptCore, which is Safari, is the only engine that shipped them. V8 and SpiderMonkey declined, mostly over the effect on stack traces and debugging. So the feature is real and unusable in practice: write tail calls if you prefer them, and never rely on them for depth. The last option is also wrong on its own terms, since a tail call means the call result is returned directly with nothing left to do, which excludes something like return n * f(n - 1).',
     hints: [],
     tags: ['recursion', 'call-stack'],
   },
   {
     id: 'frame-lifetime-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'When is a stack frame removed?',
     options: [
@@ -244,7 +255,7 @@ The reason the question asks for the type is that the number itself is not fixed
       'When the function makes its own next call',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'A frame lives until its call completes, whether that is by returning a value or by an exception unwinding through it. Reaching the last line is not enough on its own, since that line may itself be a call that has to finish first. The garbage collector has no say: the stack is not the heap, and frames are not collected. And a function making a call adds a frame on top rather than removing its own, which is exactly why recursion accumulates them.',
     hints: [],
     tags: ['call-stack'],

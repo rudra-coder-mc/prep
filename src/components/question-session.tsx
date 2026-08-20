@@ -3,12 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  answerMcqAction,
-  answerOutputAction,
-  recordAttemptAction,
-  revealAnswerAction,
-} from '@/actions/session'
+import { answerChoiceAction, revealAnswerAction, selfGradeAction } from '@/actions/session'
 import {
   DURATION_FAST,
   EASE_SOFT,
@@ -18,17 +13,13 @@ import { Button, buttonClass } from '@/components/ui/button'
 import { Card, SectionLabel } from '@/components/ui/card'
 import { CheckIcon, LightbulbIcon } from '@/components/ui/icons'
 import { SpeakButton } from '@/components/speech/speak-button'
-import {
-  CONFIDENCE_LABELS,
-  RESULT_LABELS,
-  type Confidence,
-  type Result,
-} from '@/lib/interval-ladder'
+import { RESULT_LABELS, type Result } from '@/lib/interval-ladder'
+import type { AnswerForm } from '@/content/schema'
 import { cx } from '@/lib/cx'
 
 /**
  * Deliberately excludes the answer, so it cannot reach the browser early. For a
- * multiple choice question that means the options are here but which one is
+ * choice question that means the options are here but which one is
  * correct is not.
  */
 export type SessionQuestion = {
@@ -41,20 +32,19 @@ export type SessionQuestion = {
   code?: string
   hints: string[]
   options?: string[]
-  /** Whether this question is checked against printed output rather than self graded. */
-  checksOutput?: boolean
+  /** How it is answered. Decides which form the session renders. */
+  form: AnswerForm
   /**
-   * Where the recording of the prompt and, for a multiple choice question, its
+   * Where the recording of the prompt and, for a choice question, its
    * options lives. Built by `npm run narration:build`, so this is a key and not
    * a script: there is no synthesis to fall back to.
    */
   questionAudioKey?: string
 }
 
-type Revealed = { expectedAnswer: string; explanation: string; answerAudioKey: string }
+type Revealed = { answerInFull: string; explanation?: string; answerAudioKey: string }
 type Tally = Record<Result, number>
 
-const CONFIDENCES: Confidence[] = [1, 2, 3, 4, 5]
 const RESULTS: Result[] = ['passed', 'weak', 'failed']
 const OPTION_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -159,12 +149,46 @@ function Hints({
   )
 }
 
+/** The answer in full, and the explanation when there is one to add. */
+function AnswerCard({
+  answerInFull,
+  explanation,
+  answerAudioKey,
+  heading,
+}: {
+  answerInFull: string
+  explanation?: string
+  answerAudioKey: string
+  heading: React.ReactNode
+}) {
+  return (
+    <Card className="mt-5">
+      <div className="flex items-center justify-between gap-3">
+        {heading}
+        <SpeakButton audioKey={answerAudioKey} label="Listen to the answer" />
+      </div>
+      <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap">{answerInFull}</p>
+
+      {explanation ? (
+        <div className="mt-5 border-t border-border pt-4">
+          <SectionLabel>Worth adding</SectionLabel>
+          <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted">
+            {explanation}
+          </p>
+        </div>
+      ) : null}
+    </Card>
+  )
+}
+
 /**
- * The written form: answer from memory, reveal, then grade yourself. Grading
- * free text reliably is harder than the rest of the platform combined, so the
- * honest self assessment stays.
+ * The open form: answer it in your head or out loud, reveal, then mark yourself.
+ * The only form the platform cannot grade, so it is the only one that asks.
+ *
+ * Nothing is typed. A typed answer nobody reads back is a self grade with extra
+ * steps, and it made a two second judgement into a fifteen second one.
  */
-function WrittenQuestion({
+function OpenQuestion({
   question,
   onGraded,
   reducedMotion,
@@ -173,14 +197,11 @@ function WrittenQuestion({
   onGraded: (result: Result) => Promise<void>
   reducedMotion: boolean
 }) {
-  const [answer, setAnswer] = useState('')
-  const [confidence, setConfidence] = useState<Confidence | null>(null)
   const [hintsShown, setHintsShown] = useState(0)
   const [revealed, setRevealed] = useState<Revealed | null>(null)
   const [busy, setBusy] = useState(false)
 
-  async function submitAnswer() {
-    if (confidence === null) return
+  async function reveal() {
     setBusy(true)
     try {
       setRevealed(await revealAnswerAction(question.topicSlug, question.id))
@@ -190,267 +211,86 @@ function WrittenQuestion({
   }
 
   async function grade(result: Result) {
-    if (confidence === null) return
     setBusy(true)
     try {
-      await recordAttemptAction({
-        topicSlug: question.topicSlug,
-        questionId: question.id,
-        answer,
-        result,
-        confidence,
-        hintsUsed: hintsShown,
-      })
+      await selfGradeAction(question.topicSlug, question.id, result, hintsShown)
       await onGraded(result)
     } finally {
       setBusy(false)
     }
   }
 
-  return (
-    <>
-      {!revealed ? (
+  if (!revealed) {
+    return (
+      <>
         <Hints
           hints={question.hints}
           shown={hintsShown}
           onShow={() => setHintsShown(hintsShown + 1)}
           reducedMotion={reducedMotion}
         />
-      ) : null}
 
-      <label className="mt-6 block">
-        <span className="text-sm text-muted">Your answer</span>
-        <textarea
-          value={answer}
-          onChange={(event) => setAnswer(event.target.value)}
-          disabled={revealed !== null}
-          rows={6}
-          placeholder="Explain it as if to another developer."
-          className="mt-1.5 w-full rounded-card border border-border bg-surface p-3.5 font-mono text-sm leading-6 transition-colors outline-none placeholder:text-faint/70 focus:border-accent disabled:opacity-60"
-        />
-      </label>
-
-      <fieldset className="mt-5" disabled={revealed !== null}>
-        <legend className="text-sm text-muted">How confident are you?</legend>
-        <div className="mt-2 flex gap-1.5">
-          {CONFIDENCES.map((value) => (
-            <label key={value} className="relative flex-1">
-              {/* The input covers the pill so the whole target is clickable. */}
-              <input
-                type="radio"
-                name="confidence"
-                value={value}
-                checked={confidence === value}
-                onChange={() => setConfidence(value)}
-                aria-label={`${value} — ${CONFIDENCE_LABELS[value]}`}
-                className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0 disabled:cursor-default"
-              />
-              <span
-                className={cx(
-                  'block rounded-lg border border-border py-2 text-center text-sm font-medium transition',
-                  'hover:border-edge hover:bg-raised',
-                  'peer-checked:border-accent peer-checked:bg-accent-dim peer-checked:text-accent',
-                  'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent',
-                  'peer-disabled:cursor-default peer-disabled:opacity-60',
-                )}
-              >
-                {value}
-              </span>
-            </label>
-          ))}
-        </div>
-        <p className="mt-2 h-4 text-xs text-faint">
-          {confidence === null
-            ? 'Pick a level to reveal the answer.'
-            : CONFIDENCE_LABELS[confidence]}
+        <p className="mt-6 text-sm text-muted">
+          Answer it out loud, as you would in the room. Then reveal and mark yourself against what
+          you actually said.
         </p>
-      </fieldset>
 
-      {!revealed ? (
-        <Button
-          variant="primary"
-          onClick={submitAnswer}
-          disabled={confidence === null || busy}
-          className="mt-5"
-        >
-          {busy ? 'Loading...' : 'Submit and reveal answer'}
+        <Button variant="primary" onClick={reveal} disabled={busy} className="mt-4">
+          {busy ? 'Loading...' : 'Reveal the answer'}
         </Button>
-      ) : (
-        <motion.div
-          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
-        >
-          <Card className="mt-6">
-            <div className="flex items-center justify-between gap-3">
-              <SectionLabel>Expected answer</SectionLabel>
-              <SpeakButton
-                audioKey={revealed.answerAudioKey}
-                label="Listen to the answer and explanation"
-              />
-            </div>
-            <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">
-              {revealed.expectedAnswer}
-            </p>
-
-            <div className="mt-5 border-t border-border pt-4">
-              <SectionLabel>Explanation</SectionLabel>
-              <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted">
-                {revealed.explanation}
-              </p>
-            </div>
-          </Card>
-
-          <div className="mt-5">
-            <p className="text-sm text-muted">How did you do?</p>
-            <div className="mt-2 grid grid-cols-3 gap-2">
-              {RESULTS.map((result) => (
-                <button
-                  key={result}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => grade(result)}
-                  className={cx(
-                    buttonClass({ variant: 'secondary' }),
-                    'justify-center bg-transparent',
-                    RESULT_TONES[result],
-                  )}
-                >
-                  {RESULT_LABELS[result]}
-                </button>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </>
-  )
-}
-
-type OutputVerdict = {
-  correct: boolean
-  expectedOutput: string
-  explanation: string
-  answerAudioKey: string
-}
-
-/**
- * The output form: type what the program prints and have it checked. The answer
- * is exact, so reading the expected value and then marking yourself correct is
- * the weakest possible way to find out whether you were.
- */
-function OutputQuestion({
-  question,
-  onGraded,
-  reducedMotion,
-}: {
-  question: SessionQuestion
-  onGraded: (result: Result) => Promise<void>
-  reducedMotion: boolean
-}) {
-  const [answer, setAnswer] = useState('')
-  const [hintsShown, setHintsShown] = useState(0)
-  const [verdict, setVerdict] = useState<OutputVerdict | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  async function check() {
-    if (answer.trim().length === 0) return
-    setBusy(true)
-    try {
-      setVerdict(await answerOutputAction(question.topicSlug, question.id, answer, hintsShown))
-    } finally {
-      setBusy(false)
-    }
+      </>
+    )
   }
 
   return (
-    <>
-      {!verdict ? (
-        <Hints
-          hints={question.hints}
-          shown={hintsShown}
-          onShow={() => setHintsShown(hintsShown + 1)}
-          reducedMotion={reducedMotion}
-        />
-      ) : null}
+    <motion.div
+      initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
+    >
+      <AnswerCard
+        answerInFull={revealed.answerInFull}
+        explanation={revealed.explanation}
+        answerAudioKey={revealed.answerAudioKey}
+        heading={<SectionLabel>The answer</SectionLabel>}
+      />
 
-      <label className="mt-6 block">
-        <span className="text-sm text-muted">Your answer</span>
-        <textarea
-          value={answer}
-          onChange={(event) => setAnswer(event.target.value)}
-          disabled={verdict !== null}
-          rows={4}
-          placeholder="Exactly what it prints, one line per line of output."
-          className="mt-1.5 w-full rounded-card border border-border bg-surface p-3.5 font-mono text-sm leading-6 transition-colors outline-none placeholder:text-faint/70 focus:border-accent disabled:opacity-60"
-        />
-      </label>
-
-      {!verdict ? (
-        <Button
-          variant="primary"
-          onClick={check}
-          disabled={answer.trim().length === 0 || busy}
-          className="mt-5"
-        >
-          {busy ? 'Checking...' : 'Check answer'}
-        </Button>
-      ) : (
-        <motion.div
-          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
-        >
-          <Card className="mt-5">
-            <div className="flex items-center justify-between gap-3">
-              <p className={cx('font-medium', verdict.correct ? 'text-pass' : 'text-fail')}>
-                {verdict.correct ? 'Correct' : 'Not this time'}
-              </p>
-              <SpeakButton
-                audioKey={verdict.answerAudioKey}
-                label="Listen to the answer and explanation"
-              />
-            </div>
-
-            <div className="mt-4 border-t border-border pt-4">
-              <SectionLabel>Expected output</SectionLabel>
-              <pre className="mt-2 overflow-x-auto rounded-lg border border-border bg-bg p-3 font-mono text-sm leading-6">
-                {verdict.expectedOutput}
-              </pre>
-            </div>
-
-            <div className="mt-5 border-t border-border pt-4">
-              <SectionLabel>Explanation</SectionLabel>
-              <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted">
-                {verdict.explanation}
-              </p>
-            </div>
-          </Card>
-
-          <Button
-            variant="primary"
-            className="mt-5"
-            disabled={busy}
-            onClick={() => onGraded(verdict.correct ? 'passed' : 'failed')}
-          >
-            Next question
-          </Button>
-        </motion.div>
-      )}
-    </>
+      <div className="mt-5">
+        <p className="text-sm text-muted">How much of that did you say?</p>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {RESULTS.map((result) => (
+            <button
+              key={result}
+              type="button"
+              disabled={busy}
+              onClick={() => grade(result)}
+              className={cx(
+                buttonClass({ variant: 'secondary' }),
+                'justify-center bg-transparent',
+                RESULT_TONES[result],
+              )}
+            >
+              {RESULT_LABELS[result]}
+            </button>
+          ))}
+        </div>
+      </div>
+    </motion.div>
   )
 }
 
-type ChoiceVerdict = {
+type Verdict = {
   correct: boolean
   correctOption: number
-  explanation: string
+  answerInFull: string
+  explanation?: string
   answerAudioKey: string
 }
 
 /**
- * The multiple choice form: pick one, find out immediately, move on. Grading
- * happens on the server, which is also the only place that knows the answer.
+ * The choice form: pick one, find out immediately, read the full answer, move
+ * on. Grading happens on the server, which is also the only place that knows
+ * which option is right.
  */
 function ChoiceQuestion({
   question,
@@ -464,7 +304,7 @@ function ChoiceQuestion({
   reducedMotion: boolean
 }) {
   const [chosen, setChosen] = useState<number | null>(null)
-  const [verdict, setVerdict] = useState<ChoiceVerdict | null>(null)
+  const [verdict, setVerdict] = useState<Verdict | null>(null)
   const [hintsShown, setHintsShown] = useState(0)
   const [busy, setBusy] = useState(false)
 
@@ -473,7 +313,7 @@ function ChoiceQuestion({
     setBusy(true)
     setChosen(index)
     try {
-      setVerdict(await answerMcqAction(question.topicSlug, question.id, index))
+      setVerdict(await answerChoiceAction(question.topicSlug, question.id, index))
     } catch (error) {
       // The choice was not recorded, so let it be made again rather than
       // leaving a selected option that means nothing.
@@ -530,23 +370,16 @@ function ChoiceQuestion({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: DURATION_FAST, ease: EASE_SOFT }}
         >
-          <Card className="mt-5">
-            <div className="flex items-center justify-between gap-3">
+          <AnswerCard
+            answerInFull={verdict.answerInFull}
+            explanation={verdict.explanation}
+            answerAudioKey={verdict.answerAudioKey}
+            heading={
               <p className={cx('font-medium', verdict.correct ? 'text-pass' : 'text-fail')}>
                 {verdict.correct ? 'Correct' : 'Not this time'}
               </p>
-              <SpeakButton
-                audioKey={verdict.answerAudioKey}
-                label="Listen to the answer and explanation"
-              />
-            </div>
-            <div className="mt-4 border-t border-border pt-4">
-              <SectionLabel>Explanation</SectionLabel>
-              <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted">
-                {verdict.explanation}
-              </p>
-            </div>
-          </Card>
+            }
+          />
 
           <Button
             variant="primary"
@@ -654,17 +487,15 @@ export function QuestionSession({
         >
           <QuestionPrompt question={question} />
 
-          {question.options ? (
+          {question.form === 'choice' && question.options ? (
             <ChoiceQuestion
               question={question}
               options={question.options}
               onGraded={advance}
               reducedMotion={reducedMotion}
             />
-          ) : question.checksOutput ? (
-            <OutputQuestion question={question} onGraded={advance} reducedMotion={reducedMotion} />
           ) : (
-            <WrittenQuestion question={question} onGraded={advance} reducedMotion={reducedMotion} />
+            <OpenQuestion question={question} onGraded={advance} reducedMotion={reducedMotion} />
           )}
         </motion.div>
       </AnimatePresence>

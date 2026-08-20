@@ -4,9 +4,10 @@ export const questions: Question[] = [
   {
     id: 'what-is-coercion',
     type: 'concept',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What is coercion, and where does JavaScript apply it without being asked?',
-    expectedAnswer: `Coercion is converting a value from one type to another. It is explicit when you call Number(), String() or Boolean(), and implicit when an operator or a statement needs a type it was not given.
+    answerInFull: `Coercion is converting a value from one type to another. It is explicit when you call Number(), String() or Boolean(), and implicit when an operator or a statement needs a type it was not given.
 
 The places it happens implicitly:
 - Arithmetic and comparison operators, which convert to number. The exception is +, which concatenates if either side ends up a string.
@@ -21,13 +22,14 @@ The places it happens implicitly:
   {
     id: 'plus-and-minus-output',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `console.log(1 + '2')
 console.log('3' - 1)
 console.log([] + {})
 console.log([1, 2] + [3])`,
-    expectedOutput: `12
+    answerInFull: `12
 2
 [object Object]
 1,23`,
@@ -40,12 +42,13 @@ That leaves [] as '' and {} as '[object Object]', so the third line is string co
   {
     id: 'null-comparisons-output',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `console.log(null == 0)
 console.log(null >= 0)
 console.log(null > 0)`,
-    expectedOutput: `false
+    answerInFull: `false
 true
 false`,
     explanation: `== gives null a special case: it equals undefined and nothing else, with no conversion attempted. Relational operators have no such rule, so they convert null to 0. That makes null >= 0 the comparison 0 >= 0, which is true, while null > 0 is 0 > 0, which is false.
@@ -57,6 +60,7 @@ So null is simultaneously "not equal to 0" and "greater than or equal to 0". Not
   {
     id: 'falsy-default-bug',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'A user who sets their display count to 0 sees 10 items instead, and a user with an empty bio sees the placeholder text they deleted. Explain the bug and fix it.',
@@ -66,7 +70,7 @@ So null is simultaneously "not equal to 0" and "greater than or equal to 0". Not
     bio: input.bio || 'No bio yet',
   }
 }`,
-    expectedAnswer: `|| falls back whenever the left side is falsy, and 0 and '' are falsy. Both users supplied a legitimate value that the code treats as missing.
+    answerInFull: `|| falls back whenever the left side is falsy, and 0 and '' are falsy. Both users supplied a legitimate value that the code treats as missing.
 
 The fix is ??, which only falls back on null and undefined:
 
@@ -85,10 +89,11 @@ If input.perPage can arrive as an empty string from a form, converting and valid
   {
     id: 'is-empty',
     type: 'coding',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'Write isEmpty(value) that is true for null, undefined, an empty string, an empty array and an object with no own keys, and false for 0, false and NaN.',
-    expectedAnswer: `function isEmpty(value) {
+    answerInFull: `function isEmpty(value) {
   if (value === null || value === undefined) return true
   if (typeof value === 'string' || Array.isArray(value)) return value.length === 0
   if (typeof value === 'object') return Object.keys(value).length === 0
@@ -106,10 +111,11 @@ Two details to say out loud. The null check has to come before typeof, because t
   {
     id: 'string-ids-from-api',
     type: 'scenario',
+    form: 'open',
     difficulty: 'medium',
     prompt:
       'An API returns ids as strings, and the codebase compares them with numeric ids using ==. It works today. What would you change, and what would you worry about?',
-    expectedAnswer: `== works here only because the string is numeric and the conversion happens to be right. It stops being right the moment an id is '0012', ' 42 ', an empty string, or larger than Number.MAX_SAFE_INTEGER, and it silently makes '' == 0 true.
+    answerInFull: `== works here only because the string is numeric and the conversion happens to be right. It stops being right the moment an id is '0012', ' 42 ', an empty string, or larger than Number.MAX_SAFE_INTEGER, and it silently makes '' == 0 true.
 
 What I would do:
 - Normalise at the boundary: convert ids to one representation as they enter the system, and compare with === everywhere after that.
@@ -124,9 +130,10 @@ The precision point matters in practice. Ids from a database bigint column excee
   {
     id: 'when-is-loose-equality-ok',
     type: 'interview',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'Is there ever a good reason to use == instead of ===?',
-    expectedAnswer: `One: value == null, which is true for exactly null and undefined and false for everything else, including 0, '' and NaN. It is the idiomatic way to ask "is this missing" when either can appear, and it is shorter than value === null || value === undefined.
+    answerInFull: `One: value == null, which is true for exactly null and undefined and false for everything else, including 0, '' and NaN. It is the idiomatic way to ask "is this missing" when either can appear, and it is shorter than value === null || value === undefined.
 
 Everywhere else ===, because == needs the reader to reconstruct a conversion table to know what the line does.`,
     explanation: `The honest answer includes the fact that linters generally allow this exception. ESLint's eqeqeq has a "smart" option and an explicit null exception, which is a decent signal that it is accepted practice rather than a personal preference.
@@ -137,48 +144,52 @@ Saying "never use ==" is a defensible answer too, but knowing the one exception 
   },
   {
     id: 'typeof-null-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'What does typeof null return?',
     options: ["'null'", "'undefined'", "'object'", 'It throws a TypeError'],
     correctOption: 2,
-    explanation:
+    answerInFull:
       "'object', which is a bug from the first implementation that could not be fixed without breaking the web. The practical consequence is that typeof is not a null check: a value guard needs value !== null && typeof value === 'object'.",
     hints: [],
     tags: ['types'],
   },
   {
     id: 'truthy-string-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'Which of these is truthy?',
     options: ['0n', "''", "'0'", 'NaN'],
     correctOption: 2,
-    explanation:
+    answerInFull:
       "The string '0' is a non-empty string, and every non-empty string is truthy regardless of what it contains. The falsy values are exactly false, 0, -0, 0n, '', null, undefined and NaN, which means [] and {} are truthy too.",
     hints: [],
     tags: ['coercion'],
   },
   {
     id: 'empty-array-equals-false-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'hard',
     prompt: 'What is the value of [] == false?',
     options: ['true', 'false', 'It throws a TypeError', 'undefined'],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'true. == converts a boolean to a number first, so false becomes 0. Then an object compared with a number is converted to a primitive: [] becomes the empty string, which converts to 0. The comparison that actually runs is 0 == 0. With ===, no conversion happens and the answer is false.',
     hints: [],
     tags: ['coercion', 'equality'],
   },
   {
     id: 'nan-comparison-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'Which of these evaluates to true?',
     options: ['NaN === NaN', 'NaN == NaN', 'Object.is(NaN, NaN)', '[NaN].indexOf(NaN) > -1'],
     correctOption: 2,
-    explanation:
+    answerInFull:
       'Only Object.is. NaN is not equal to itself under == or ===, and indexOf uses === internally, so it never finds a NaN. includes uses the same rules as Object.is, which is why [NaN].includes(NaN) is true while indexOf returns -1. To test a single value, use Number.isNaN.',
     hints: [],
     tags: ['equality', 'types'],

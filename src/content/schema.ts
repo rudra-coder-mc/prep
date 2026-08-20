@@ -1,16 +1,23 @@
 import { z } from 'zod'
 import { MAX_SCRIPT_LENGTH, normaliseScript } from '@/lib/speech/script'
 
+/** What a question is about. Independent of how it is answered. */
 export const QUESTION_TYPES = [
   'concept',
   'output',
   'debugging',
   'coding',
   'scenario',
-  'architecture',
   'interview',
-  'mcq',
 ] as const
+
+/**
+ * How a question is answered. No form takes typed text: an answer nobody grades
+ * is a self grade with extra steps, and an exact string comparison fails over
+ * quote characters rather than over the answer. See
+ * docs/decisions/0023-every-question-is-answered-never-typed.md.
+ */
+export const ANSWER_FORMS = ['choice', 'open'] as const
 
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 
@@ -30,7 +37,8 @@ export const topicMetaSchema = z.object({
 export const questionSchema = z
   .object({
     id: z.string().regex(/^[a-z0-9-]+$/, 'must be lowercase words separated by hyphens'),
-    type: z.enum(QUESTION_TYPES),
+    type: z.enum(QUESTION_TYPES).describe('What the question is about.'),
+    form: z.enum(ANSWER_FORMS).describe('How it is answered.'),
     difficulty: z.enum(DIFFICULTIES),
     prompt: z.string().min(1),
     code: z
@@ -40,43 +48,43 @@ export const questionSchema = z
     options: z
       .array(z.string().min(1))
       .optional()
-      .describe('Multiple choice answers, in the order they are shown and read aloud.'),
+      .describe('Choice answers, in the order they are shown and read aloud.'),
     correctOption: z
       .number()
       .int()
       .nonnegative()
       .optional()
       .describe('Which entry in options is right. The answer itself, so it is never sent early.'),
-    expectedAnswer: z
+    answerInFull: z
       .string()
       .min(1)
-      .optional()
-      .describe('Revealed after answering. Absent on multiple choice, which grades itself.'),
-    expectedOutput: z
+      .describe(
+        'What you would say if an interviewer asked. Shown once the question is answered, whatever its form.',
+      ),
+    explanation: z
       .string()
       .min(1)
       .optional()
       .describe(
-        'Exactly what the program prints. Present means the answer is checked, not self graded.',
+        'Only what the answer leaves out: why a wrong option was tempting, the follow up, the consequence. Absent when the answer says everything worth saying.',
       ),
-    explanation: z.string().min(1),
     hints: z.array(z.string()).default([]),
     tags: z.array(z.string()).default([]),
   })
   /**
-   * A multiple choice question and a written one carry different fields, and
-   * mixing them silently is how a question ends up with an answer nobody reads
-   * or options nobody can choose. Each shape has to be complete and exclusive.
+   * Options belong to a choice question and to nothing else. A question with
+   * options nobody can pick, or a choice question with no options, is a session
+   * that renders wrong rather than a build that fails, so it is caught here.
    */
   .superRefine((question, ctx) => {
-    if (question.type === 'mcq') {
+    if (question.form === 'choice') {
       const options = question.options ?? []
 
       if (options.length < 2) {
         ctx.addIssue({
           code: 'custom',
           path: ['options'],
-          message: 'a multiple choice question needs at least two options',
+          message: 'a choice question needs at least two options',
         })
       }
 
@@ -102,14 +110,6 @@ export const questionSchema = z
         })
       }
 
-      if (question.expectedAnswer !== undefined || question.expectedOutput !== undefined) {
-        ctx.addIssue({
-          code: 'custom',
-          path: question.expectedAnswer !== undefined ? ['expectedAnswer'] : ['expectedOutput'],
-          message: 'the correct option is the answer, so this would only drift out of step with it',
-        })
-      }
-
       return
     }
 
@@ -117,46 +117,7 @@ export const questionSchema = z
       ctx.addIssue({
         code: 'custom',
         path: ['options'],
-        message: `only a multiple choice question has options, and this one is "${question.type}"`,
-      })
-    }
-
-    if (question.type === 'output') {
-      // An output question is either checked against what the program prints or
-      // graded by eye against a written answer. Carrying both would mean two
-      // answers to keep in step, and no way to say which one is authoritative.
-      if (question.expectedAnswer !== undefined && question.expectedOutput !== undefined) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['expectedOutput'],
-          message: 'give either expectedOutput or expectedAnswer, not both',
-        })
-      }
-
-      if (question.expectedAnswer === undefined && question.expectedOutput === undefined) {
-        ctx.addIssue({
-          code: 'custom',
-          path: ['expectedOutput'],
-          message: 'an output question needs expectedOutput, or expectedAnswer to grade by eye',
-        })
-      }
-
-      return
-    }
-
-    if (question.expectedOutput !== undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['expectedOutput'],
-        message: `only an output question is checked against printed output, and this one is "${question.type}"`,
-      })
-    }
-
-    if (question.expectedAnswer === undefined) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['expectedAnswer'],
-        message: 'required for every question that is not multiple choice',
+        message: `only a choice question has options, and this one is answered by "${question.form}"`,
       })
     }
   })
@@ -210,6 +171,7 @@ export type Exercise = z.infer<typeof exerciseSchema>
 export type NarrationSection = z.infer<typeof narrationSectionSchema>
 export type Narration = z.infer<typeof narrationSchema>
 export type QuestionType = (typeof QUESTION_TYPES)[number]
+export type AnswerForm = (typeof ANSWER_FORMS)[number]
 export type Difficulty = (typeof DIFFICULTIES)[number]
 
 /** A question's identity across the whole platform, stored on attempts. */

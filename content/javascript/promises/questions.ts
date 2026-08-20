@@ -4,9 +4,10 @@ export const questions: Question[] = [
   {
     id: 'states',
     type: 'concept',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What states can a promise be in, and what can move it between them?',
-    expectedAnswer: `Three states: pending, fulfilled and rejected. Fulfilled and rejected are collectively "settled".
+    answerInFull: `Three states: pending, fulfilled and rejected. Fulfilled and rejected are collectively "settled".
 
 A promise starts pending and moves once, to either fulfilled with a value or rejected with a reason. That transition is irreversible, and calling resolve or reject again does nothing.
 
@@ -18,9 +19,10 @@ Attaching a handler does not change the state. Handlers registered after settlin
   {
     id: 'all-vs-allsettled',
     type: 'interview',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'Compare Promise.all, allSettled, race and any, with a practical use for each.',
-    expectedAnswer: `- all: fulfils with every value, or rejects as soon as any one rejects. Use it when you need all of the results and any failure makes the whole thing pointless, such as loading data a page cannot render without.
+    answerInFull: `- all: fulfils with every value, or rejects as soon as any one rejects. Use it when you need all of the results and any failure makes the whole thing pointless, such as loading data a page cannot render without.
 - allSettled: never rejects; fulfils with an array of status objects. Use it when you want everything attempted and reported, such as sending several independent analytics calls or a batch where partial success is fine.
 - race: settles with the first to settle, fulfilled or rejected. The classic use is a timeout.
 - any: fulfils with the first to fulfil, ignoring rejections, and rejects with an AggregateError only if all reject. Use it for redundant sources such as several mirrors.
@@ -33,6 +35,7 @@ The one that catches people out is that all does not cancel the others when it r
   {
     id: 'sequential-vs-parallel',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'This takes three seconds when it should take one. Fix it.',
     code: `async function loadAll(ids) {
@@ -42,7 +45,7 @@ The one that catches people out is that all does not cancel the others when it r
   }
   return results
 }`,
-    expectedAnswer: `Each await pauses the loop until that request finishes, so three one-second requests take three seconds. They do not depend on each other, so they should start together.
+    answerInFull: `Each await pauses the loop until that request finishes, so three one-second requests take three seconds. They do not depend on each other, so they should start together.
 
   async function loadAll(ids) {
     return Promise.all(ids.map((id) => fetchItem(id)))
@@ -56,6 +59,7 @@ The map starts every request immediately and Promise.all waits for all of them, 
   {
     id: 'all-rejection-output',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print, and in what order?',
     code: `const ok = () => Promise.resolve('ok')
@@ -68,7 +72,7 @@ Promise.all([ok(), bad(), ok()])
 Promise.allSettled([ok(), bad(), ok()]).then((r) =>
   console.log('settled:', r.map((x) => x.status).join(',')),
 )`,
-    expectedOutput: `all failed: bad
+    answerInFull: `all failed: bad
 settled: fulfilled,rejected,fulfilled`,
     explanation: `Promise.all rejects at the first rejection, so its then never runs and the catch receives the error. allSettled waits for everything and reports each outcome, so it always fulfils.
 
@@ -79,6 +83,7 @@ The ordering follows from allSettled needing to wait for all three, which takes 
   {
     id: 'forgotten-return',
     type: 'debugging',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'This chain logs undefined instead of the user. What is wrong?',
     code: `fetchUser(id)
@@ -88,7 +93,7 @@ The ordering follows from allSettled needing to wait for all three, which takes 
   .then((posts) => {
     console.log(posts)
   })`,
-    expectedAnswer: `The first callback does not return anything, so the promise it produces fulfils with undefined and the next then receives undefined. The inner fetchPosts promise is never linked into the chain, so nothing waits for it and a rejection from it goes unhandled.
+    answerInFull: `The first callback does not return anything, so the promise it produces fulfils with undefined and the next then receives undefined. The inner fetchPosts promise is never linked into the chain, so nothing waits for it and a rejection from it goes unhandled.
 
 Fix by returning it:
 
@@ -105,9 +110,10 @@ With async/await the same bug is harder to write, because the value has to go so
   {
     id: 'await-error-handling',
     type: 'scenario',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'How do you handle errors with async/await, and what is easy to get wrong?',
-    expectedAnswer: `A rejected promise that is awaited throws, so try/catch works normally.
+    answerInFull: `A rejected promise that is awaited throws, so try/catch works normally.
 
 What is easy to get wrong:
 - Wrapping too much. A broad try around ten awaits cannot tell you which one failed, and it catches your own bugs alongside the network error.
@@ -123,9 +129,10 @@ For multiple independent calls, Promise.allSettled gives per-item outcomes rathe
   {
     id: 'timeout-race',
     type: 'coding',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'Write withTimeout(promise, ms) that rejects if the promise has not settled in time.',
-    expectedAnswer: `function withTimeout(promise, ms) {
+    answerInFull: `function withTimeout(promise, ms) {
   let timer
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(() => reject(new Error(\`Timed out after \${ms}ms\`)), ms)
@@ -143,6 +150,7 @@ For multiple independent calls, Promise.allSettled gives per-item outcomes rathe
   {
     id: 'unhandled-rejection',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'Does this produce an unhandled rejection? Explain.',
     code: `const p = Promise.reject(new Error('boom'))
@@ -150,7 +158,7 @@ For multiple independent calls, Promise.allSettled gives per-item outcomes rathe
 setTimeout(() => {
   p.catch((e) => console.log('caught:', e.message))
 }, 0)`,
-    expectedAnswer: `Yes. The rejection is reported as unhandled first, and then "caught: boom" prints afterwards.
+    answerInFull: `Yes. The rejection is reported as unhandled first, and then "caught: boom" prints afterwards.
 
 The runtime checks for handlers once the microtask queue has drained. The catch here is attached from a macrotask, which runs later, so at the moment of the check the promise had no handler.`,
     explanation: `The practical rule is to attach handlers in the same turn the promise is created. This is also why storing a promise now and awaiting it much later can produce a spurious unhandled rejection warning, and the usual workaround is to attach a no-op catch immediately.`,
@@ -159,7 +167,8 @@ The runtime checks for handlers once the microtask queue has drained. The catch 
   },
   {
     id: 'then-returns-value-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'What does the second then receive?',
     code: `Promise.resolve(1)
@@ -167,14 +176,15 @@ The runtime checks for handlers once the microtask queue has drained. The catch 
   .then((n) => console.log(n))`,
     options: ['2', '1', 'A promise for 2', 'undefined'],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'then returns a new promise resolved with whatever the callback returned. A plain value is used as is; a returned promise is adopted and waited for, which is what makes chains flatten instead of nesting.',
     hints: [],
     tags: ['promises'],
   },
   {
     id: 'async-return-type-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'What does an async function return?',
     options: [
@@ -184,14 +194,15 @@ The runtime checks for handlers once the microtask queue has drained. The catch 
       'undefined, unless it is awaited',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'Always a promise. A returned value resolves it, a thrown error rejects it. This is why a forgotten await gives you a pending promise where you expected a number, and why throwing inside an async function never produces a synchronous exception at the call site.',
     hints: [],
     tags: ['promises', 'async-await'],
   },
   {
     id: 'promise-all-rejection-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'One of four promises passed to Promise.all rejects. What happens?',
     options: [
@@ -201,7 +212,7 @@ The runtime checks for handlers once the microtask queue has drained. The catch 
       'It retries the rejected one before giving up',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'Promise.all rejects on the first rejection without waiting. The others are not cancelled, because a promise cannot be cancelled, so their work continues and their results are discarded. Promise.allSettled is the one that waits for every outcome.',
     hints: [],
     tags: ['promises'],

@@ -4,9 +4,10 @@ export const questions: Question[] = [
   {
     id: 'curry-against-partial',
     type: 'concept',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What is the difference between currying and partial application?',
-    expectedAnswer: `Partial application fixes some of a function's arguments and returns a function that takes the remaining ones. It happens in a single step, and the new function's arity is the old one minus however many were supplied.
+    answerInFull: `Partial application fixes some of a function's arguments and returns a function that takes the remaining ones. It happens in a single step, and the new function's arity is the old one minus however many were supplied.
 
 Currying rewrites a function of n arguments as a chain of n functions, each taking exactly one argument, so f(a, b, c) becomes f(a)(b)(c). Every step in the chain has an arity of one.
 
@@ -20,6 +21,7 @@ Worth adding: most JavaScript libraries ship a curry that also accepts several a
   {
     id: 'nested-arrows-output',
     type: 'output',
+    form: 'open',
     difficulty: 'easy',
     prompt: 'What does this print?',
     code: `const add = (a) => (b) => a + b
@@ -30,7 +32,7 @@ console.log(add5(3))
 console.log(add5(10))
 console.log(add(1)(2))
 console.log(typeof add(1))`,
-    expectedOutput: `8
+    answerInFull: `8
 15
 3
 function`,
@@ -45,6 +47,7 @@ add(1) is the same thing without the variable, so its type is function, and only
   {
     id: 'curry-default-parameter',
     type: 'debugging',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'This throws "curried(...) is not a function" on the second call. The curry implementation is the standard one. Explain what went wrong and how you would fix it.',
@@ -59,7 +62,7 @@ const volume = (length, width = 1, height) => length * width * height
 const curried = curry(volume)
 
 console.log(curried(2)(3)(4))`,
-    expectedAnswer: `curry decides it has enough arguments by comparing against fn.length, and fn.length stops counting at the first parameter with a default. volume declares three parameters but width has a default, so volume.length is 1, not 3.
+    answerInFull: `curry decides it has enough arguments by comparing against fn.length, and fn.length stops counting at the first parameter with a default. volume declares three parameters but width has a default, so volume.length is 1, not 3.
 
 So curried(2) already satisfies the check and calls volume(2) immediately. That returns 2 * 1 * undefined, which is NaN, and the next call in the chain tries to invoke NaN as a function.
 
@@ -76,10 +79,11 @@ The general rule is that any curry driven by fn.length inherits every way that n
   {
     id: 'implement-curry',
     type: 'coding',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'Implement curry(fn) so that curried(1)(2)(3), curried(1, 2)(3) and curried(1, 2, 3) all call fn with the same three arguments.',
-    expectedAnswer: `function curry(fn, arity = fn.length) {
+    answerInFull: `function curry(fn, arity = fn.length) {
   return function curried(...args) {
     if (args.length >= arity) return fn.apply(this, args)
 
@@ -113,6 +117,7 @@ The bind-based recursion above is one way to get that independence for free. The
   {
     id: 'bind-output',
     type: 'output',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `function greet(greeting, name) {
@@ -125,7 +130,7 @@ console.log(hi('ada'))
 console.log(hi.length)
 console.log(hi.name)
 console.log(greet.bind(null) === greet.bind(null))`,
-    expectedOutput: `hi, ada
+    answerInFull: `hi, ada
 1
 bound greet
 false`,
@@ -138,10 +143,11 @@ The last line is the one that matters in practice. bind returns a brand new func
   {
     id: 'handler-per-row',
     type: 'scenario',
+    form: 'open',
     difficulty: 'hard',
     prompt:
       'A table of a few thousand rows builds a click handler per row with handleClick.bind(null, row.id). Memory grows and every re-render churns listeners. How would you approach it?',
-    expectedAnswer: `Every bind allocates a new function object holding the bound arguments, so a few thousand rows means a few thousand functions, and every re-render allocates a fresh set with new identities. Nothing can match the old ones, so listeners are removed and re-added, or never removed at all.
+    answerInFull: `Every bind allocates a new function object holding the bound arguments, so a few thousand rows means a few thousand functions, and every re-render allocates a fresh set with new identities. Nothing can match the old ones, so listeners are removed and re-added, or never removed at all.
 
 The approach in order:
 
@@ -157,9 +163,10 @@ Measure before restructuring. A few thousand small closures is not automatically
   {
     id: 'when-to-curry',
     type: 'interview',
+    form: 'open',
     difficulty: 'medium',
     prompt: 'When is currying actually worth using in a JavaScript codebase?',
-    expectedAnswer: `The honest answer is that full currying is rarely the right tool in JavaScript, and partial application often is.
+    answerInFull: `The honest answer is that full currying is rarely the right tool in JavaScript, and partial application often is.
 
 Where it pays:
 - A configuration argument that every call site repeats. A logger fixed to a level and a scope, a fetch wrapper fixed to a base URL.
@@ -179,6 +186,7 @@ JavaScript is not a language where currying is the default, because functions he
   {
     id: 'partials-are-independent',
     type: 'output',
+    form: 'open',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `function curry(fn) {
@@ -194,7 +202,7 @@ const start = join('x')
 
 console.log(start('y', 'z'))
 console.log(start('1', '2'))`,
-    expectedOutput: `x-y-z
+    answerInFull: `x-y-z
 x-1-2`,
     explanation: `start is a function closing over args, which holds exactly ['x']. Calling it does not modify that array, it spreads it into a new call, so every use of start begins again from the same one argument.
 
@@ -204,7 +212,8 @@ This is what makes a partial reusable rather than single-use. If the implementat
   },
   {
     id: 'which-is-partial-mcq',
-    type: 'mcq',
+    type: 'concept',
+    form: 'choice',
     difficulty: 'easy',
     prompt: 'Which of these is partial application rather than currying?',
     options: [
@@ -214,26 +223,28 @@ This is what makes a partial reusable rather than single-use. If the implementat
       'const g = (...args) => f(...args)',
     ],
     correctOption: 1,
-    explanation:
+    answerInFull:
       'bind fixes some arguments in one step and returns a function taking the rest, which is the definition of partial application. The nested arrows and curry both produce a chain of single-argument steps, and the last option fixes nothing at all: it is a pass-through wrapper with the same arity as f.',
     hints: [],
     tags: ['functions', 'currying', 'bind'],
   },
   {
     id: 'bound-length-mcq',
-    type: 'mcq',
+    type: 'output',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'Given function f(a, b, c) {}, what is f.bind(null, 1, 2).length?',
     options: ['3', '2', '0', '1'],
     correctOption: 3,
-    explanation:
+    answerInFull:
       'A bound function reports the original arity minus the number of arguments that were fixed, so three minus two is one. It never goes below zero, so binding more arguments than the function declares still reports 0. This is what lets a curry implementation keep working across a bind, since the arity it reads goes down as arguments are supplied.',
     hints: [],
     tags: ['functions', 'bind', 'parameters'],
   },
   {
     id: 'curry-arity-source-mcq',
-    type: 'mcq',
+    type: 'coding',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'How does a typical curry implementation know it has collected enough arguments?',
     options: [
@@ -243,7 +254,7 @@ This is what makes a partial reusable rather than single-use. If the implementat
       'It waits for a call with no arguments to signal the end',
     ],
     correctOption: 0,
-    explanation:
+    answerInFull:
       'fn.length is the whole mechanism, which is also the whole limitation: it stops counting at the first default or rest parameter, so a variadic or partly optional function reports a number that makes curry fire early. That is why serious implementations accept an explicit arity as a second parameter. Parsing toString does exist in the wild and breaks on minified code, and calling to see what happens would run side effects.',
     hints: [],
     tags: ['functions', 'currying', 'parameters'],

@@ -13,9 +13,10 @@ const validMeta = {
 const validQuestion = {
   id: 'q1',
   type: 'concept',
+  form: 'open',
   difficulty: 'easy',
   prompt: 'p',
-  expectedAnswer: 'a',
+  answerInFull: 'a',
   explanation: 'e',
 }
 const validExercise = {
