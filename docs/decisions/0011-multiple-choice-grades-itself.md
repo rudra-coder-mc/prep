@@ -2,7 +2,13 @@
 
 ## Status
 
-Accepted.
+Accepted, then superseded in part.
+
+`0023` removed every typed answer, so the ban on a multiple choice question
+carrying a written answer no longer holds: every question now carries an answer
+in full whatever its form. `0025` replaced the fixed confidence of 3 with a rung
+that climbs. What survives is the shape of the form itself, and the rule that the
+correct option never reaches the browser before an answer is submitted.
 
 ## Context
 

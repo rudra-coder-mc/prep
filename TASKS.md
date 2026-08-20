@@ -3,6 +3,10 @@
 Pending work only. Delete an entry when it is done, since the history of what
 was done lives in git and `docs/`.
 
+This file carries the whole task, not a link to one. There is no ticket tracker:
+`CLAUDE.md` explains why. Everything a person needs to pick a task up cold is
+written here, or in the brief a task points at under `docs/tasks/`.
+
 The learn, recall and streak loop works. What follows turns it from a five
 topic JavaScript demo into an interview preparation tool: a shell that is not
 about one technology, questions that grade themselves, and a voice that
@@ -12,14 +16,182 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 
 ---
 
-# Next
+# Now: every question is answered, never typed
+
+Typing an explanation and then marking yourself is a self grade with extra
+steps, and typing exact output fails you over a quote character. Both go. Every
+question becomes a choice, an ordering, or an open question you answer in your
+head and mark yourself on.
+
+Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
+`docs/glossary.md` defines the terms. Read those first.
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1. Everything a JavaScript interview asks
+## 1. Split subject from form, and take the typing out
+
+Branch `feature/answer-forms`. Blocked by nothing.
+
+**What to build.** No session takes typed input any more. Every question
+declares a `form` of `choice` or `open`, separately from the `type` that says
+what it is about. Anything that cannot be answered by choosing is answered by
+revealing and marking yourself, with no textarea in front of it.
+
+**Why.** The two typed forms produce no evidence. Nothing reads a written answer
+back, and the output check keeps failing over indentation and quote characters
+rather than over the answer. See `0023`.
+
+**Areas touched.** The content schema and all twelve question files, the session
+component, the session actions and the attempt recording, the content check, the
+question audio scripts, and their tests.
+
+**Acceptance criteria.**
+
+- [ ] `type` holds only `concept`, `output`, `debugging`, `coding`, `scenario`
+      and `interview`. The 37 questions that were `mcq` carry a real subject.
+- [ ] A new `form` field holds `choice` or `open`, required on every question.
+- [ ] `expectedAnswer` is renamed `answerInFull` and is required on every
+      question whatever its form, including the 37 choice questions that have
+      never had one.
+- [ ] `explanation` is optional.
+- [ ] `expectedOutput`, `matchesExpectedOutput` and `normaliseOutput` are gone.
+- [ ] The written form, the typed output form and the confidence picker are
+      deleted, along with `revealQuestion` and the free text path through
+      `recordAttempt`.
+- [ ] An open question reveals its answer and records Passed, Weak or Failed,
+      with nothing to type before it.
+- [ ] The 93 questions not yet authored as choice questions are `open`. The one
+      per topic rule is not enforced yet, which is task 16.
+- [ ] `npm run db:reset` drops the database, migrates and seeds, and the wipe
+      happens on this branch.
+
+**Done when** `npm run verify` passes and a practice session runs end to end
+with no input control anywhere except the option buttons and the self grade.
+
+## 2. Ordering questions
+
+Branch `feature/ordering-questions`. Blocked by 1.
+
+**What to build.** A third form. The question shows a pool of lines, some of
+which the program never prints, and you tap them in the order they are printed.
+Tapping again takes one back out. Submitting grades the whole sequence at once.
+
+**Why.** Sequencing is most of what an event loop or promises interview asks,
+and it is the part typed output was testing badly. See `0024`.
+
+**Areas touched.** The content schema and the content check, the session
+component and its grading action, the question audio script, and the event loop
+topic's content.
+
+**Acceptance criteria.**
+
+- [ ] `items` holds the pool in the order it is shown. `correctOrder` holds the
+      positions of the real lines in the order they print. Anything not named in
+      `correctOrder` is a distractor.
+- [ ] The check refuses fewer than three real lines, a pool with no distractor,
+      a pool over eight items, and a `correctOrder` naming a position twice or a
+      position the pool does not have.
+- [ ] The page never receives `correctOrder`, and the browser sends back
+      positions rather than text, so a line printed twice grades correctly.
+- [ ] Grading is all or nothing. A wrong answer shows the correct sequence
+      beside the submitted one.
+- [ ] The screen never says how many lines are real.
+- [ ] The recording reads the pool in the order the screen shows it, so the
+      question can be answered by ear.
+- [ ] The event loop topic's `ordering-basic` question is the first real one.
+
+**Done when** `npm run verify` passes and the event loop ordering question can
+be answered correctly, answered wrongly, and heard.
+
+## 3. The ladder climbs, and confidence is derived
+
+Branch `improvement/derived-confidence`. Blocked by 1 and 2.
+
+**What to build.** Nothing asks for a confidence rating. The platform works it
+out from the answer form and the verdict, and a question that keeps being
+answered correctly moves up the ladder instead of sitting on one rung.
+
+**Why.** With the picker gone, an absolute rung can never climb, so 117 choice
+questions would come back every three days forever. See `0025`.
+
+**Areas touched.** The interval ladder, attempt recording, and the dashboard
+text that describes a rung.
+
+**Acceptance criteria.**
+
+- [ ] A correct choice answer caps at rung 3, a correct ordering answer at rung
+      4, and an open question's self grade sets its rung outright: Passed 5,
+      Weak 3.
+- [ ] On a choice or ordering question a correct answer moves up one rung from
+      where the question currently sits, capped at fourteen days.
+- [ ] Any wrong answer drops the question to the bottom of the ladder.
+- [ ] `nextStep` takes the current rung. Nothing in the app renders a confidence
+      control.
+
+**Done when** `npm run verify` passes and answering the same question correctly
+four times in a row moves it from four hours to fourteen days.
+
+## 4 to 15. Convert one topic
+
+One branch per topic, named `content/<topic-slug>`. Each blocked by 2.
+
+The full brief is `docs/tasks/converting-a-topic.md`. Read it before starting.
+It covers the mix a converted topic ships, how each existing question shape
+converts, what makes a wrong option worth writing, and what makes a distractor
+worth writing.
+
+In short: every question that can be a choice question becomes one, at most one
+stays open, any topic with something that happens in an order gets an ordering
+question, and the questions that were already multiple choice gain the answer in
+full they have never had.
+
+Delete a line below when its topic is merged.
+
+1. `content/closures`
+2. `content/currying-and-partial-application`
+3. `content/event-loop`
+4. `content/higher-order-functions`
+5. `content/parameters-and-arguments`
+6. `content/promises`
+7. `content/prototypes`
+8. `content/recursion-and-the-call-stack`
+9. `content/scope-and-hoisting`
+10. `content/this-binding`
+11. `content/types-and-coercion`
+12. `content/value-and-reference`
+
+**Done when** the topic passes `npm run content:check`, its audio is built, and
+every wrong option in it is wrong for a reason you can say out loud.
+
+## 16. Enforce one open question per topic
+
+Branch `improvement/open-question-cap`. Blocked by 4 to 15.
+
+**What to build.** The content check stops accepting a second open question in a
+topic, which it could not do while 93 questions were waiting to be converted.
+
+**Why.** An escape hatch with no lock on it becomes the default, and the
+platform is self graded again. See `0023`.
+
+**Acceptance criteria.**
+
+- [ ] The check fails a topic with two open questions, and fails an open
+      question whose subject is not `interview` or `scenario`.
+- [ ] The authoring convention in the next section is rewritten to the three
+      forms.
+
+**Done when** `npm run verify` passes with the rule enforced across all twelve
+topics.
+
+---
+
+# Next: everything a JavaScript interview asks
 
 The goal is that anything reasonably asked in a JavaScript interview has a
 topic, and that each topic carries the full question mix.
+
+Blocked by the conversion above. A group authored before the three forms exist
+is a group that gets written twice.
 
 This is content work, not platform work, and it is far too big for one branch,
 so it is broken into groups of three or four related topics. **One group is one
@@ -38,8 +210,9 @@ The conventions the first group established, so the rest stay consistent:
 - `order` runs in tens, in teaching order across the whole track, leaving room
   to insert. Renumber the ones below rather than squeezing a topic in at 45.
 - Every topic ships a lesson with at least one visual, ten or eleven questions
-  spanning concept, output, debugging, coding, scenario, interview and three
-  or four multiple choice, and two exercises.
+  and two exercises. The questions cover all six subjects, and the mix of answer
+  forms is the one in `docs/tasks/converting-a-topic.md`: mostly choice, one
+  ordering where something happens in an order, at most one open.
 - Every topic ships a `narration.ts` as well, in sections that follow the
   lesson's own headings. Written to be heard, not read: no code spoken
   character by character, and a section short enough to be one thought. Each
@@ -47,29 +220,30 @@ The conventions the first group established, so the rest stay consistent:
   it, which is what makes the lesson follow the voice. See
   `docs/decisions/0016-narration-is-written-not-read.md` and
   `docs/decisions/0018-the-lesson-follows-the-voice.md`.
-- Output questions carry `expectedOutput` so they grade themselves, unless the
-  answer is genuinely prose, in which case they carry `expectedAnswer`.
-- The correct multiple choice option is not always first.
+- Every question carries `answerInFull`, whatever its form. It is what you would
+  say if an interviewer asked, not a one line solution.
+- The correct option is not always first, and neither is the first item of an
+  ordering question's correct sequence.
 
 Done when every group below has shipped. Each group is done when its topics
 pass the content check and read as one lesson each, not as a list of facts.
 
-### Objects
+## Objects
 
 Property descriptors with getters and setters, destructuring, optional chaining
 and nullish handling, JSON serialisation and its edges.
 
-### Collections and iteration
+## Collections and iteration
 
 The array methods worth knowing cold, the iterable protocol, generators,
 `Map`, `Set` and their weak counterparts.
 
-### Classes
+## Classes
 
 Class syntax and fields, `extends` and `super`, static and private members,
 composition against inheritance.
 
-### Async in practice
+## Async in practice
 
 Promise combinators, error handling across async boundaries, cancellation with
 `AbortController`, async iteration.
@@ -77,22 +251,22 @@ Promise combinators, error handling across async boundaries, cancellation with
 Sits after the existing event loop and promises topics rather than replacing
 them: those two explain the model, this group is what you do with it.
 
-### Modules and the runtime
+## Modules and the runtime
 
 ES modules against CommonJS, resolution and side effects, strict mode and
 `globalThis`, what a bundler changes.
 
-### Errors
+## Errors
 
 The built-in error types, custom errors, `try`/`catch`/`finally` semantics
 including the return value trap, and errors that cross an async boundary.
 
-### Memory and performance
+## Memory and performance
 
 Garbage collection and the shapes of a leak, `WeakMap` and `WeakRef`, debounce
 and throttle, the real cost of common collection operations.
 
-### The browser, not the language
+## The browser, not the language
 
 The DOM, events and delegation, `fetch` and the network, storage.
 

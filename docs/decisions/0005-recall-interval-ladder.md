@@ -1,6 +1,8 @@
 # 0005. Confidence-driven interval ladder, not SM-2
 
-**Status:** accepted, 2026-08-19
+**Status:** accepted, 2026-08-19. Superseded in part by `0025`, which keeps the
+ladder and the rung lengths but derives confidence from the answer form rather
+than asking for it, and lets a correct answer climb one rung at a time.
 
 ## Context
 
