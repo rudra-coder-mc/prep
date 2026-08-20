@@ -30,30 +30,38 @@ microtasks until there are none left.
     {
       note: 'Synchronous code holds the stack. Both queues have work waiting, and neither can touch it.',
       stack: ['main', 'console.log'],
-      microtasks: ['then: log 3'],
-      macrotasks: ['timeout: log 2'],
+      microtasks: [{ id: 'then-3', label: 'then: log 3' }],
+      macrotasks: [{ id: 'timeout', label: 'timeout: log 2' }],
       active: 'stack',
       output: ['1', '4'],
     },
     {
-      note: 'The stack empties. Before taking anything from the macrotask queue, the loop drains microtasks completely.',
+      note: 'The stack empties. Before taking anything from the macrotask queue, the loop turns to the microtasks.',
       stack: [],
-      microtasks: ['then: log 3'],
-      macrotasks: ['timeout: log 2'],
+      microtasks: [{ id: 'then-3', label: 'then: log 3' }],
+      macrotasks: [{ id: 'timeout', label: 'timeout: log 2' }],
       active: 'microtasks',
       output: ['1', '4'],
     },
     {
-      note: 'A microtask that queues another microtask joins the same drain. The loop does not move on until the queue is empty.',
-      stack: ['then callback'],
-      microtasks: ['then: log 3b'],
-      macrotasks: ['timeout: log 2'],
+      note: 'Watch the microtask itself move onto the stack. It runs, prints 3, and queues another microtask behind it.',
+      stack: [{ id: 'then-3', label: 'then: log 3' }],
+      microtasks: [{ id: 'then-3b', label: 'then: log 3b' }],
+      macrotasks: [{ id: 'timeout', label: 'timeout: log 2' }],
       active: 'microtasks',
       output: ['1', '4', '3'],
     },
     {
-      note: 'Only now, with microtasks exhausted, does the loop take exactly one macrotask.',
-      stack: ['timeout callback'],
+      note: 'A microtask queued by a microtask joins the same drain. The loop does not move on until the queue is empty.',
+      stack: [{ id: 'then-3b', label: 'then: log 3b' }],
+      microtasks: [],
+      macrotasks: [{ id: 'timeout', label: 'timeout: log 2' }],
+      active: 'microtasks',
+      output: ['1', '4', '3', '3b'],
+    },
+    {
+      note: 'Only now, with microtasks exhausted, does the timer callback cross from the macrotask queue onto the stack.',
+      stack: [{ id: 'timeout', label: 'timeout: log 2' }],
       microtasks: [],
       macrotasks: [],
       active: 'macrotasks',
@@ -61,7 +69,6 @@ microtasks until there are none left.
     },
   ]}
 />
-
 ## Which is which
 
 **Macrotasks** are what the loop picks up one at a time: `setTimeout`,

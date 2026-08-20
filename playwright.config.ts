@@ -11,7 +11,15 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   reporter: process.env.CI ? 'list' : [['html', { open: 'never' }]],
-  use: { baseURL, trace: 'retain-on-failure' },
+  // Visuals play themselves when scrolled into view, which would race every
+  // assertion about which step is showing. Reduced motion switches that off, so
+  // specs drive the steps by hand; the one spec that checks autoplay opts back
+  // in for itself.
+  use: {
+    baseURL,
+    trace: 'retain-on-failure',
+    contextOptions: { reducedMotion: 'reduce' },
+  },
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {

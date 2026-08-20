@@ -43,6 +43,21 @@ test('marking a topic learned enrols its questions into recall', async ({ page }
   await expect(page.getByText('Nothing due')).toHaveCount(0)
 })
 
+test.describe('with motion allowed', () => {
+  test.use({ contextOptions: { reducedMotion: 'no-preference' } })
+
+  test('a visual starts playing itself once it is on screen', async ({ page }) => {
+    await page.goto('/topics/javascript/closures')
+
+    const walkthrough = page.locator('figure', { hasText: 'Two counters, two scopes' })
+    await walkthrough.scrollIntoViewIfNeeded()
+
+    // Nothing is clicked here: the visual is expected to run on its own, which
+    // is the difference between an animation and a diagram with buttons.
+    await expect(walkthrough.getByText('1/5')).toHaveCount(0, { timeout: 10_000 })
+  })
+})
+
 test('the event loop lesson renders its queue visual', async ({ page }) => {
   await page.goto('/topics/javascript/event-loop')
 
@@ -50,9 +65,11 @@ test('the event loop lesson renders its queue visual', async ({ page }) => {
 
   const loop = page.locator('figure', { hasText: 'One turn of the loop' })
   await expect(loop).toBeVisible()
-  await expect(loop.getByText('Microtasks')).toBeVisible()
-  await expect(loop.getByText('Macrotasks')).toBeVisible()
+  // By role, because the phase rail above the lanes also says "microtasks".
+  await expect(loop.getByRole('heading', { name: 'Microtasks' })).toBeVisible()
+  await expect(loop.getByRole('heading', { name: 'Macrotasks' })).toBeVisible()
+  await expect(loop.getByText('Drain microtasks')).toBeVisible()
 
   await loop.getByLabel('Next step').click()
-  await expect(loop.getByText('2/4')).toBeVisible()
+  await expect(loop.getByText('2/5')).toBeVisible()
 })

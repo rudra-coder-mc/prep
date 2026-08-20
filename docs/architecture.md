@@ -118,6 +118,13 @@ Motion is one primitive (`<Rise>`) with shared easing, and every animated
 component checks `prefers-reduced-motion` before it moves. See
 `docs/decisions/0009-app-shell-and-motion.md`.
 
+The lesson visuals are a second, heavier motion system with the same rule. Each
+one is a list of steps, and `src/components/visuals/flow.tsx` holds the shared
+vocabulary they animate with: a token that keeps its identity as it moves
+between regions, a region that lights up when the loop is working on it, an
+output log and a caption. Visuals play themselves the first time they are
+scrolled into view. See `docs/decisions/0013-visuals-animate-transitions.md`.
+
 ## The visual layer
 
 Animation is the expensive part of this project, so it is built as a finite,

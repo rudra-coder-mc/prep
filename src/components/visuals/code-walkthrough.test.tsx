@@ -69,6 +69,26 @@ describe('CodeWalkthrough', () => {
     expect(screen.getByText('Output')).toBeDefined()
   })
 
+  it('moves one marker rather than redrawing the highlight', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<CodeWalkthrough code={CODE} steps={STEPS} />)
+
+    const marker = () => container.querySelectorAll('[aria-hidden][class*="border-accent"]')
+    expect(marker()).toHaveLength(1)
+
+    await user.click(screen.getByLabelText('Next step'))
+    expect(marker()).toHaveLength(1)
+  })
+
+  it('bands each run of lines separately when a step points at two places', () => {
+    const split: WalkthroughStep[] = [
+      { lines: [1, 3], note: 'The call, and the line it lands on.' },
+    ]
+
+    const { container } = render(<CodeWalkthrough code={CODE} steps={split} />)
+    expect(container.querySelectorAll('[aria-hidden][class*="border-accent"]')).toHaveLength(2)
+  })
+
   it('exposes the timeline as a labelled range for keyboard use', async () => {
     const user = userEvent.setup()
     const { container } = render(<CodeWalkthrough code={CODE} steps={STEPS} />)

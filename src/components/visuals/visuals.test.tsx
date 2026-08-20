@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { CallStack, type CallStackStep } from './call-stack'
@@ -29,8 +29,10 @@ describe('CallStack', () => {
     expect(container.querySelectorAll('[data-frame]')).toHaveLength(2)
     expect(container.querySelector('[data-frame="greet"]')).not.toBeNull()
 
+    // A popped frame animates out before it is removed, so this waits for the
+    // pop rather than asserting on the frame mid-exit.
     await next()
-    expect(container.querySelectorAll('[data-frame]')).toHaveLength(1)
+    await waitFor(() => expect(container.querySelectorAll('[data-frame]')).toHaveLength(1))
     expect(container.querySelector('[data-frame="greet"]')).toBeNull()
   })
 
@@ -80,6 +82,43 @@ describe('EventLoop', () => {
     await next()
     const stack = container.querySelector('[data-lane="stack"]')
     expect(stack?.textContent).toContain('empty')
+  })
+
+  it('carries one identified task from a queue onto the stack', async () => {
+    const moving: EventLoopStep[] = [
+      {
+        note: 'The timer callback is waiting its turn.',
+        macrotasks: [{ id: 'timeout', label: 'timeout: log 2' }],
+        active: 'macrotasks',
+      },
+      {
+        note: 'The loop takes it and runs it.',
+        stack: [{ id: 'timeout', label: 'timeout callback' }],
+        active: 'stack',
+      },
+    ]
+
+    const { container } = render(<EventLoop steps={moving} />)
+    expect(container.querySelector('[data-lane="macrotasks"] [data-task="timeout"]')).not.toBeNull()
+
+    await next()
+    // The same task, now on the stack: identity is what lets it travel rather
+    // than being deleted in one lane and created in another.
+    await waitFor(() =>
+      expect(container.querySelector('[data-lane="stack"] [data-task="timeout"]')).not.toBeNull(),
+    )
+  })
+
+  it('keeps two identically labelled tasks apart', () => {
+    const repeated: EventLoopStep[] = [
+      { note: 'Two of the same callback are queued.', microtasks: ['then', 'then'] },
+    ]
+
+    const { container } = render(<EventLoop steps={repeated} />)
+    const ids = [...container.querySelectorAll('[data-task]')].map((el) =>
+      el.getAttribute('data-task'),
+    )
+    expect(new Set(ids).size).toBe(2)
   })
 })
 
