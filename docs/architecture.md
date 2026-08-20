@@ -39,15 +39,18 @@ in the stack that exists because of what it can do rather than what it stores.
         |
    content/ baked into the image at build time
         |
-   named volume: speech-cache
+   reads ./.speech-cache, mounted at /cache/speech
 
 
                 npm run narration:build
                         |
                    tts container          starts, records what has no
                    Piper + HTTP server    recording yet, and stops again
-                   voice model baked in   writes into speech-cache
+                   voice model baked in   writes ./.speech-cache
 ```
+
+One directory holds every recording, and the app mounts it rather than keeping a
+copy. See `docs/decisions/0022-one-place-for-recordings.md`.
 
 ## The two halves: content and progress
 

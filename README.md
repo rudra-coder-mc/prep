@@ -49,11 +49,15 @@ Short for `docker compose -f compose.yaml -f compose.dev.yaml up`. Same stack
 with `content/`, `src/` and `public/` bind-mounted and hot reload on, so editing
 a lesson or a component shows up immediately.
 
-Plain `docker compose up` runs the built image and does not pick up edits. Use
-this profile while working, that one to just use the platform.
+Plain `docker compose up` runs the built image and does not pick up edits at
+all, including edits to `src/`. Use this profile while working, that one to just
+use the platform, and `docker compose up --build` after changing code you want
+the plain profile to serve.
 
-Anything outside those three directories is baked into the image, so changing
-`package.json`, `next.config.ts` or the Dockerfile needs `--build`:
+Plain `docker compose up` runs the image as it was last built, so anything
+changed since then needs `--build`. Under this profile that is only
+`package.json`, `next.config.ts` and the Dockerfile, since the other three
+directories are mounted:
 
 ```bash
 npm run dev:docker -- --build
