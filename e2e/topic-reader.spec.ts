@@ -128,30 +128,26 @@ test('the controls follow the reader once the player has scrolled away', async (
   expect((await audioState(page))?.paused).toBe(true)
 })
 
-test('a section that has been built once is played rather than synthesised again', async ({
-  page,
-}) => {
+test('a section that has been built is played rather than synthesised again', async ({ page }) => {
   const asked: string[] = []
   await page.route(/\/api\/speech/, async (route) => {
     asked.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`)
     await route.continue()
   })
 
+  // Whether this first play has to synthesise depends on what the rest of the
+  // suite has already said out loud, and that is the point: from here on it must
+  // not matter.
   await page.goto('/topics/javascript/closures')
   await page.getByRole('group', { name: READER }).getByLabel('Play narration').click()
   await waitUntilPlaying(page)
-
-  // Nothing has been built for this run's cache, so the first play asks for the
-  // recording, is told there is none, and synthesises it.
-  expect(asked[0]).toMatch(/^GET \/api\/speech\/[0-9a-f]{64}$/)
-  expect(asked).toContain('POST /api/speech')
 
   asked.length = 0
   await page.reload()
   await page.getByRole('group', { name: READER }).getByLabel('Play narration').click()
   await waitUntilPlaying(page)
 
-  // The second time it is a file that already exists, which is the whole point.
+  // A recording that exists is a file to fetch, not work to do again.
   expect(asked[0]).toMatch(/^GET \/api\/speech\/[0-9a-f]{64}$/)
   expect(asked).not.toContain('POST /api/speech')
 })
