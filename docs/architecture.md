@@ -23,16 +23,20 @@ separate API service. Server Components read data directly, Server Actions write
 it. For a single-user tool, a network hop between a frontend and a backend we
 also own buys nothing and costs two deployments.
 
+The one exception is speech. Turning a narration script into audio is not
+something a Next.js process can do, so it is a third container, and the only one
+in the stack that exists because of what it can do rather than what it stores.
+
 ```
                 docker compose up
                         |
-        +---------------+---------------+
-        |                               |
-   app container                  postgres container
-   Next.js (standalone)           named volume: pgdata
-   better-auth                    healthcheck gates app start
-   drizzle-orm
-        |
+        +---------------+---------------+---------------+
+        |                               |               |
+   app container                  postgres container    tts container
+   Next.js (standalone)           named volume: pgdata  Piper + its HTTP server
+   better-auth                    healthcheck gates     voice model baked in
+   drizzle-orm                    app start             named volume:
+        |                                               speech-cache
    content/ baked into the image at build time
 ```
 
@@ -230,10 +234,34 @@ Running the code is planned separately as browser-side WASM runners, in
 All three forms write the same `attempts` row, so the ladder, the streak and the
 dashboard did not change to accommodate any of them.
 
+## Narration
+
+A topic can be listened to rather than read. The voice is Piper, a neural text to
+speech engine running in the `tts` container with its voice model baked into the
+image, so narration works offline and no lesson text leaves the machine.
+
+`src/lib/speech/` is the whole engine and `POST /api/speech` is its only entry
+point: a script in, a WAV out, gated by the same session as everything else.
+Audio is cached by content — the file's name is a hash of the script — so a
+script is synthesised once and read from a volume every time after. Editing a
+script is therefore a new recording rather than a stale one, and the old entry
+is orphaned rather than served.
+
+Synthesis costs about a second of CPU for three and a half seconds of speech, so
+a request carries one section of a narration rather than a whole one, and a
+script over 3000 characters is refused rather than left to hang. Nothing about
+the audio gates the application starting: the engine being unready is a 502 on
+one endpoint, not a stack that will not boot.
+
+What the narration scripts themselves are, and the player that moves between
+their sections, are separate work; see `TASKS.md`. See
+`docs/decisions/0015-piper-narration-engine.md` for why Piper rather than the
+browser's own `speechSynthesis` or a cloud API.
+
 ## Not in V1
 
 AI tutoring, multi-user support, social login, mobile, gamification beyond the
-streak, SM-2, and any service beyond the two containers. The schema is
+streak, SM-2, and any service beyond the three containers. The schema is
 multi-user-shaped (`userId` on every progress row) so that adding users later is
 an auth change, not a data migration — but nothing else anticipates features that
 do not exist yet.

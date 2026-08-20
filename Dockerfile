@@ -35,6 +35,11 @@ FROM base AS runner
 ENV NODE_ENV=production
 RUN addgroup -g 1001 -S nodejs && adduser -S -u 1001 -G nodejs nextjs
 
+# The speech cache is a named volume in compose. Docker gives a fresh volume the
+# ownership of the image directory it is mounted over, so this has to exist and
+# belong to nextjs or the app cannot write synthesised audio into it.
+RUN mkdir -p /cache/speech && chown -R nextjs:nodejs /cache
+
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
