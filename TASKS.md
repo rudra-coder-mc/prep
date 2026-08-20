@@ -65,7 +65,7 @@ every wrong option in it is wrong for a reason you can say out loud.
 Branch `improvement/open-question-cap`. Blocked by 1 to 11.
 
 **What to build.** The content check stops accepting a second open question in a
-topic, which it could not do while 84 questions were waiting to be converted.
+topic, which it could not do while 85 questions are still waiting to be converted.
 
 **Why.** An escape hatch with no lock on it becomes the default, and the
 platform is self graded again. See `0023`.
