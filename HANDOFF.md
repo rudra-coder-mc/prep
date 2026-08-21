@@ -27,9 +27,22 @@ question and its answer can be listened to as well.
 
 **No question takes typed input any more.** That is the largest change in the
 repository's history and it is only half done: the platform side is finished and
-six topics of twelve have been converted, so the conversion is halfway. Read the
-next action before anything else. Each of the following landed on its own
-branch, merged with `--no-ff`, most recent first.
+seven topics of twelve have been converted. Read the next action before anything
+else. Each of the following landed on its own branch, merged with `--no-ff`,
+most recent first.
+
+**The prototypes topic is on the three forms**, the seventh conversion, and the
+first where an existing question converted straight into the ordering question
+the way the brief describes. `shadowing-output` already printed three lines; the
+work was the distractors, and the two worth having were the line a write that
+walked the chain would print and the `undefined` everyone expects after a
+`delete`.
+
+Replaced `object-create-null-mcq`, which asked the same thing as the
+`Object.create(null)` scenario four questions above it. What took its place is
+the topic's missing question: `item.tags.push()` reaching the prototype while
+`item.name =` does not, which is the read and write asymmetry at the point where
+it costs somebody a bug rather than a quiz mark.
 
 **The promises topic is on the three forms**, the sixth conversion. Nine of its
 eleven questions are choice questions and `all-vs-allsettled` stays open, since
@@ -213,7 +226,7 @@ never asked for.
 **Convert one topic onto the three answer forms.** `closures` is done and is the
 worked example to read before starting another, and
 `currying-and-partial-application` is a second one. Take any of the remaining
-six, in `TASKS.md` order unless an interview makes one urgent. One topic is one
+five, in `TASKS.md` order unless an interview makes one urgent. One topic is one
 branch, named `content/<topic-slug>`.
 
 Read `docs/tasks/converting-a-topic.md` before you start. It is the whole brief:
@@ -286,21 +299,21 @@ about order. Reordering either is content work and nobody owns it yet.
 it. Left over from V1, when lessons were going to have syntax highlighted code
 blocks. Nobody owns it; it is recorded at the bottom of `TASKS.md`.
 
-**Fifty one questions are open because nothing has converted them yet.**
+**Forty four questions are open because nothing has converted them yet.**
 They are not open because they earned it. The rule is at most one open question
 per topic, on an `interview` or `scenario` subject only, and the content check
-cannot enforce it while six topics would fail. That check is the last task in
-`TASKS.md` and it is blocked on the six conversions left. Until then the app is
+cannot enforce it while five topics would fail. That check is the last task in
+`TASKS.md` and it is blocked on the five conversions left. Until then the app is
 more self graded than it was before the rework, which is the opposite of the
 point and is entirely expected.
 
-**Nineteen questions show a one-line explanation as their answer in full.**
+**Sixteen questions show a one-line explanation as their answer in full.**
 The ones that were already multiple choice never had a written answer, so their
 short `explanation` was moved into `answerInFull` rather than a new answer being
 invented for them. Honest, since it is the only prose they carry, and thin. The
 topic conversions fix it.
 
-**Nineteen question ids still end in `-mcq`**, a word nothing in the codebase
+**Sixteen question ids still end in `-mcq`**, a word nothing in the codebase
 is called any more. Renaming them to end in `-choice` is part of converting each
 topic and is written into the brief, so do it there rather than in a sweep.
 
@@ -311,7 +324,7 @@ grade among the last three keeps a topic at "learning". Both are more honest tha
 what they replaced, but if a status looks pessimistic against a memory of the old
 dashboard, this is why.
 
-**Only six ordering questions exist.** `ordering-basic` in the event loop
+**Only seven ordering questions exist.** `ordering-basic` in the event loop
 topic, whose distractor is a `.catch` on an already-resolved promise that never
 fires, `loop-timer-order` in closures, whose distractor is the line the same loop
 prints once it is written with `var`, `bind-output` in currying, whose
@@ -321,8 +334,10 @@ whose distractors are the two elements a `forEach` callback never logs and the
 line a throw jumps over, and `default-evaluation-order` in parameters and
 arguments, whose distractors are a default that never ran and the body it would
 have produced, and `settles-once-order` in promises, whose distractors are the
-two lines a rejection would have printed if the promise had not already
-settled. Every other topic that has something
+two lines a rejection would have printed if the promise had not already settled,
+and `shadowing-output` in prototypes, whose distractors are a write that walked
+the chain and the `undefined` a `delete` looks like it should leave. Every other
+topic that has something
 happening in an order still owes one, which is part of its conversion.
 
 **`APP_TIMEZONE` defaults to UTC.** Until it is set in `.env`, the daily streak

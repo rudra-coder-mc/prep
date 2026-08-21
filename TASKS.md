@@ -21,7 +21,7 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 Typing an explanation and then marking yourself is a self grade with extra
 steps, and typing exact output fails you over a quote character. Both are gone.
 All three forms exist and the platform schedules them without asking anyone to
-rate themselves. What is left is the content: six topics to convert onto the
+rate themselves. What is left is the content: five topics to convert onto the
 forms, and then the rule that stops open questions spreading.
 
 Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
@@ -29,7 +29,7 @@ Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1 to 6. Convert one topic
+## 1 to 5. Convert one topic
 
 One branch per topic, named `content/<topic-slug>`. Each blocked by nothing.
 
@@ -51,22 +51,21 @@ for that as part of the task rather than treating it as a surprise.
 
 Delete a line below when its topic is merged.
 
-1. `content/prototypes`
-2. `content/recursion-and-the-call-stack`
-3. `content/scope-and-hoisting`
-4. `content/this-binding`
-5. `content/types-and-coercion`
-6. `content/value-and-reference`
+1. `content/recursion-and-the-call-stack`
+2. `content/scope-and-hoisting`
+3. `content/this-binding`
+4. `content/types-and-coercion`
+5. `content/value-and-reference`
 
 **Done when** the topic passes `npm run content:check`, its audio is built, and
 every wrong option in it is wrong for a reason you can say out loud.
 
-## 7. Enforce one open question per topic
+## 6. Enforce one open question per topic
 
-Branch `improvement/open-question-cap`. Blocked by 1 to 6.
+Branch `improvement/open-question-cap`. Blocked by 1 to 5.
 
 **What to build.** The content check stops accepting a second open question in a
-topic, which it could not do while 51 questions are still waiting to be converted.
+topic, which it could not do while 44 questions are still waiting to be converted.
 
 **Why.** An escape hatch with no lock on it becomes the default, and the
 platform is self graded again. See `0023`.
