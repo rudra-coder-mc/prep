@@ -7,11 +7,11 @@ what is in flight, and what will bite you.
 
 ## Where this stands
 
-`main` at `2d071fe`. The repository has no git remote, and no task tracker
-either. Both are deliberate; see the hard rule in `CLAUDE.md`, which now covers
-every hosted service rather than only the company GitLab.
+`main` holds every merge listed below. The repository has no git remote, and no
+task tracker either. Both are deliberate; see the hard rule in `CLAUDE.md`,
+which now covers every hosted service rather than only the company GitLab.
 
-Verified green at that commit: `npm run verify` exited 0 through lint, format
+Verified green at its head: `npm run verify` exited 0 through lint, format
 check, typecheck, 307 unit tests, 26 integration tests against real Postgres and
 a real speech engine, the production build, and 52 Playwright end-to-end tests.
 The content check reports 12 topics, 130 questions, 24 exercises, 77 narration
@@ -27,9 +27,18 @@ question and its answer can be listened to as well.
 
 **No question takes typed input any more.** That is the largest change in the
 repository's history and it is only half done: the platform side is finished and
-two topics of twelve have been converted. Read the next action before anything
+three topics of twelve have been converted. Read the next action before anything
 else. Each of the following landed on its own branch, merged with `--no-ff`,
 most recent first.
+
+**The event loop topic is on the three forms**, the third conversion. Nine of its
+eleven questions are choice questions, `settimeout-delay` stays open because
+whether a timer fires on time has several routes to a good answer, and
+`ordering-basic` was already an ordering question and was left exactly as it was.
+That last part was the whole risk: `e2e/ordering.spec.ts` drives this topic and
+leans on that question being the first one, on its authored pool order, on its
+`correctOrder`, and on a sentence from its answer. Converting around it cost
+nothing. Moving it would have cost five specs.
 
 **The currying topic is on the three forms**, the second conversion. Eight of its
 eleven questions are choice questions, `bind-output` became the topic's ordering
@@ -171,7 +180,7 @@ never asked for.
 **Convert one topic onto the three answer forms.** `closures` is done and is the
 worked example to read before starting another, and
 `currying-and-partial-application` is a second one. Take any of the remaining
-ten, in `TASKS.md` order unless an interview makes one urgent. One topic is one
+nine, in `TASKS.md` order unless an interview makes one urgent. One topic is one
 branch, named `content/<topic-slug>`.
 
 Read `docs/tasks/converting-a-topic.md` before you start. It is the whole brief:
@@ -244,21 +253,21 @@ about order. Reordering either is content work and nobody owns it yet.
 it. Left over from V1, when lessons were going to have syntax highlighted code
 blocks. Nobody owns it; it is recorded at the bottom of `TASKS.md`.
 
-**Seventy eight questions are open because nothing has converted them yet.**
+**Seventy two questions are open because nothing has converted them yet.**
 They are not open because they earned it. The rule is at most one open question
 per topic, on an `interview` or `scenario` subject only, and the content check
-cannot enforce it while ten topics would fail. That check is the last task in
-`TASKS.md` and it is blocked on the ten conversions left. Until then the app is
+cannot enforce it while nine topics would fail. That check is the last task in
+`TASKS.md` and it is blocked on the nine conversions left. Until then the app is
 more self graded than it was before the rework, which is the opposite of the
 point and is entirely expected.
 
-**Thirty one questions show a one-line explanation as their answer in full.**
+**Twenty eight questions show a one-line explanation as their answer in full.**
 The ones that were already multiple choice never had a written answer, so their
 short `explanation` was moved into `answerInFull` rather than a new answer being
 invented for them. Honest, since it is the only prose they carry, and thin. The
 topic conversions fix it.
 
-**Thirty one question ids still end in `-mcq`**, a word nothing in the codebase
+**Twenty eight question ids still end in `-mcq`**, a word nothing in the codebase
 is called any more. Renaming them to end in `-choice` is part of converting each
 topic and is written into the brief, so do it there rather than in a sweep.
 

@@ -30,24 +30,38 @@ rejection to handle and the catch callback is never called at all.`,
   {
     id: 'microtask-vs-macrotask',
     type: 'concept',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
-    prompt:
-      'What is the difference between a microtask and a macrotask, and which APIs produce each?',
-    answerInFull: `A macrotask is one unit of work the event loop picks up per turn: timers, I/O callbacks, event handlers, message events. A microtask is work queued to run at the end of the current turn, before the loop picks up anything else.
+    prompt: 'Which of these runs as a macrotask?',
+    options: [
+      'The callback passed to queueMicrotask',
+      'A click handler, when the user clicks',
+      'The code after an await inside an async function',
+      'A .finally handler on a promise that has already settled',
+    ],
+    correctOption: 1,
+    answerInFull: `The click handler. A UI event is a macrotask, the same as a timer or an I/O callback, and it is worth saying out loud because most answers list setTimeout and stop.
+
+A macrotask is one unit of work the event loop picks up per turn: timers, I/O callbacks, event handlers, message events. A microtask is work queued to run at the end of the current turn, before the loop picks up anything else.
 
 Macrotasks: setTimeout, setInterval, setImmediate in Node, I/O, UI events.
 Microtasks: promise reactions (.then, .catch, .finally), queueMicrotask, await continuations, MutationObserver.
 
-The important asymmetry is that the entire microtask queue is drained after each macrotask, including microtasks queued by other microtasks. A macrotask queue is not drained; exactly one is taken per turn.`,
-    explanation: `That asymmetry is what makes an infinite microtask loop freeze a page while an infinite chain of setTimeout does not. Microtasks starve everything below them, including rendering.`,
+The important asymmetry is that the entire microtask queue is drained after each macrotask, including microtasks queued by other microtasks. The macrotask queue is not drained: exactly one is taken per turn.
+
+That asymmetry is what makes an infinite microtask loop freeze a page while an infinite chain of setTimeout does not. Microtasks starve everything below them, including rendering.`,
+    explanation: `queueMicrotask names itself, which is why it is in the list. It is the control the other three are read against.
+
+The code after an await is the one people miss. An async function looks like a function, so its second half looks like ordinary code, and it is a promise reaction like any other.
+
+.finally is tempting because it sounds like cleanup that happens outside the chain, in the way a finally block does. It is a promise reaction, so it queues a microtask, and whether the promise had already settled changes when it is queued rather than which queue it joins.`,
     hints: [],
     tags: ['event-loop', 'async'],
   },
   {
     id: 'async-await-ordering',
     type: 'output',
-    form: 'open',
+    form: 'choice',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `async function a() {
@@ -64,15 +78,25 @@ console.log('script start')
 a()
 Promise.resolve().then(() => console.log('promise'))
 console.log('script end')`,
-    answerInFull: `script start
-a start
-b
-script end
-a end
-promise`,
-    explanation: `await splits the function in two. Everything up to the await runs synchronously, which is why "a start" and "b" print before "script end". What follows the await is scheduled as a microtask.
+    options: [
+      'script start, a start, b, script end, promise, a end',
+      'script start, script end, a start, b, a end, promise',
+      'script start, a start, b, script end, a end, promise',
+      'script start, a start, script end, b, a end, promise',
+    ],
+    correctOption: 2,
+    answerInFull: `script start, a start, b, script end, a end, promise
 
-The subtle part is ordering between "a end" and "promise". The continuation of a() is queued when the await is reached, which happens before the Promise.resolve().then line runs, so a's continuation is first in the microtask queue.`,
+await splits the function in two. Everything up to the await runs synchronously, which is why "a start" and "b" print before "script end": calling a() runs its body, calling b() runs its body, and only then does the await suspend a() and hand the thread back to the script.
+
+What follows the await is scheduled as a microtask. The subtle part is the order of the last two lines. The continuation of a() is queued at the moment the await is reached, which happens before the Promise.resolve().then line has run at all, so it sits first in the microtask queue and prints first.
+
+The rule to state is two sentences. An async function is synchronous up to its first await, and microtasks run in the order they were queued.`,
+    explanation: `Swapping the last two lines is the most common wrong answer, and it comes from reading a() as scheduling something rather than running it. The .then is written later in the file, so it looks later in the queue. What decides the queue is when the await was reached, and that had already happened.
+
+Putting "script end" straight after "script start" is the belief that async defers a whole function. It does not. async makes the function return a promise and allows await inside it, and neither of those postpones the body.
+
+The last order suspends a() at the call to b() rather than at the await, which pushes "b" past "script end". b() is an ordinary call: its body runs immediately, and the promise it returns is what the await then waits on.`,
     hints: [
       'How much of an async function runs synchronously?',
       'When exactly is each microtask queued?',
@@ -82,30 +106,43 @@ The subtle part is ordering between "a end" and "promise". The continuation of a
   {
     id: 'blocking-loop',
     type: 'debugging',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
     prompt:
-      'A user reports the page freezes for two seconds when they click a button. The handler is below. What is wrong, and what would you do?',
+      'A user reports the page freezes for two seconds when they click the button. Which change fixes it, for the right reason?',
     code: `button.addEventListener('click', () => {
   const result = expensiveSynchronousWork()
   render(result)
 })`,
-    answerInFull: `The work runs on the same thread as rendering and event handling. Until the handler returns, the call stack is occupied, so nothing else can run: no repaint, no other events, no timers, no promise callbacks. "Asynchronous" does not mean "parallel" and there is no second thread to fall back on.
+    options: [
+      'Wrap the work in a promise and await it, so the rest of the page keeps running while it resolves',
+      'Schedule the work with setTimeout(fn, 0), so the handler returns and the page stays responsive',
+      'Move the work to a Web Worker, which is the only one of these that runs it anywhere else',
+      'Mark the handler async, so the browser can interleave rendering with its body',
+    ],
+    correctOption: 2,
+    answerInFull: `Move the work to a Web Worker.
+
+The work runs on the same thread as rendering and event handling. Until the handler returns, the call stack is occupied, so nothing else can run: no repaint, no other events, no timers, no promise callbacks. "Asynchronous" does not mean "parallel" and there is no second thread to fall back on.
 
 Options, roughly in order of how much they help:
 - Move the work to a Web Worker, which is the only way to genuinely run it elsewhere.
-- Break it into chunks and yield between them, with setTimeout, scheduler.yield, or requestIdleCallback.
+- Break it into chunks and yield between them, with setTimeout, scheduler.yield or requestIdleCallback. The page then freezes in slices rather than in one block, which is enough for a spinner and for input.
 - Do less work: memoise, precompute, or do it on the server.
 
 Wrapping it in a promise changes nothing, because the body still runs synchronously.`,
-    explanation: `The last point is the one interviewers are usually probing. Promise.resolve().then(expensiveWork) still blocks; it just blocks slightly later. Only a worker moves the work off the main thread.`,
+    explanation: `The promise is what interviewers are usually probing for, because it is the reflex. Promise.resolve().then(expensiveWork) still blocks, it just blocks slightly later, in the microtask drain rather than in the handler.
+
+setTimeout is the one to argue with rather than dismiss. It does let the click's own frame paint, so a spinner set beforehand appears, and then the page freezes for two seconds on the next turn. It moves the block, and chunking is what turns that into a fix.
+
+async on the handler does nothing to its body. It makes the function return a promise and allows await inside, and neither of those interleaves anything with the work.`,
     hints: ['What else needs the main thread while this runs?'],
     tags: ['event-loop', 'performance'],
   },
   {
     id: 'nested-microtasks',
     type: 'output',
-    form: 'open',
+    form: 'choice',
     difficulty: 'hard',
     prompt: 'What order do these print?',
     code: `setTimeout(() => console.log('timeout'), 0)
@@ -114,8 +151,23 @@ Promise.resolve().then(() => {
   console.log('micro 1')
   Promise.resolve().then(() => console.log('micro 2'))
 })`,
-    answerInFull: `micro 1, micro 2, timeout`,
-    explanation: `A microtask queued from inside a microtask joins the same drain, so micro 2 runs before the loop moves on. The queue is emptied, not merely visited once. This is exactly why an unbounded chain of microtasks can lock a page while a timer chain cannot.`,
+    options: [
+      'timeout, micro 1, micro 2',
+      'micro 1, micro 2, timeout',
+      'micro 1, timeout, micro 2',
+      'micro 1 and micro 2, and timeout never runs, because the nested microtask starves the loop',
+    ],
+    correctOption: 1,
+    answerInFull: `micro 1, micro 2, timeout
+
+A microtask queued from inside a microtask joins the same drain, so micro 2 runs before the loop moves on. The queue is emptied, not merely visited once.
+
+That is the asymmetry of the loop in three lines: one macrotask per turn, but microtasks until there are none left. It is also exactly why an unbounded chain of microtasks can lock a page while a chain of timers cannot.`,
+    explanation: `micro 1, timeout, micro 2 is the answer if the queue were drained by snapshot: everything waiting when the drain began, with anything queued during it left for next time. Engines do not do that, and the difference is what makes microtask starvation possible at all.
+
+timeout first is the reading where a zero millisecond delay means "now". It is a minimum, and the microtask queue is drained before the loop takes any macrotask, however long the timer has been eligible.
+
+The starvation option over-applies a true rule. An unbounded chain of microtasks really does starve the timer forever, but this chain is two long and it ends, so the loop carries on immediately afterwards.`,
     hints: ['Is the microtask queue drained once, or repeatedly until empty?'],
     tags: ['event-loop', 'async'],
   },
@@ -137,41 +189,71 @@ Two more details:
   {
     id: 'render-timing',
     type: 'scenario',
-    form: 'open',
+    form: 'choice',
     difficulty: 'hard',
     prompt:
-      'You set an element to display a loading spinner, then immediately run a long synchronous task. The spinner never appears. Why?',
+      'You set an element to show a loading spinner, then immediately run a long synchronous task. The spinner never appears. Which explanation fits?',
+    options: [
+      'The DOM change is queued as a microtask, so it only runs once the task has finished',
+      'A DOM change marks the page as needing paint, and the browser cannot paint until the task releases the thread',
+      'The browser drops frames it cannot deliver on time, so the spinner frame is skipped and the next one is already up to date',
+      'Reading a layout property first would force the paint through, and nothing here reads one',
+    ],
+    correctOption: 1,
     answerInFull: `Changing the DOM does not paint. It marks the document as needing layout and paint, which happens when the browser gets the main thread back, after the current task and all its microtasks have finished. The long task never releases the thread, so the frame containing the spinner is never rendered.
 
+Rendering sits between macrotasks in the loop, alongside them rather than above them. That single fact explains most "my UI does not update until the end" bugs.
+
 Fixes: yield to the loop before starting the work, so a frame can be painted, or move the work to a worker.`,
-    explanation: `Rendering sits between macrotasks in the loop, alongside them rather than above them. That single fact explains most "my UI does not update until the end" bugs, and it is also why forcing a synchronous layout read does not help.`,
+    explanation: `Calling the DOM change a microtask is wrong in a useful way, because microtasks are also drained before rendering. Even if it were one, the spinner still would not appear.
+
+Dropped frames are real and are the wrong scale of explanation. The browser is not choosing to skip this frame, it is never asked to produce one.
+
+Forcing layout is the sophisticated wrong answer. Reading offsetHeight really does force a synchronous layout, which is why people reach for it, and layout is not paint. Nothing you can call from inside the task puts pixels on the screen.`,
     hints: ['When does a DOM change actually reach the screen?'],
     tags: ['event-loop', 'performance'],
   },
   {
     id: 'starvation',
     type: 'coding',
-    form: 'open',
+    form: 'choice',
     difficulty: 'hard',
     prompt:
-      'Write a function that processes a large array without blocking the page, yielding to the event loop between chunks.',
-    answerInFull: `async function processInChunks(items, work, chunkSize = 500) {
-  for (let i = 0; i < items.length; i += chunkSize) {
-    const chunk = items.slice(i, i + chunkSize)
-    for (const item of chunk) work(item)
+      'You are processing a large array in chunks so the page keeps painting. Which yield between chunks does that?',
+    options: [
+      'await Promise.resolve(), so the loop gets a turn between chunks',
+      'await a promise that resolves from a setTimeout of zero, so the browser can take a turn and paint',
+      'Mark the function async and await every item, so each one yields',
+      'Wrap the whole loop in a promise and await it, so the work leaves the main thread',
+    ],
+    correctOption: 1,
+    answerInFull: `Yield with a macrotask:
 
-    // Yield with a macrotask, so rendering and input get a turn.
-    await new Promise((resolve) => setTimeout(resolve, 0))
+  async function processInChunks(items, work, chunkSize = 500) {
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const chunk = items.slice(i, i + chunkSize)
+      for (const item of chunk) work(item)
+
+      // Yield with a macrotask, so rendering and input get a turn.
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
   }
-}`,
-    explanation: `The critical detail is yielding with a macrotask rather than a microtask. Awaiting Promise.resolve() would queue a microtask, which runs in the same drain and never lets the browser render, so the page would still freeze.
 
-In modern browsers scheduler.yield() is the purpose-built version of this.`,
+The critical detail is yielding with a macrotask rather than a microtask. Awaiting Promise.resolve() queues a microtask, which runs in the same drain, so the browser never gets between two tasks and never renders.
+
+In modern browsers scheduler.yield() is the purpose-built version, and it resumes sooner than a timer because it is prioritised above ordinary tasks.
+
+Chunk size is the other half of the answer. Yielding after every item makes the whole thing many times slower, and yielding once every few thousand still blocks a frame, so the number comes from measuring rather than from a principle.`,
+    explanation: `await Promise.resolve() is the version almost everyone writes first, and it is the trap the question exists for. It suspends the function, which feels like yielding, and resumes it inside the same microtask drain, so the loop never reaches the point where it renders.
+
+Awaiting each item is the same mistake made expensive: a microtask per item, still no frame painted, and a loop that now runs far slower than the one it replaced.
+
+A promise around the whole loop moves nothing anywhere. The body runs synchronously from wherever it is called, and awaiting it only decides when the caller continues.`,
     hints: ['What kind of task do you have to yield with for the browser to paint?'],
     tags: ['event-loop', 'performance', 'async'],
   },
   {
-    id: 'log-order-mcq',
+    id: 'log-order-choice',
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
@@ -180,33 +262,49 @@ In modern browsers scheduler.yield() is the purpose-built version of this.`,
 setTimeout(() => console.log('b'), 0)
 Promise.resolve().then(() => console.log('c'))
 console.log('d')`,
-    options: ['a d c b', 'a d b c', 'a b c d', 'a c d b'],
-    correctOption: 0,
-    answerInFull:
-      'Synchronous code first, so a and d. The stack then empties, the microtask queue is drained, which runs c. Only then does the loop take a macrotask, running b. A zero millisecond timeout is still a macrotask and still loses to any pending microtask.',
+    options: ['a d b c', 'a b c d', 'a d c b', 'a c d b'],
+    correctOption: 2,
+    answerInFull: `a d c b
+
+Synchronous code first, so a and d. The stack then empties and the microtask queue is drained, which runs c. Only then does the loop take a macrotask, running b.
+
+A zero millisecond timeout is still a macrotask and still loses to any pending microtask, however early it was scheduled.`,
+    explanation: `a d b c is what you get by reading the two queues as one queue in scheduling order: b was queued before c, so it looks like it should run first. Which queue a callback is in decides everything here, and when it was queued decides nothing across queues.
+
+a b c d treats a zero delay as "run this now" and interleaves the timer with the synchronous code. Nothing queued runs while the stack is busy, whatever its delay.
+
+a c d b drains the microtask between the two synchronous lines, which would mean a promise callback can interrupt code that is still running. Nothing preempts the stack.`,
     hints: [],
     tags: ['event-loop', 'microtasks'],
   },
   {
-    id: 'microtask-drain-mcq',
+    id: 'microtask-drain-choice',
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
     prompt: 'How much of the microtask queue runs between two macrotasks?',
     options: [
-      'All of it, including microtasks queued by other microtasks',
       'Exactly one microtask',
       'As many as were queued when the macrotask started',
       'None, microtasks only run when the call stack is idle',
+      'All of it, including microtasks queued by other microtasks',
     ],
-    correctOption: 0,
-    answerInFull:
-      'The queue is drained completely, and anything a microtask queues while running is drained in the same pass. That is why an endlessly self queueing microtask starves the loop and freezes the page, while an endlessly self queueing setTimeout does not.',
+    correctOption: 3,
+    answerInFull: `All of it, including anything queued while the drain is already in progress.
+
+The queue is drained completely, and a microtask that queues another microtask has that work done in the same pass. This is why an endlessly self queueing microtask starves the loop and freezes the page, while an endlessly self queueing setTimeout does not: the timer version hands control back between every one.
+
+Said as a rule: one macrotask per turn, microtasks until there are none left. Almost everything else in this topic follows from that asymmetry.`,
+    explanation: `One at a time is the macrotask rule applied to the wrong queue, and it is the answer that makes the two queues sound symmetrical. They are not, and the asymmetry is the whole topic.
+
+Draining only what was queued at the start is the most careful wrong answer, because it is how you would implement this if you were worried about starvation. Engines do not, which is why starvation is possible.
+
+The last option confuses an empty stack with an idle page. An empty stack is the condition for a drain, not a reason to postpone one.`,
     hints: [],
     tags: ['event-loop', 'microtasks'],
   },
   {
-    id: 'queue-microtask-vs-timeout-mcq',
+    id: 'queue-microtask-vs-timeout-choice',
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
@@ -214,14 +312,22 @@ console.log('d')`,
     code: `setTimeout(() => console.log('timeout'), 0)
 queueMicrotask(() => console.log('microtask'))`,
     options: [
-      'microtask, because the microtask queue is drained first',
       'timeout, because it was scheduled first',
       'Whichever the engine happens to pick, it is not specified',
+      'microtask, because the microtask queue is drained first',
       'They run at the same time, in parallel',
     ],
-    correctOption: 0,
-    answerInFull:
-      'Scheduling order between the two queues does not matter. Once the stack empties, microtasks are drained before the loop takes its next macrotask, so the microtask always wins regardless of which line came first.',
+    correctOption: 2,
+    answerInFull: `The microtask.
+
+Scheduling order between the two queues does not matter. Once the stack empties, microtasks are drained before the loop takes its next macrotask, so the microtask always wins regardless of which line came first.
+
+Swapping the two lines changes nothing, and neither does the delay: there is no number small enough to put a macrotask ahead of a pending microtask.`,
+    explanation: `Scheduling order is the intuition this question exists to break, which is why the timer is written first. It is the only fact in the code that points the wrong way.
+
+"Not specified" is worth ruling out rather than leaving as a possibility. The order between the two queues is specified, engines agree on it, and it is the same in Node.
+
+Nothing here runs two callbacks at once. One thread means one callback at a time, and parallelism needs a worker.`,
     hints: [],
     tags: ['event-loop', 'microtasks'],
   },
