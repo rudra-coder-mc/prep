@@ -27,9 +27,20 @@ question and its answer can be listened to as well.
 
 **No question takes typed input any more.** That is the largest change in the
 repository's history and it is only half done: the platform side is finished and
-three topics of twelve have been converted. Read the next action before anything
+four topics of twelve have been converted. Read the next action before anything
 else. Each of the following landed on its own branch, merged with `--no-ff`,
 most recent first.
+
+**The higher order functions topic is on the three forms**, the fourth
+conversion, and the first where the ordering question had to be written from
+nothing. The topic had no output that printed several lines worth ordering, and
+the async `forEach` question, which is about ordering, has no plausible line it
+never prints, so there were no distractors to be had. What worked was a
+`forEach` whose callback returns on one element and throws on the next: the pool
+holds the element that was skipped, the element that threw before logging, and
+the line after the loop that the throw jumped over. Three lines print and three
+do not. Expect to author rather than convert on any topic whose printed output
+is a single value.
 
 **The event loop topic is on the three forms**, the third conversion. Nine of its
 eleven questions are choice questions, `settimeout-delay` stays open because
@@ -180,7 +191,7 @@ never asked for.
 **Convert one topic onto the three answer forms.** `closures` is done and is the
 worked example to read before starting another, and
 `currying-and-partial-application` is a second one. Take any of the remaining
-nine, in `TASKS.md` order unless an interview makes one urgent. One topic is one
+eight, in `TASKS.md` order unless an interview makes one urgent. One topic is one
 branch, named `content/<topic-slug>`.
 
 Read `docs/tasks/converting-a-topic.md` before you start. It is the whole brief:
@@ -253,21 +264,21 @@ about order. Reordering either is content work and nobody owns it yet.
 it. Left over from V1, when lessons were going to have syntax highlighted code
 blocks. Nobody owns it; it is recorded at the bottom of `TASKS.md`.
 
-**Seventy two questions are open because nothing has converted them yet.**
+**Sixty five questions are open because nothing has converted them yet.**
 They are not open because they earned it. The rule is at most one open question
 per topic, on an `interview` or `scenario` subject only, and the content check
-cannot enforce it while nine topics would fail. That check is the last task in
-`TASKS.md` and it is blocked on the nine conversions left. Until then the app is
+cannot enforce it while eight topics would fail. That check is the last task in
+`TASKS.md` and it is blocked on the eight conversions left. Until then the app is
 more self graded than it was before the rework, which is the opposite of the
 point and is entirely expected.
 
-**Twenty eight questions show a one-line explanation as their answer in full.**
+**Twenty five questions show a one-line explanation as their answer in full.**
 The ones that were already multiple choice never had a written answer, so their
 short `explanation` was moved into `answerInFull` rather than a new answer being
 invented for them. Honest, since it is the only prose they carry, and thin. The
 topic conversions fix it.
 
-**Twenty eight question ids still end in `-mcq`**, a word nothing in the codebase
+**Twenty five question ids still end in `-mcq`**, a word nothing in the codebase
 is called any more. Renaming them to end in `-choice` is part of converting each
 topic and is written into the brief, so do it there rather than in a sweep.
 
@@ -278,12 +289,14 @@ grade among the last three keeps a topic at "learning". Both are more honest tha
 what they replaced, but if a status looks pessimistic against a memory of the old
 dashboard, this is why.
 
-**Only three ordering questions exist.** `ordering-basic` in the event loop
+**Only four ordering questions exist.** `ordering-basic` in the event loop
 topic, whose distractor is a `.catch` on an already-resolved promise that never
 fires, `loop-timer-order` in closures, whose distractor is the line the same loop
-prints once it is written with `var`, and `bind-output` in currying, whose
+prints once it is written with `var`, `bind-output` in currying, whose
 distractors are the arity and the name a bound function would report if `bind`
-only fixed `this`. Every other topic that has something
+only fixed `this`, and `foreach-return-and-throw` in higher order functions,
+whose distractors are the two elements a `forEach` callback never logs and the
+line a throw jumps over. Every other topic that has something
 happening in an order still owes one, which is part of its conversion.
 
 **`APP_TIMEZONE` defaults to UTC.** Until it is set in `.env`, the daily streak
