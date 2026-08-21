@@ -4,57 +4,94 @@ export const questions: Question[] = [
   {
     id: 'what-is-a-higher-order-function',
     type: 'concept',
-    form: 'open',
+    form: 'choice',
     difficulty: 'easy',
-    prompt: 'What is a higher order function, and what does the pattern actually buy you?',
+    prompt: 'What makes a function a higher order function?',
+    options: [
+      'It returns a function, so the returned one closes over what it was built with',
+      'It is written in a functional style, with no loops and no mutation',
+      'It takes a function as an argument, returns a function, or both',
+      'It works on values of any type, because it never inspects its arguments',
+    ],
+    correctOption: 2,
     answerInFull: `A higher order function is one that takes a function as an argument, returns a function, or both. It is possible because functions in JavaScript are ordinary values: they can be stored, passed and returned like any object.
 
 What it buys is that the varying step of an algorithm becomes a parameter. Two pieces of code that differ only in one step collapse into one implementation plus a callback, and the wrapper and the work no longer have to know anything about each other.
 
 Examples worth naming: map, filter and reduce take one; once, memoize and debounce return one; Express middleware and React higher order components are the returning kind at a larger scale.`,
-    explanation: `The answer that stops at "it makes code reusable" is true of every abstraction and says nothing. Naming the mechanism, that a step becomes an argument, is what shows you know why this particular technique works, and it leads straight into the follow-up question of implementing one.`,
+    explanation: `Returning a function is half the definition, and it is the half people remember, because middleware and decorators are the memorable examples. Taking one is the half that covers map, forEach, setTimeout and addEventListener, which is nearly everything anybody actually writes.
+
+Functional style is an aesthetic, not a definition. A reduce implemented with a for loop and a reassigned accumulator is still a higher order function.
+
+The last option is a different idea altogether. Working on any type is parametric polymorphism, and a function can be higher order without being generic or generic without being higher order.
+
+The answer that stops at "it makes code reusable" is true of every abstraction and says nothing. Naming the mechanism, that a step becomes an argument, is what leads into the follow-up, which is always a request to implement one.`,
     hints: ['What kind of value is a function in JavaScript?'],
     tags: ['functions', 'callbacks'],
   },
   {
-    id: 'foreach-return-value',
+    id: 'foreach-return-and-throw',
     type: 'output',
-    form: 'open',
-    difficulty: 'easy',
-    prompt: 'What does this print?',
-    code: `const nums = [1, 2, 3, 4]
+    form: 'ordering',
+    difficulty: 'medium',
+    prompt: 'Put the lines this prints in the order it prints them.',
+    code: `const items = ['a', 'b', 'c']
 
-const doubled = nums.forEach((n) => n * 2)
-console.log(doubled)
+try {
+  items.forEach((item) => {
+    if (item === 'b') return
+    if (item === 'c') throw new Error('stop')
+    console.log('item ' + item)
+  })
+  console.log('forEach finished')
+} catch (error) {
+  console.log('caught ' + error.message)
+}
 
-const kept = []
-nums.forEach((n) => {
-  if (n % 2 === 0) return
-  kept.push(n)
-})
-console.log(kept)`,
-    answerInFull: `undefined
-[ 1, 3 ]`,
-    explanation: `forEach exists for its side effects and always returns undefined. Whatever the callback returns is thrown away, which is why the first log is undefined rather than an array of doubles. map is the one that collects return values.
+console.log('after')`,
+    items: ['forEach finished', 'item a', 'item c', 'caught stop', 'item b', 'after'],
+    correctOrder: [1, 3, 5],
+    answerInFull: `item a, caught stop, after
 
-The return inside the second callback ends that one call and nothing more. forEach carries straight on with the next element, so it behaves like continue rather than break. There is no way to stop a forEach early.`,
-    hints: ['What does forEach do with the value its callback returns?'],
+Three rules, one for each line that is missing.
+
+return inside a forEach callback ends that one call and nothing more. The loop carries straight on with the next element, so it behaves like continue rather than break, which is why "item b" is skipped rather than the iteration stopping there.
+
+A throw inside the callback is not caught by forEach. The callback runs on top of forEach, which runs on top of your code, so the error unwinds all three frames together. That is why the try around forEach catches it, and why "forEach finished" never runs: control jumps from inside the callback to the catch block.
+
+"item c" never prints because the throw on that pass happens before the log.
+
+The sentence to carry away is that a callback runs on the caller's stack. return returns from the callback, and throw travels back out through everything that called it.`,
+    explanation: `"forEach finished" is in the pool for anyone who reads forEach as containing the error, the way a loop with a try inside its body would. Nothing in forEach catches anything, and nothing in it is even aware an error was raised.
+
+"item b" covers two misreadings at once. If return were ignored, b would print like the others. If it were a break, b and c would both be skipped, no error would be thrown, and "forEach finished" would print instead. Neither happens: return skips exactly one element and the loop carries on.
+
+"item c" is there for a reader who puts the log before the throw on that pass. Which of the two lines comes first is the only thing deciding whether it prints.`,
+    hints: ['What does return do inside a forEach callback, and what does throw do?'],
     tags: ['functions', 'callbacks', 'arrays'],
   },
   {
     id: 'async-foreach',
     type: 'debugging',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
-    prompt:
-      'This logs "all saved" immediately and the saves finish long afterwards. Explain why, and give two fixes that behave differently from each other.',
+    prompt: 'This logs "all saved" immediately, with every save still in flight. Why?',
     code: `async function saveAll(items) {
   items.forEach(async (item) => {
     await save(item)
   })
   console.log('all saved')
 }`,
-    answerInFull: `The async callback returns a promise as soon as it hits the first await. forEach ignores whatever its callback returns, so it starts the next one straight away, finishes the loop, and saveAll reaches the log with every save still in flight. Nothing is awaited because there is nothing holding the promises.
+    options: [
+      'The callback is async, so forEach calls every one of them without awaiting, and only a for...of loop can await a callback',
+      'forEach ignores what its callback returns, so the promise each call produces is dropped and nothing is left holding it',
+      'save is called without await inside the arrow, so each call is fire and forget',
+      'saveAll is async but never awaits anything, so its body runs straight through to the end',
+    ],
+    correctOption: 1,
+    answerInFull: `forEach ignores whatever its callback returns.
+
+The async callback returns a promise as soon as it hits the first await. forEach throws that promise away, starts the next call straight away, finishes the loop, and saveAll reaches the log with every save still in flight. Nothing is awaited because nothing is holding the promises.
 
 Fix one, sequential:
 
@@ -66,8 +103,14 @@ Fix two, concurrent:
 
   await Promise.all(items.map((item) => save(item)))
 
-They are not interchangeable. The first saves one at a time and stops at the first failure. The second starts everything at once and rejects on the first failure while the rest keep running. Which one is right depends on whether the saves can run in parallel and what should happen when one fails.`,
-    explanation: `The root cause is a property of forEach rather than of async: forEach has no way to consume a return value, so it can never wait for one. Any higher order function that discards its callback's result has the same problem. map does not, which is why the Promise.all fix works by switching to map first.`,
+They are not interchangeable. The first saves one at a time and stops at the first failure. The second starts everything at once and rejects on the first failure while the rest keep running. Which one is right depends on whether the saves can run in parallel and on what should happen when one of them fails.
+
+The root cause is a property of forEach rather than of async: it has no way to consume a return value, so it can never wait for one. Any higher order function that discards its callback's result has the same problem, which is why the Promise.all fix starts by switching to map.`,
+    explanation: `The first option has the shape right and the reason wrong. It is not that a callback cannot be awaited. It is that forEach drops the value that would be awaited. map keeps those promises, and Promise.all over them waits perfectly well.
+
+The second option is worth reading the code again for. There is an await inside the arrow and it does suspend that callback. What it cannot do is suspend forEach, which has already moved on to the next element.
+
+The last option is true, and it is the symptom rather than the cause. Putting await in front of items.forEach(...) awaits undefined, which resolves immediately and changes nothing.`,
     hints: [
       'What does an async function return the moment it awaits?',
       'What does forEach do with that value?',
@@ -77,32 +120,47 @@ They are not interchangeable. The first saves one at a time and stops at the fir
   {
     id: 'implement-reduce',
     type: 'coding',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
     prompt:
-      'Implement reduce(array, fn, initial) without using Array.prototype.reduce, matching the real one on the details that matter.',
-    answerInFull: `function reduce(array, fn, ...rest) {
-  const hasInitial = rest.length > 0
-  let acc = hasInitial ? rest[0] : array[0]
-  let index = hasInitial ? 0 : 1
+      'You are implementing reduce(array, fn, initial) by hand. How should it decide whether an initial value was passed?',
+    options: [
+      'Test initial === undefined, and start from the first element when it is',
+      'Give initial a default of array[0] in the parameter list, so the default does the work',
+      'Count the arguments, because undefined is a legitimate initial value',
+      'Test initial == null, so that null and undefined both count as no initial value',
+    ],
+    correctOption: 2,
+    answerInFull: `Count the arguments:
 
-  if (!hasInitial && array.length === 0) {
-    throw new TypeError('Reduce of empty array with no initial value')
+  function reduce(array, fn, ...rest) {
+    const hasInitial = rest.length > 0
+    let acc = hasInitial ? rest[0] : array[0]
+    let index = hasInitial ? 0 : 1
+
+    if (!hasInitial && array.length === 0) {
+      throw new TypeError('Reduce of empty array with no initial value')
+    }
+
+    for (; index < array.length; index++) {
+      acc = fn(acc, array[index], index, array)
+    }
+
+    return acc
   }
 
-  for (; index < array.length; index++) {
-    acc = fn(acc, array[index], index, array)
-  }
+Three details separate a real answer from a sketch.
 
-  return acc
-}`,
-    explanation: `Three details separate a real answer from a sketch.
+Whether an initial value was passed has to be decided by counting arguments rather than by testing for undefined, because undefined is a legitimate initial value. A rest parameter is the cleanest way to count, and arguments.length is the older one.
 
 The callback takes four arguments, accumulator, value, index and array, not two.
 
-Whether an initial value was passed has to be decided by counting arguments rather than by testing for undefined, because undefined is a legitimate initial value. A rest parameter is the cleanest way to count.
-
 Without an initial value the first element becomes the accumulator and the callback is never called with it, so a single element array returns that element with zero calls. An empty array with no initial value is a TypeError, which is the case people forget until it happens in production.`,
+    explanation: `Testing for undefined is what almost every hand-written reduce does, including the one in this topic's lesson, and it is wrong for exactly one input: reduce(xs, fn, undefined). That looks contrived until the initial value arrives from a lookup or a config object that returned nothing.
+
+Defaulting the parameter to array[0] has the same hole and adds another. A default is applied precisely when the argument is undefined, so it cannot tell the two cases apart either, and it leaves the loop starting at index 0, which feeds the first element in twice.
+
+Treating null as absent is the same mistake made wider, and null is an even more plausible accumulator than undefined.`,
     hints: [
       'How do you tell "no initial value" apart from "an initial value of undefined"?',
       'How many arguments does the real callback receive?',
@@ -113,7 +171,7 @@ Without an initial value the first element becomes the accumulator and the callb
   {
     id: 'function-identity',
     type: 'output',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `function makeHandler() {
@@ -123,23 +181,38 @@ Without an initial value the first element becomes the accumulator and the callb
 const first = makeHandler()
 const second = makeHandler()
 
-console.log(first === second)
-console.log(String(first) === String(second))`,
-    answerInFull: `false
-true`,
-    explanation: `Every evaluation of a function expression creates a new function object, so two calls to makeHandler produce two objects that happen to have identical source. Comparing them with === compares identity, which is false.
+console.log(first === second, String(first) === String(second))`,
+    options: ['true true', 'false true', 'false false', 'true false'],
+    correctOption: 1,
+    answerInFull: `false true
 
-Converting them to strings compares their source text, which is the same, so that is true. Nothing in the language treats two functions as equal because they look alike, and that is exactly why removeEventListener needs the same object you added rather than an equivalent one.`,
+Every evaluation of a function expression creates a new function object, so two calls to makeHandler produce two objects that happen to have identical source. Comparing them with === compares identity, which is false.
+
+Converting them to strings compares their source text, which is the same, so that is true. Nothing in the language treats two functions as equal because they look alike.
+
+That is exactly why removeEventListener needs the same object you added rather than an equivalent one, why bind returns a new function every time it is called, and why an inline arrow in a dependency array never settles.`,
+    explanation: `true true is equality by value, which no part of JavaScript applies to functions or to any other object. If it did, every inline callback would be interchangeable and none of the identity bugs in this topic would exist.
+
+false false is the answer if identity is assumed to leak into the string. It does not. Function.prototype.toString returns source text, and two functions written the same way stringify the same.
+
+true false is the same belief the other way round, that toString produces something unique per object. Nothing on a function hands you its address.`,
     hints: ['How many function objects does calling makeHandler twice create?'],
     tags: ['functions', 'references'],
   },
   {
     id: 'listener-never-removed',
     type: 'scenario',
-    form: 'open',
+    form: 'choice',
     difficulty: 'hard',
     prompt:
-      'A widget adds a scroll listener when it opens and removes it when it closes. Listeners keep accumulating and scrolling gets slower every time it is reopened. The add and remove calls both look correct. What would you check?',
+      'A widget adds a scroll listener when it opens and removes it when it closes. Listeners keep accumulating and scrolling gets slower on every reopen. The add and remove calls both look correct. What would you check first?',
+    options: [
+      'Whether removeEventListener failed, since it returns false when nothing matched and that is easy to miss',
+      'Whether scroll events are arriving faster than the handler runs, so they pile up',
+      'Whether the handler is created inline at both call sites, so the function passed to remove is a different object from the one added',
+      'Whether the widget is ever opened twice without being closed in between, so one add has no matching remove',
+    ],
+    correctOption: 2,
     answerInFull: `Almost certainly the handler is being created inline in both places, so the function passed to removeEventListener is a different object from the one that was added:
 
   window.addEventListener('scroll', () => this.onScroll())
@@ -156,8 +229,16 @@ The fix is to hold on to the one function:
 
 An AbortController signal passed to addEventListener is the modern alternative, and it removes the whole class of bug because there is nothing to match.
 
-Two other things worth checking: that the capture flag matches on both calls, and that a bound method is not being re-bound at each call site, since bind also returns a new function every time.`,
-    explanation: `The reason this bug survives review is that both lines read correctly in isolation. Nothing warns you, because removeEventListener with an unmatched handler is not an error, it is a no-op. The general rule to carry away is that any API which registers a function and later unregisters it is comparing identity, so the function has to be stored somewhere.`,
+Two other things worth checking: that the capture flag matches on both calls, and that a bound method is not being re-bound at each call site, since bind also returns a new function every time.
+
+The reason this bug survives review is that both lines read correctly in isolation. Nothing warns you, because removeEventListener with an unmatched handler is not an error.`,
+    explanation: `The first option is tempting because a return value would be exactly what you want here, and there is none. removeEventListener returns undefined whether it removed something or not, which is why the bug is silent.
+
+Events arriving faster than the handler runs is a real problem with a different signature: it makes scrolling janky while the widget is open, and it does not accumulate across reopens or survive a close.
+
+Unbalanced opens are worth ruling out with a counter, and they would explain accumulation. They do not fit a widget where every open is paired with a close, which is what the report describes, so it is the second thing to check rather than the first.
+
+The general rule is that any API which registers a function and later unregisters it is comparing identity, so the function has to be stored somewhere.`,
     hints: ['How does removeEventListener decide which listener to remove?'],
     tags: ['functions', 'callbacks', 'references'],
   },
@@ -182,7 +263,7 @@ There is also a readability limit. Point free style, where the arguments are nev
   {
     id: 'reduce-single-element',
     type: 'output',
-    form: 'open',
+    form: 'choice',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `let calls = 0
@@ -193,44 +274,72 @@ const total = [7].reduce((a, b) => {
 })
 
 console.log(total, calls)`,
-    answerInFull: '7 0',
-    explanation: `With no initial value, reduce takes the first element as the accumulator and starts iterating from the second. A single element array has no second element, so the loop body never runs and the callback is never called once.
+    options: ['NaN 1', '7 1', '7 0', 'TypeError: Reduce of empty array with no initial value'],
+    correctOption: 2,
+    answerInFull: `7 0
 
-The array is returned through unchanged, so total is 7 and calls is 0. The same rule is why an empty array with no initial value throws a TypeError rather than returning undefined: there is no first element to start from.
+With no initial value, reduce takes the first element as the accumulator and starts iterating from the second. A single element array has no second element, so the loop body never runs and the callback is never called at all.
 
-Passing an initial value of 0 would make both of those cases ordinary, and the count here would be 1.`,
+The element is returned through unchanged, so total is 7 and calls is 0. The same rule is why an empty array with no initial value throws a TypeError rather than returning undefined: there is no first element to start from.
+
+Passing an initial value of 0 makes both of those cases ordinary, and the count here would be 1.`,
+    explanation: `7 1 is the answer if reduce is read as starting from an implicit zero, which is what nearly every reduce anybody writes looks like, because they sum numbers and pass 0. Without an initial value there is no zeroth call for the first element.
+
+NaN 1 is the more careful version of the same mistake: one call per element, with an accumulator that does not exist yet, so 7 plus undefined. It is what would happen if reduce started at index 0 with the accumulator unset.
+
+The TypeError is the empty array rule applied one element too early. Empty with no initial throws. One element with no initial returns that element untouched.`,
     hints: ['What becomes the accumulator when no initial value is given?'],
     tags: ['functions', 'callbacks', 'arrays'],
   },
   {
-    id: 'which-is-higher-order-mcq',
+    id: 'which-is-higher-order-choice',
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
     prompt: 'Which of these is not a higher order function?',
     options: ['setTimeout', 'Array.prototype.map', 'Number.parseInt', 'Function.prototype.bind'],
     correctOption: 2,
-    answerInFull:
-      'parseInt takes a string and a number and returns a number. No function goes in or comes out, so it is an ordinary function. setTimeout and map take one, and bind returns one. The definition is only about whether a function is an argument or the result, not about how clever the function is.',
+    answerInFull: `Number.parseInt.
+
+It takes a string and a radix and returns a number. No function goes in and none comes out, so it is an ordinary function. setTimeout and map take one, and bind returns one.
+
+The definition is only about whether a function is an argument or the result, not about how clever the function is or the style it is written in.
+
+parseInt is worth knowing here for the opposite reason. ['1', '2', '3'].map(parseInt) gives [1, NaN, NaN], because map passes the index as a second argument and parseInt reads it as the radix. It is not a higher order function, and it is the classic victim of one.`,
+    explanation: `bind is the one people hesitate over, because nothing goes into it but a this value and some arguments. It returns a function, which is the other half of the definition and the half that middleware, decorators and every wrapper in this topic rest on.
+
+setTimeout is easy to overlook because it is a platform API rather than something that feels like functional programming. Taking a callback is all it takes to qualify.
+
+map is the one nobody doubts, and it is in the list to make the point that this is a question about definitions rather than about difficulty.`,
     hints: [],
     tags: ['functions', 'callbacks'],
   },
   {
-    id: 'filter-boolean-mcq',
+    id: 'filter-boolean-choice',
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
     prompt: 'What does this evaluate to?',
     code: `['0', '', 'false', 0, null, []].filter(Boolean)`,
-    options: ["['0', 'false', []]", "['0', 'false']", '[]', "['0', '', 'false', []]"],
-    correctOption: 0,
-    answerInFull:
-      'filter(Boolean) keeps everything truthy. The strings "0" and "false" are non-empty strings, so they are truthy despite what they say, and an empty array is an object, so it is truthy too. The empty string, the number 0 and null are the falsy ones and are dropped. This is a neat idiom and a good illustration of passing an existing function as a callback, since Boolean happens to take exactly one argument and so is safe here.',
+    options: ["['0', 'false']", '[]', "['0', '', 'false', []]", "['0', 'false', []]"],
+    correctOption: 3,
+    answerInFull: `['0', 'false', []]
+
+filter(Boolean) keeps everything truthy. The strings "0" and "false" are non-empty strings, so they are truthy whatever they happen to say, and an empty array is an object, so it is truthy too. The empty string, the number 0 and null are the falsy ones and are dropped.
+
+Two things are worth saying about the idiom. It works because Boolean takes exactly one argument, so the index and the array that filter also passes are ignored harmlessly. That is not true of every function you might pass straight through, which is the map(parseInt) trap.
+
+And in TypeScript, filter(Boolean) does not narrow the element type on its own, which is why codebases end up writing a typed isDefined helper instead.`,
+    explanation: `['0', 'false'] is the answer if an empty array reads as falsy. Every object is truthy, including [] and {}. It is only == that makes [] look false, and that is coercion to a primitive rather than truthiness.
+
+[] is the answer that reads the strings as their contents, "0" as zero and "false" as false. Truthiness of a string is about its length and nothing else.
+
+The four element answer keeps the empty string, which is the falsy value people forget because they are busy thinking about null and undefined.`,
     hints: [],
     tags: ['functions', 'callbacks', 'coercion'],
   },
   {
-    id: 'stop-a-foreach-mcq',
+    id: 'stop-a-foreach-choice',
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
@@ -242,8 +351,21 @@ Passing an initial value of 0 would make both of those cases ordinary, and the c
       'return from the callback',
     ],
     correctOption: 2,
-    answerInFull:
-      'forEach offers no way out. break is a syntax error, since the callback is a function rather than a loop body, and returning only ends that one call, so it behaves like continue. some and every stop as soon as the callback settles the answer, find stops at the first match, and for...of supports break directly.',
+    answerInFull: `You cannot. forEach offers no way out.
+
+break is a syntax error, since the callback is a function body rather than a loop body. Returning ends that one call, so it behaves like continue.
+
+What to reach for instead:
+- for...of, which supports break directly and also allows await inside the loop.
+- some or every, which stop as soon as the callback settles the answer. some is the honest way to write "stop when you find one".
+- find or findIndex, which stop at the first match and hand you the element.
+
+The reason to know this rather than look it up is the workaround people invent when they do not: throwing an exception to escape a forEach, catching it outside, and leaving the next reader to work out which errors are control flow and which are real.`,
+    explanation: `return false is the jQuery.each convention, where a falsy return really did stop the loop, so the habit is older than most codebases. forEach ignores the return value entirely, along with every other value the callback produces.
+
+break reads as though it should work, because the callback looks like a loop body. It is a function body, so break outside a loop is a syntax error and this one fails before it runs.
+
+Returning is the near miss. It does end the current call, which is enough to look like it worked whenever the elements after it happen not to matter.`,
     hints: [],
     tags: ['functions', 'callbacks', 'arrays'],
   },
