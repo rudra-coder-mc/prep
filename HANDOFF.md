@@ -27,9 +27,22 @@ question and its answer can be listened to as well.
 
 **No question takes typed input any more.** That is the largest change in the
 repository's history and it is only half done: the platform side is finished and
-eight topics of twelve have been converted. Read the next action before anything
+nine topics of twelve have been converted. Read the next action before anything
 else. Each of the following landed on its own branch, merged with `--no-ff`,
 most recent first.
+
+**The scope and hoisting topic is on the three forms**, the ninth conversion.
+Ten of its eleven questions are choice questions and `const-is-not-frozen`
+stays open, since freeze, deep freeze and not sharing the object at all are
+three routes to a good answer; the interview question is a list with one right
+ordering, so it became a choice question, as it did in recursion. The ordering
+question, `function-then-var-order`, had to be authored, because the topic's
+only multi-line output printed two lines and the check wants three. It is a
+function declaration and a `var` sharing a name: the distractors are the
+`TypeError` you get if you believe the `var` resets the name to `undefined` at
+registration, and the `number` you get if you believe a `var` hoists with its
+value. The misreading it cannot hold, `early` printed twice, is named in the
+explanation instead, the same way `countdown-order` handles the mirrored ups.
 
 **The recursion topic is on the three forms**, the eighth conversion. Nine of
 its eleven questions are choice questions and `deep-json-walker` stays open: the
@@ -239,7 +252,7 @@ never asked for.
 **Convert one topic onto the three answer forms.** `closures` is done and is the
 worked example to read before starting another, and
 `currying-and-partial-application` is a second one. Take any of the remaining
-four, in `TASKS.md` order unless an interview makes one urgent. One topic is one
+three, in `TASKS.md` order unless an interview makes one urgent. One topic is one
 branch, named `content/<topic-slug>`.
 
 Read `docs/tasks/converting-a-topic.md` before you start. It is the whole brief:
@@ -256,14 +269,14 @@ answer in full they have never had.
 Budget for the tests only when the topic is one a spec drives. Converting
 `closures` reordered which form sits where and broke five end-to-end specs and
 two integration tests, none of them in a way that read as a test problem. Not one
-of the six conversions after it touched a file outside `content/`, because the
+of the seven conversions after it touched a file outside `content/`, because the
 specs name `closures` and the reveal guard reads its ids off that topic, and the
 only other spec pinned to content is `e2e/ordering.spec.ts`, which drives
 `event-loop`. Both of those topics are converted. So the honest expectation for
-the four that remain is content only, and the way to keep it that way is to check
+the three that remain is content only, and the way to keep it that way is to check
 `e2e/` for the slug before starting rather than after.
 
-### What the eight conversions have taught
+### What the nine conversions have taught
 
 Read `shadowing-output` in `content/javascript/prototypes/questions.ts`,
 `bind-output` in currying and `countdown-order` in recursion. They are the three
@@ -271,8 +284,8 @@ cases where an existing question converted straight into the ordering question
 the way the brief describes, and all three did it because the original already
 printed several lines.
 
-- **The ordering question is more often authored than converted.** Four of the
-  eight topics had no output printing several lines, or had one whose plausible
+- **The ordering question is more often authored than converted.** Five of the
+  nine topics had no output printing several lines, or had one whose plausible
   misreadings all used the same words. A pool needs lines the program never
   prints, so look for a skipped element, an ignored `reject`, a default that never
   ran, a line a `throw` jumped over. If nothing in the topic can fail to print,
@@ -345,21 +358,21 @@ about order. Reordering either is content work and nobody owns it yet.
 it. Left over from V1, when lessons were going to have syntax highlighted code
 blocks. Nobody owns it; it is recorded at the bottom of `TASKS.md`.
 
-**Thirty seven questions are open because nothing has converted them yet.**
+**Twenty two questions are open because nothing has converted them yet.**
 They are not open because they earned it. The rule is at most one open question
 per topic, on an `interview` or `scenario` subject only, and the content check
-cannot enforce it while four topics would fail. That check is the last task in
-`TASKS.md` and it is blocked on the four conversions left. Until then the app is
+cannot enforce it while three topics would fail. That check is the last task in
+`TASKS.md` and it is blocked on the three conversions left. Until then the app is
 more self graded than it was before the rework, which is the opposite of the
 point and is entirely expected.
 
-**Sixteen questions show a one-line explanation as their answer in full.**
+**Thirteen questions show a one-line explanation as their answer in full.**
 The ones that were already multiple choice never had a written answer, so their
 short `explanation` was moved into `answerInFull` rather than a new answer being
 invented for them. Honest, since it is the only prose they carry, and thin. The
 topic conversions fix it.
 
-**Thirteen question ids still end in `-mcq`**, a word nothing in the codebase
+**Ten question ids still end in `-mcq`**, a word nothing in the codebase
 is called any more. Renaming them to end in `-choice` is part of converting each
 topic and is written into the brief, so do it there rather than in a sweep.
 
@@ -370,7 +383,7 @@ grade among the last three keeps a topic at "learning". Both are more honest tha
 what they replaced, but if a status looks pessimistic against a memory of the old
 dashboard, this is why.
 
-**Only eight ordering questions exist.** `ordering-basic` in the event loop
+**Only nine ordering questions exist.** `ordering-basic` in the event loop
 topic, whose distractor is a `.catch` on an already-resolved promise that never
 fires, `loop-timer-order` in closures, whose distractor is the line the same loop
 prints once it is written with `var`, `bind-output` in currying, whose
@@ -384,7 +397,9 @@ two lines a rejection would have printed if the promise had not already settled,
 and `shadowing-output` in prototypes, whose distractors are a write that walked
 the chain and the `undefined` a `delete` looks like it should leave, and
 `countdown-order` in recursion, whose distractors are the two lines the base
-case frame never prints. Every other topic that has something happening in an
+case frame never prints, and `function-then-var-order` in scope and hoisting,
+whose distractors are the error and the value a `var` would produce if
+registration did more than register. Every other topic that has something happening in an
 order still owes one, which is part of its conversion.
 
 **`APP_TIMEZONE` defaults to UTC.** Until it is set in `.env`, the daily streak
