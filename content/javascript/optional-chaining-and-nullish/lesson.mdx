@@ -1,0 +1,186 @@
+## Why this matters
+
+Half of the defensive code in any JavaScript codebase is about one question: is
+this thing here? Before 2020 the answer was `user && user.profile &&
+user.profile.address`, or a `get` helper from a utility library, or a crash in
+production at the one path nobody tested. `?.` and `??` replace all of that with
+two characters each.
+
+They also get misused, in two opposite directions. `?.` sprinkled over every
+access hides real bugs behind an `undefined` that surfaces three functions
+later. `||` used where `??` was meant turns a `0` into a default and ships a bug
+that only shows up for the one user whose count is zero. Knowing precisely what
+each one tests is what lets you use them where they belong and nowhere else.
+
+## Two kinds of missing
+
+There are two values that mean "nothing here": `undefined`, which is what the
+language produces for a property that does not exist or a variable that was
+never assigned, and `null`, which is what code produces on purpose to say the
+same thing. Together they are the **nullish** values, and they are the only two.
+
+Everything else is a value, including the ones that are falsy. `0` is a count
+of zero, `''` is a name that is empty, `false` is an answer. The old habit of
+testing with `||` treats those three as missing, and that is the bug this
+whole topic exists to stop.
+
+```js
+null == undefined // true, the one useful == in the language
+value == null // tests for both nullish values in one go
+```
+
+## `?.` short-circuits the whole chain
+
+`a?.b` reads `b` from `a` unless `a` is nullish, in which case the expression
+is `undefined` and nothing to its right is evaluated. Not just the next step:
+the rest of the chain.
+
+<CodeWalkthrough
+  title="Four chains, four outcomes"
+  code={`const user = { name: 'Ada', profile: null, tags: [] }
+const city = user.profile?.address.city
+const tag = user.tags?.[0] ?? 'none'
+const greeting = user.greet?.() ?? 'hello'
+const theme = user.settings?.theme || 'light'`}
+  steps={[
+    {
+      lines: [2],
+      note: 'user.profile is null, so ?. stops the whole chain there. .address.city is never evaluated, and city is undefined. Not null: ?. always produces undefined when it short-circuits.',
+      variables: { city: 'undefined' },
+    },
+    {
+      lines: [3],
+      note: 'user.tags is an array, which is not nullish, so ?.[0] goes ahead and reads index 0. That is undefined on an empty array, and ?? supplies the fallback.',
+      variables: { city: 'undefined', tag: "'none'" },
+    },
+    {
+      lines: [4],
+      note: 'user.greet does not exist. ?.() skips the call rather than throwing "greet is not a function", and the fallback fills in.',
+      variables: { city: 'undefined', tag: "'none'", greeting: "'hello'" },
+    },
+    {
+      lines: [5],
+      note: 'settings is missing, so the chain gives undefined and || picks the default. Here || and ?? agree. They stop agreeing the moment the left side is 0, an empty string or false.',
+      variables: { city: 'undefined', tag: "'none'", greeting: "'hello'", theme: "'light'" },
+    },
+  ]}
+/>
+
+It has three forms, because property access has three forms. `a?.b` for a dot,
+`a?.[key]` for brackets, `fn?.()` for a call. The `.` after the `?` is part of
+the token in all three, which is why the bracket and call forms look odd.
+
+The short-circuit is the part people get wrong. In `a?.b.c.d`, if `a` is
+nullish the result is `undefined` and `.b`, `.c` and `.d` are all skipped. Only
+`a` was guarded. If `a` exists and `a.b` is nullish, `.c` throws, because
+nothing said `b` was optional. Put `?.` exactly where absence is legitimate, and
+let everything else throw, since a throw there is a real bug that wants finding.
+
+## `??` against `||`
+
+`a ?? b` is `a` unless `a` is nullish, then `b`. `a || b` is `a` unless `a` is
+falsy, then `b`. The difference is exactly `0`, `''`, `false`, `NaN`, `0n` and
+`-0`.
+
+```js
+const retries = config.retries || 3 // 0 becomes 3. A bug.
+const retries = config.retries ?? 3 // 0 stays 0. null and undefined become 3.
+const name = input.name || 'anonymous' // '' becomes 'anonymous'. Probably what you wanted.
+```
+
+Neither is the right one. `??` answers "was a value supplied", `||` answers "is
+there something usable here". A form field that is empty usually wants `||`. A
+setting that can legitimately be zero or off always wants `??`.
+
+`??` was designed alongside `?.` and pairs with it: `user.settings?.theme ??
+'light'` reads the setting if the object exists and defaults either way.
+
+## Assigning a default in place
+
+The three logical operators each have an assignment form, and they only assign
+when the test says so:
+
+```js
+settings.theme ??= 'dark' // assign if theme is null or undefined
+settings.volume ||= 50 // assign if volume is falsy, so 0 becomes 50
+settings.debug &&= 'yes' // assign only if debug is already truthy
+```
+
+`??=` is the one that earns its place. "Set this if nobody set it" is a line in
+nearly every initialiser, and `??=` says it without evaluating the right side
+when the value exists. That matters when the right side is a call.
+
+## Where `?.` cannot go
+
+- **Not on the left of an assignment.** `a?.b = 1` is a syntax error. There is
+  no sensible meaning for "assign, unless there is nothing to assign to".
+- **Not mixed with `||` or `&&` without parentheses.** `a ?? b || c` is a
+  syntax error, deliberately, because the two operators have different ideas
+  of "missing" and the precedence would be a trap either way. Write
+  `(a ?? b) || c` or `a ?? (b || c)`.
+- **Not on a template tag.** `` tag?.`x` `` is a syntax error.
+- **Not a substitute for a check.** `?.` turns an error into `undefined`. If the
+  next line uses the value as if it existed, the throw has moved, not gone.
+
+`delete a?.b` is allowed and does nothing when `a` is nullish, which is the one
+place an optional chain on the left of something is fine.
+
+## The interview angle
+
+> **"What is the difference between `||` and `??`?"**
+> `||` falls through on any falsy value, `??` only on `null` and `undefined`.
+> Then give the case that separates them: a setting of `0` or an empty string
+> that `||` silently replaces. Mentioning that `??` was added in ES2020
+> precisely because `||` kept causing that bug shows you know why it exists.
+
+> **"What does `a?.b.c` do when `a` is null?"**
+> Returns `undefined` for the whole expression. The chain short-circuits at the
+> `?.`, so `.c` is never evaluated and there is no throw. And when `a` exists
+> but `a.b` is null, `.c` throws, because only `a` was marked optional.
+
+## Traps
+
+- **`?.` gives `undefined`, never `null`.** `null?.x` is `undefined`. Code that
+  checks `=== null` after a chain misses every short-circuit.
+- **`?.` guards only its own left side.** `a?.b.c` throws if `a.b` is null.
+- **`||` rewrites `0` and `''`.** Any default on a number or a string that can
+  be empty wants `??`.
+- **`??` does not catch `NaN`.** `Number('abc') ?? 0` is `NaN`, because `NaN`
+  is a value. That is what `||` is for.
+- **`?.` on a method still calls it with the right `this`.** `obj.method?.()`
+  keeps `obj` as the receiver. It is `(obj.method)?.()` with extra parentheses
+  that loses it, so write it without them.
+
+## In one picture
+
+<ConceptMap
+  center={'Is this thing here?'}
+  branches={[
+    {
+      label: 'Nullish',
+      summary: 'null and undefined are the two values that mean nothing here. Nothing else does.',
+      nodes: ['0, "" and false are values', 'value == null tests both'],
+    },
+    {
+      label: '?.',
+      summary:
+        'Read, index or call unless the left side is nullish, then the whole chain is undefined.',
+      nodes: ['a?.b', 'a?.[k]', 'f?.()', 'guards only its own left side'],
+    },
+    {
+      label: '??',
+      summary: 'Fall back only when the left side is nullish.',
+      nodes: ['0 and "" survive', 'NaN survives too'],
+    },
+    {
+      label: '||',
+      summary: 'Fall back when the left side is falsy.',
+      nodes: ['right for an empty form field', 'wrong for a count or a flag'],
+    },
+    {
+      label: 'In place',
+      summary: 'Each operator has an assignment form that only assigns when the test says so.',
+      nodes: ['??= set if unset', '||= set if falsy', '&&= set if truthy'],
+    },
+  ]}
+/>

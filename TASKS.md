@@ -36,7 +36,7 @@ group across the track and renumbering what is already there. The functions
 group did exactly that. See
 `docs/decisions/0019-a-group-is-a-branch-not-a-block-of-the-track.md`.
 
-The conventions the first group established, so the rest stay consistent:
+The conventions the first groups established, so the rest stay consistent:
 
 - `order` runs in tens, in teaching order across the whole track, leaving room
   to insert. Renumber the ones below rather than squeezing a topic in at 45.
@@ -62,11 +62,6 @@ The conventions the first group established, so the rest stay consistent:
 
 Done when every group below has shipped. Each group is done when its topics
 pass the content check and read as one lesson each, not as a list of facts.
-
-## Objects
-
-Property descriptors with getters and setters, destructuring, optional chaining
-and nullish handling, JSON serialisation and its edges.
 
 ## Collections and iteration
 

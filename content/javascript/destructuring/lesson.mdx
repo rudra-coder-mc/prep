@@ -1,0 +1,239 @@
+## Why this matters
+
+Destructuring is the syntax you read most and think about least. It is on the
+first line of nearly every function that takes an options object, every React
+component, every `import`. Most of the time it does the obvious thing, which is
+why the cases where it does not are so hard to spot: a default that never fires
+because the value was `null`, a nested pattern that throws on the one response
+shape nobody tested, a "copy" that is still sharing everything inside it.
+
+The rules are small. A pattern reads properties, a default fills in `undefined`
+and nothing else, and rest collects what is left. Knowing those three precisely
+is what separates code that handles a partial response from code that crashes on
+it.
+
+## Matching a shape
+
+A destructuring pattern is an object or array literal written on the left of
+`=`. Each name in it becomes a binding, filled by reading the matching property
+of the value on the right. It is property access written as a shape:
+
+```js
+const { status, data } = response // const status = response.status, data = response.data
+const [first, second] = pair // const first = pair[0], second = pair[1]
+```
+
+Nothing is copied that would not be copied by the longhand. A primitive comes
+across as a value, an object comes across as a reference to the same object, and
+the right hand side is untouched.
+
+<CodeWalkthrough
+  title="One pattern, read from the outside in"
+  code={`const response = {
+  status: 200,
+  data: { user: { name: 'Ada', roles: ['admin'] } },
+}
+const {
+  status,
+  data: { user: { name, email = 'none', roles: [first, ...others] } },
+  headers = {},
+} = response`}
+  steps={[
+    {
+      lines: [6],
+      note: 'status reads response.status. The shorthand means the property name and the binding name are the same.',
+      variables: { status: '200' },
+    },
+    {
+      lines: [7],
+      note: 'data: { ... } is not a binding for data. The colon says "go into this property and keep matching". Neither data nor user becomes a variable.',
+      variables: { status: '200' },
+    },
+    {
+      lines: [7],
+      note: 'Inside user, name reads the property, and email is missing so its default fills in. A default only applies when the read gives undefined.',
+      variables: { status: '200', name: "'Ada'", email: "'none'" },
+    },
+    {
+      lines: [7],
+      note: 'roles is matched against an array pattern. first takes index 0, and the rest element collects everything after it into a new array, here an empty one.',
+      variables: { status: '200', name: "'Ada'", email: "'none'", first: "'admin'", others: '[]' },
+    },
+    {
+      lines: [8],
+      note: 'headers is absent on response, so its default, a fresh empty object, becomes the binding.',
+      variables: {
+        status: '200',
+        name: "'Ada'",
+        email: "'none'",
+        first: "'admin'",
+        others: '[]',
+        headers: '{}',
+      },
+    },
+  ]}
+/>
+
+Array patterns work on any iterable, not only arrays. `const [a, b] = 'hi'` gives
+two characters, `const [head] = new Set([1, 2])` gives `1`, and a pattern longer
+than the iterable fills the rest with `undefined`. Holes skip a position:
+`const [, second] = pair`.
+
+## Defaults trigger on `undefined` only
+
+A default is used when the property read gives `undefined`. That is the whole
+rule, and every surprise in this topic is a case of expecting it to be wider.
+
+```js
+const { a = 1, b = 2, c = 3 } = { a: 0, b: null, c: undefined }
+// a is 0, b is null, c is 3
+```
+
+`0`, `''`, `false` and `null` are all real values as far as a pattern is
+concerned. Only `null` tends to surprise, because it is the value APIs send for
+"nothing here", and it sails straight past a default.
+
+Defaults are expressions, evaluated lazily and left to right, so a default that
+calls a function only calls it when it is needed:
+
+```js
+const { id = nextId() } = record // nextId runs only if record.id is undefined
+```
+
+The same rule applies to a whole nested pattern. `data: { user } = {}` says "if
+`data` is undefined, match the inner pattern against an empty object instead",
+which is how a nested pattern survives a missing branch. It still throws if
+`data` is `null`, for the same reason the default did not fire.
+
+## Renaming and nesting
+
+`property: target` reads the property and binds it under a different name, or
+matches it against a further pattern. The left of the colon is always the source
+key, the right is always what happens to the value:
+
+```js
+const {
+  id: userId,
+  profile: { name },
+} = user
+// binds userId and name. Neither id nor profile is a variable.
+```
+
+The key can be computed, which is the destructuring equivalent of bracket
+access:
+
+```js
+const { [field]: value = 0 } = stats
+```
+
+Reading from a nested pattern means reading into the intermediate object, so the
+intermediate has to exist. A pattern never checks for you. `{ profile: { name } }`
+on a user with no `profile` is `undefined.name`, and it throws exactly as the
+longhand would.
+
+## Rest collects, spread spreads
+
+The same three dots do opposite jobs depending on which side of `=` they are on.
+
+**Rest** appears in a pattern, collects everything the pattern did not name, and
+has to be last. In an array pattern it produces a new array of the remaining
+elements. In an object pattern it produces a new object of the remaining own
+enumerable properties:
+
+```js
+const [head, ...tail] = [1, 2, 3] // tail is [2, 3]
+const { id, ...withoutId } = user // a new object, every key but id
+```
+
+**Spread** appears in a literal or a call, expands one value into many, and can
+go anywhere. `[...a, ...b]` concatenates, `{ ...defaults, ...overrides }` merges
+with later keys winning, `fn(...args)` passes an array as separate arguments.
+
+Both are one level deep. `withoutId` holds the same nested objects `user` does,
+and spreading an object copies its own enumerable properties and nothing
+inherited. Anything past the first level is shared, exactly as with any other
+shallow copy.
+
+## In parameters
+
+A parameter is a binding like any other, so a pattern can stand where a
+parameter name would. That is what an options object is:
+
+```js
+function connect({ host, port = 5432, ssl = false } = {}) {}
+```
+
+The inner defaults cover missing properties. The outer `= {}` covers the call
+with no argument at all. Without it, `connect()` tries to destructure
+`undefined` and throws before the body runs. A function taking an options
+object nearly always wants both.
+
+Swapping two values without a temporary is the idiom people reach for first:
+`;[a, b] = [b, a]`. The leading semicolon matters at the start of a line, since
+without it the previous line's value gets indexed.
+
+## The interview angle
+
+> **"What does a destructuring default apply to?"**
+> `undefined`, and nothing else. `null`, `0`, `''` and `false` all come through
+> as themselves. If the point needs making, say that an API sending `null` for
+> a missing field bypasses every default in the pattern, and that `??` is how
+> you handle it afterwards.
+
+> **"Is `const { ...copy } = obj` a copy of `obj`?"**
+> A shallow one. New outer object, same inner objects, own enumerable properties
+> only. It is the same as `{ ...obj }` and has the same limits.
+
+## Traps
+
+- **A default does not catch `null`.** `const { items = [] } = { items: null }`
+  binds `items` to `null`.
+- **A nested pattern throws on a missing branch.** `{ data: { items } }` with no
+  `data` is a TypeError. Give the branch a default, `data: { items } = {}`,
+  and remember that covers `undefined` only.
+- **`prop: name` does not bind `prop`.** The left of the colon is the source
+  key. Only the right side becomes a variable.
+- **Rest is shallow.** `const { id, ...rest } = user` shares every nested object
+  with `user`.
+- **Rest on an object skips inherited and non-enumerable properties.** What
+  comes across is what `Object.keys` would list, plus own enumerable symbols.
+- **Destructuring a string, number or boolean uses its wrapper.** `const
+{ length } = 'abc'` works and gives `3`. `const { x } = null` throws, because
+  `null` and `undefined` have no wrapper.
+
+## In one picture
+
+<ConceptMap
+  center={'A pattern reads a shape'}
+  branches={[
+    {
+      label: 'Reading',
+      summary: 'Each name reads the matching property, exactly as the longhand would.',
+      nodes: ['primitives copied', 'objects shared', 'any iterable for an array pattern'],
+    },
+    {
+      label: 'Defaults',
+      summary: 'A default fills in undefined and nothing else.',
+      nodes: [
+        'null passes through',
+        'evaluated lazily, left to right',
+        '= {} keeps a branch alive',
+      ],
+    },
+    {
+      label: 'Renaming',
+      summary: 'source: target. The left is the key, the right is the binding or the next pattern.',
+      nodes: ['the source key is not bound', 'computed keys allowed'],
+    },
+    {
+      label: 'Rest',
+      summary: 'Collects what the pattern did not name, into a new array or object. Must be last.',
+      nodes: ['own enumerable only', 'one level deep'],
+    },
+    {
+      label: 'Spread',
+      summary: 'Expands one value into many, anywhere a list is being built.',
+      nodes: ['later keys win', 'shallow, like every copy'],
+    },
+  ]}
+/>

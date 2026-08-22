@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Higher order functions',
   summary:
     'Functions that take or return functions, and what changes once a step can be an argument.',
-  order: 60,
+  order: 80,
   difficulty: 'medium',
   tags: ['functions', 'callbacks', 'composition'],
   prerequisites: ['javascript/closures', 'javascript/parameters-and-arguments'],

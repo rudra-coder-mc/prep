@@ -1,0 +1,234 @@
+## Why this matters
+
+JSON is the format every API speaks, every config file is written in, and every
+`localStorage` value is stored as. It is also a strict subset of what a
+JavaScript value can be, and `JSON.stringify` gets from one to the other by
+quietly dropping, converting or nulling whatever does not fit. Most of the time
+that is invisible. The rest of the time a `Date` comes back as a string, a
+`Map` comes back as `{}`, an `undefined` disappears and a 64-bit id is off by
+three.
+
+The rules are mechanical and short. Knowing them is what separates "JSON
+serialisation is fine" from knowing exactly which values in your state will not
+survive a round trip, and having a `toJSON`, a replacer or a reviver ready for
+each one.
+
+## What `stringify` keeps
+
+`JSON.stringify` walks own enumerable string-keyed properties, the same set
+`Object.keys` lists, and applies one rule per value:
+
+- Strings, finite numbers, booleans and `null` are written as themselves.
+- `undefined`, functions and symbols are **dropped** from an object, and become
+  **`null`** in an array, because an array cannot lose a position.
+- `NaN`, `Infinity` and `-Infinity` become `null`. `-0` becomes `0`.
+- An object with a `toJSON` method is replaced by what it returns. `Date` has
+  one, which is why dates serialise as ISO strings.
+- Any other object is written from its own enumerable properties. `Map` and
+  `Set` keep their entries in internal slots, not properties, so they serialise
+  as `{}`.
+- A `BigInt` throws a `TypeError`. So does a structure that refers to itself.
+
+<CodeWalkthrough
+  title="One object, six rules"
+  code={`const record = {
+  id: 1,
+  tags: new Set(['a']),
+  created: new Date(0),
+  note: undefined,
+  score: NaN,
+  save() {},
+}
+const text = JSON.stringify(record)`}
+  steps={[
+    {
+      lines: [2],
+      note: 'A finite number is written as it is.',
+      variables: { text: '{"id":1' },
+    },
+    {
+      lines: [3],
+      note: 'A Set has no own enumerable properties; its entries live in an internal slot. It serialises as an empty object, and nothing warns you.',
+      variables: { text: '{"id":1,"tags":{}' },
+    },
+    {
+      lines: [4],
+      note: 'Date has a toJSON method, so stringify calls it and writes the ISO string it returns. Parsing that back gives a string, not a Date.',
+      variables: { text: '{"id":1,"tags":{},"created":"1970-01-01T00:00:00.000Z"' },
+    },
+    {
+      lines: [5],
+      note: 'An undefined value is not a JSON value. In an object the whole property is dropped. In an array it would have become null to keep the positions.',
+      variables: { text: '{"id":1,"tags":{},"created":"1970-01-01T00:00:00.000Z"' },
+    },
+    {
+      lines: [6],
+      note: 'NaN is not a JSON value either, but a number property cannot simply vanish without changing the shape, so it becomes null. Infinity does the same.',
+      variables: { text: '{"id":1,"tags":{},"created":"1970-01-01T00:00:00.000Z","score":null' },
+    },
+    {
+      lines: [7, 9],
+      note: 'A function is dropped like undefined. The result has four keys out of six, and two of those four mean something different from what went in.',
+      variables: { text: '{"id":1,"tags":{},"created":"1970-01-01T00:00:00.000Z","score":null}' },
+      output: ['{"id":1,"tags":{},"created":"1970-01-01T00:00:00.000Z","score":null}'],
+    },
+  ]}
+/>
+
+Key order in the output is the object's own property order: integer-like keys
+first in ascending order, then string keys in insertion order. It is stable, but
+it is not the order you wrote them in if any key looks like an integer.
+
+## `toJSON` and the replacer
+
+Two hooks change what `stringify` writes, and they run in a fixed order for each
+value: `toJSON` first, then the replacer.
+
+**`toJSON`** is a method on the value. If it exists, `stringify` calls it and
+serialises the return value instead of the object. It is how a class decides
+what its instances look like on the wire:
+
+```js
+class Money {
+  constructor(cents, currency) {
+    this.cents = cents
+    this.currency = currency
+  }
+  toJSON() {
+    return `${this.currency} ${(this.cents / 100).toFixed(2)}`
+  }
+}
+JSON.stringify({ price: new Money(250, 'EUR') }) // '{"price":"EUR 2.50"}'
+```
+
+**The replacer** is the second argument. As a function, it is called for every
+key and value, including the root with the key `''`, with `this` set to the
+object holding the key, and its return value is what gets written. Returning
+`undefined` drops the property. As an array of strings, it is an allow-list of
+keys to include, at every level.
+
+The third argument is indentation: a number of spaces up to ten, or a string
+used as the indent. `JSON.stringify(obj, null, 2)` is the usual form, and
+`JSON.stringify(obj, 2)` is the usual mistake, which puts the `2` in the
+replacer slot where it is ignored.
+
+## `parse` and the reviver
+
+`JSON.parse` is strict: trailing commas, comments, single quotes and unquoted
+keys all throw a `SyntaxError`. It produces plain objects and arrays, with
+strings, numbers, booleans and `null` in them, and nothing else. Whatever a
+`Date` was on the way in, it is a string on the way out.
+
+The reviver is the second argument. It is called for every key and value, from
+the innermost values outward and the root last with the key `''`, and its
+return value replaces the parsed value. It is where a tagged date comes back to
+life:
+
+```js
+JSON.parse(text, (key, value) =>
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value) ? new Date(value) : value,
+)
+```
+
+One safety property is worth knowing. `parse` creates a property literally named
+`"__proto__"` if the text has one, as an own property, rather than setting the
+prototype. Assigning the parsed object's keys into another object with a loop
+is what turns that into prototype pollution; `parse` itself does not.
+
+## What does not round-trip
+
+`JSON.parse(JSON.stringify(value))` is the oldest deep-copy trick and it is
+lossy in exactly these ways:
+
+| Value in               | Value out                    |
+| ---------------------- | ---------------------------- |
+| `undefined` property   | gone                         |
+| `undefined` in array   | `null`                       |
+| function, symbol value | gone                         |
+| `NaN`, `Infinity`      | `null`                       |
+| `-0`                   | `0`                          |
+| `Date`                 | ISO string                   |
+| `Map`, `Set`           | `{}`                         |
+| `RegExp`, `Error`      | `{}`                         |
+| class instance         | plain object, prototype gone |
+| `BigInt`               | throws                       |
+| integer above 2^53     | rounded, silently            |
+| cycle                  | throws                       |
+
+The last two rows are the ones that reach production. A 64-bit id from a
+backend parses to a nearby double, and `JSON.parse` has no option to do
+otherwise; the fix is to send ids as strings. A cycle throws on the way out,
+which at least is loud.
+
+For a copy, `structuredClone` handles every row above except functions and
+class prototypes. For transport, the rule is to serialise what JSON can hold,
+and tag what it cannot: `{ type: 'Date', value: iso }` with a reviver that
+knows the tags.
+
+## The interview angle
+
+> **"What does `JSON.stringify` do with `undefined`?"**
+> Drops the property from an object, writes `null` in an array. Then the
+> neighbours: functions and symbols go the same way, `NaN` and `Infinity`
+> become `null`, and `Date` becomes a string through `toJSON`. Listing those
+> without being asked is what shows you have been bitten by each one.
+
+> **"Is `JSON.parse(JSON.stringify(x))` a deep copy?"**
+> A lossy one. It copies plain data deeply and loses `Date`, `Map`, `Set`,
+> `undefined`, functions, prototypes and precision above 2^53, and throws on
+> cycles and `BigInt`. `structuredClone` is the built-in that does it
+> properly.
+
+## Traps
+
+- **`JSON.stringify(obj, 2)` does not indent.** The indent is the third
+  argument. Write `JSON.stringify(obj, null, 2)`.
+- **`Map` and `Set` serialise as `{}`.** Convert with `[...map]` or
+  `Object.fromEntries(map)` first, or give the wrapper a `toJSON`.
+- **A `Date` comes back as a string.** Every place that reads a date out of
+  JSON needs a reviver or a `new Date(value)`.
+- **Large integers lose precision in `parse`.** Send them as strings.
+- **`toJSON` runs before the replacer.** A replacer looking for a `Date` never
+  sees one, because `toJSON` already turned it into a string.
+- **`stringify` returns `undefined`, not a string, for `undefined`, a function
+  or a symbol at the root.** Code that expects a string gets none.
+
+## In one picture
+
+<ConceptMap
+  center={'JSON is a subset'}
+  branches={[
+    {
+      label: 'stringify keeps',
+      summary:
+        'Own enumerable string keys, with strings, finite numbers, booleans, null, arrays and plain objects.',
+      nodes: ['same set as Object.keys', 'integer-like keys come first'],
+    },
+    {
+      label: 'stringify changes',
+      summary: 'Whatever does not fit is dropped, nulled or converted, silently.',
+      nodes: [
+        'undefined and functions: dropped, or null in arrays',
+        'NaN and Infinity: null',
+        'Date: toJSON string',
+        'Map and Set: {}',
+      ],
+    },
+    {
+      label: 'stringify throws',
+      summary: 'Two things cannot be written at all.',
+      nodes: ['BigInt', 'a cycle'],
+    },
+    {
+      label: 'Hooks',
+      summary:
+        'toJSON, then the replacer, on the way out. The reviver, innermost first, on the way back.',
+      nodes: ['replacer array is an allow-list', 'third argument indents'],
+    },
+    {
+      label: 'Round trip',
+      summary: 'Plain data survives. Types, precision above 2^53 and prototypes do not.',
+      nodes: ['structuredClone for a copy', 'tag and revive for transport'],
+    },
+  ]}
+/>
