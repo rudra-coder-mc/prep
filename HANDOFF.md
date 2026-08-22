@@ -14,8 +14,8 @@ which now covers every hosted service rather than only the company GitLab.
 Verified green at its head: `npm run verify` exited 0 through lint, format
 check, typecheck, 307 unit tests, 26 integration tests against real Postgres and
 a real speech engine, the production build, and 52 Playwright end-to-end tests.
-The content check reports 12 topics, 130 questions, 24 exercises, 77 narration
-sections and 260 question scripts. Re-run `verify` rather than trusting any
+The content check reports 12 topics, 131 questions, 24 exercises, 77 narration
+sections and 262 question scripts. Re-run `verify` rather than trusting any
 figure you read anywhere, including here, and read the section on piping it
 before you do.
 
@@ -27,9 +27,24 @@ question and its answer can be listened to as well.
 
 **No question takes typed input any more.** That is the largest change in the
 repository's history and it is only half done: the platform side is finished and
-ten topics of twelve have been converted. Read the next action before anything
+eleven topics of twelve have been converted. Read the next action before anything
 else. Each of the following landed on its own branch, merged with `--no-ff`,
 most recent first.
+
+**The types and coercion topic is on the three forms**, the eleventh
+conversion. Nine of its eleven questions are choice questions and
+`string-ids-from-api` stays open, since normalising at the boundary, choosing a
+representation and rejecting bad ids are three routes to a good answer; the
+interview question has one crisp exception in it, `value == null`, so it became
+a choice question. The ordering question converted straight from an existing
+one, the fourth time that has happened: `plus-and-minus-output` already printed
+four lines and is now `plus-and-minus-order`. Its four distractors are each the
+value a line would print under the neighbouring operator, `3` and `31` for +
+and - swapped, `NaN` for `[] + {}` done as numbers, and `1,2,3` for arrays that
+concatenate. `null-comparisons-output` printed three lines but only ever says
+`true` or `false`, so it is a choice question whose wrong options are the three
+consistent worlds where `==` and `>=` agree. Every code sample, and every wrong
+option's claimed result, was run before its answer was written.
 
 **The this binding topic is on the three forms**, the tenth conversion. Nine
 of its eleven questions are choice questions and `class-field-vs-method` stays
@@ -267,8 +282,8 @@ never asked for.
 
 **Convert one topic onto the three answer forms.** `closures` is done and is the
 worked example to read before starting another, and
-`currying-and-partial-application` is a second one. Take any of the remaining
-two, in `TASKS.md` order unless an interview makes one urgent. One topic is one
+`currying-and-partial-application` is a second one. `value-and-reference` is the
+one left. Take it next. One topic is one
 branch, named `content/<topic-slug>`.
 
 Read `docs/tasks/converting-a-topic.md` before you start. It is the whole brief:
@@ -285,23 +300,24 @@ answer in full they have never had.
 Budget for the tests only when the topic is one a spec drives. Converting
 `closures` reordered which form sits where and broke five end-to-end specs and
 two integration tests, none of them in a way that read as a test problem. Not one
-of the eight conversions after it touched a file outside `content/`, because the
+of the nine conversions after it touched a file outside `content/`, because the
 specs name `closures` and the reveal guard reads its ids off that topic, and the
 only other spec pinned to content is `e2e/ordering.spec.ts`, which drives
 `event-loop`. Both of those topics are converted. So the honest expectation for
-the two that remain is content only, and the way to keep it that way is to check
+the one that remains is content only, and the way to keep it that way is to check
 `e2e/` for the slug before starting rather than after.
 
-### What the ten conversions have taught
+### What the eleven conversions have taught
 
 Read `shadowing-output` in `content/javascript/prototypes/questions.ts`,
-`bind-output` in currying and `countdown-order` in recursion. They are the three
+`bind-output` in currying, `countdown-order` in recursion and
+`plus-and-minus-order` in types and coercion. They are the four
 cases where an existing question converted straight into the ordering question
-the way the brief describes, and all three did it because the original already
+the way the brief describes, and all four did it because the original already
 printed several lines.
 
 - **The ordering question is more often authored than converted.** Six of the
-  ten topics had no output printing several lines, or had one whose plausible
+  eleven topics had no output printing several lines, or had one whose plausible
   misreadings all used the same words. A pool needs lines the program never
   prints, so look for a skipped element, an ignored `reject`, a default that never
   ran, a line a `throw` jumped over. If nothing in the topic can fail to print,
@@ -374,21 +390,21 @@ about order. Reordering either is content work and nobody owns it yet.
 it. Left over from V1, when lessons were going to have syntax highlighted code
 blocks. Nobody owns it; it is recorded at the bottom of `TASKS.md`.
 
-**Fourteen questions are open because nothing has converted them yet.**
+**Seven questions are open because nothing has converted them yet.**
 They are not open because they earned it. The rule is at most one open question
 per topic, on an `interview` or `scenario` subject only, and the content check
-cannot enforce it while two topics would fail. That check is the last task in
-`TASKS.md` and it is blocked on the two conversions left. Until then the app is
+cannot enforce it while one topic would fail. That check is the last task in
+`TASKS.md` and it is blocked on the one conversion left. Until then the app is
 more self graded than it was before the rework, which is the opposite of the
 point and is entirely expected.
 
-**Ten questions show a one-line explanation as their answer in full.**
+**Three questions show a one-line explanation as their answer in full.**
 The ones that were already multiple choice never had a written answer, so their
 short `explanation` was moved into `answerInFull` rather than a new answer being
 invented for them. Honest, since it is the only prose they carry, and thin. The
 topic conversions fix it.
 
-**Seven question ids still end in `-mcq`**, a word nothing in the codebase
+**Three question ids still end in `-mcq`**, a word nothing in the codebase
 is called any more. Renaming them to end in `-choice` is part of converting each
 topic and is written into the brief, so do it there rather than in a sweep.
 
@@ -575,7 +591,7 @@ avoids. The dimming itself is one rule in `globals.css`.
 
 **`.speech-cache` is gitignored, holds 415 MB and takes about fifty minutes to
 rebuild.** One file per script, addressed by content: 77 narration sections and
-260 question recordings. The app bind mounts this directory, so it is not a
+262 question recordings. The app bind mounts this directory, so it is not a
 convenience copy, it is where playback reads from. Deleting it means nothing
 plays until `npm run narration:build` has finished, and there is no synthesis
 fallback any more, so every listen button says to run the build until it does.
