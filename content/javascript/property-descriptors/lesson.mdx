@@ -1,0 +1,224 @@
+## Why this matters
+
+Every property you have ever written carries three flags you have probably
+never set. They decide whether a write sticks, whether `Object.keys` and
+`JSON.stringify` see the property, and whether it can be deleted or redefined.
+A property literal sets all three to `true`, which is why most code never
+notices them. The built-in objects do not: array `length`, class methods and
+everything on a prototype are shaped by these flags, and so is every object a
+library hands you.
+
+Accessors are the other half. A getter looks like a property and runs like a
+function, which is how `length`, `size` and most framework reactivity work. It
+is also why spreading an object can silently freeze a value that used to be
+computed. This topic is what lets you read `Object.getOwnPropertyDescriptor`
+output and know what the object will do.
+
+## A property is four things
+
+A data property has a `value` and three attributes:
+
+- **`writable`**: whether assignment changes the value.
+- **`enumerable`**: whether `for...in`, `Object.keys`, spread and
+  `JSON.stringify` list it.
+- **`configurable`**: whether it can be deleted, have its attributes changed,
+  or be switched between data and accessor.
+
+Assignment and literals create properties with all three `true`.
+`Object.defineProperty` creates them with every attribute you did not mention
+set to `false`, which is the opposite default and the source of most surprises
+with it.
+
+<CodeWalkthrough
+  title="Two ways to add a property, two different properties"
+  code={`const account = { owner: 'Ada' }
+Object.defineProperty(account, 'id', { value: 7 })
+account.id = 8
+account.balance = 10
+console.log(Object.keys(account))
+console.log(JSON.stringify(account))`}
+  steps={[
+    {
+      lines: [1],
+      note: 'A literal creates owner with writable, enumerable and configurable all true. This is the property everyone pictures when they say "property".',
+      variables: { owner: "'Ada' (w e c)" },
+    },
+    {
+      lines: [2],
+      note: 'defineProperty was given only a value. Every attribute not mentioned defaults to false, so id is read-only, hidden from enumeration, and cannot be deleted or redefined.',
+      variables: { owner: "'Ada' (w e c)", id: '7 (- - -)' },
+    },
+    {
+      lines: [3],
+      note: 'The write fails. In sloppy code it fails silently, in strict code, which is every module and class body, it throws a TypeError. Either way id is still 7.',
+      variables: { owner: "'Ada' (w e c)", id: '7 (- - -)' },
+    },
+    {
+      lines: [4],
+      note: 'Plain assignment creates an ordinary property again, with all three attributes true.',
+      variables: { owner: "'Ada' (w e c)", id: '7 (- - -)', balance: '10 (w e c)' },
+    },
+    {
+      lines: [5, 6],
+      note: 'Object.keys lists enumerable own properties and JSON.stringify serialises the same set. id is invisible to both, and to spread, and to for...in. It is still there: account.id reads 7.',
+      variables: { owner: "'Ada' (w e c)", id: '7 (- - -)', balance: '10 (w e c)' },
+      output: ["[ 'owner', 'balance' ]", '{"owner":"Ada","balance":10}'],
+    },
+  ]}
+/>
+
+`Object.getOwnPropertyDescriptor(obj, key)` shows the four fields for one
+property, and `Object.getOwnPropertyDescriptors(obj)` shows them for every own
+property. Reading those on an array or a class instance is the fastest way to
+see that `length` is writable but not enumerable, and that a class method is
+writable and configurable but not enumerable, which is why it does not show up
+in a `for...in` over the instance.
+
+## Getters and setters
+
+An accessor property has no `value` and no `writable`. It has a `get` function,
+a `set` function, or both, and reading or assigning the property calls them:
+
+```js
+const temp = {
+  celsius: 20,
+  get fahrenheit() {
+    return (this.celsius * 9) / 5 + 32
+  },
+  set fahrenheit(value) {
+    this.celsius = ((value - 32) * 5) / 9
+  },
+}
+temp.fahrenheit = 212 // calls the setter, celsius is now 100
+temp.fahrenheit // calls the getter, 212
+```
+
+A getter with no setter makes the property read-only: assignment is ignored in
+sloppy code and throws in strict code. A setter has to store its value
+somewhere other than the property it guards, since `this.name = value` inside
+`set name` calls the setter again, forever.
+
+Getters run every time they are read, and whatever `this` the read happened
+through. That second part is what `class` relies on: a getter defined on the
+prototype reads `this.celsius` from the instance it was called on. The cost of
+the first part is what a "lazy property" pattern pays for: compute once on the
+first read, then redefine the property as a plain value.
+
+## Who sees which property
+
+Each way of listing properties draws its own line, and knowing which is what
+stops "why is it not in the JSON" being a mystery:
+
+| Operation                          | Own | Inherited | Non-enumerable | Symbol keys |
+| ---------------------------------- | :-: | :-------: | :------------: | :---------: |
+| `for...in`                         | yes |    yes    |       no       |     no      |
+| `Object.keys`, `values`, `entries` | yes |    no     |       no       |     no      |
+| `JSON.stringify`                   | yes |    no     |       no       |     no      |
+| `{ ...obj }`, `Object.assign`      | yes |    no     |       no       |     yes     |
+| `Object.getOwnPropertyNames`       | yes |    no     |      yes       |     no      |
+| `Reflect.ownKeys`                  | yes |    no     |      yes       |     yes     |
+| `'key' in obj`                     | yes |    yes    |      yes       |     yes     |
+| `Object.hasOwn(obj, key)`          | yes |    no     |      yes       |     yes     |
+
+Two rows matter most. `for...in` is the only listing that walks the prototype
+chain, which is why it was the wrong loop for arrays the moment anyone added a
+method to `Array.prototype`. And spread copies enumerable symbol keys where
+`Object.keys` and JSON do not, so a symbol is not a way to hide something from
+a copy.
+
+Spread and `Object.assign` also read through getters. The copy gets the value
+the getter returned at that moment, as a plain data property, and the accessor
+is gone.
+
+## Freeze, seal and prevent extensions
+
+Three built-ins lock an object down, each a little more than the last:
+
+- **`Object.preventExtensions`**: no new properties. Existing ones are
+  untouched.
+- **`Object.seal`**: no new properties, and every existing one becomes
+  non-configurable. Values can still change.
+- **`Object.freeze`**: sealed, and every data property becomes non-writable as
+  well. Nothing about the object's own properties can change.
+
+All three are one level deep. A frozen object holding an array holds a mutable
+array. And all three report failure the way property attributes do: silently in
+sloppy code, as a `TypeError` in strict code. A freeze that nobody tests under
+strict mode is a freeze that nobody has tested.
+
+`Object.isFrozen`, `isSealed` and `isExtensible` ask the question back. There is
+no flag on the object; `isFrozen` checks that it is non-extensible and every own
+property is non-configurable and, if a data property, non-writable.
+
+## The interview angle
+
+> **"What does `Object.freeze` guarantee?"**
+> That the object's own properties cannot be added, removed, reassigned or
+> reconfigured. Then the two limits: one level deep, so nested objects are
+> still mutable, and enforced by a throw only in strict code. Most answers stop
+> at "makes it immutable", and the two limits are what the question is for.
+
+> **"What is the difference between `Object.keys` and `for...in`?"**
+> `for...in` includes enumerable properties inherited from the prototype chain,
+> `Object.keys` lists own enumerable properties only. Neither sees
+> non-enumerable properties or symbol keys.
+
+## Traps
+
+- **`defineProperty` defaults to `false`.** A property defined with only a
+  `value` is read-only, hidden and locked. Say `writable: true, enumerable:
+true, configurable: true` if you want an ordinary one.
+- **A read-only write fails silently in sloppy code.** The same line throws in
+  a module. Code that works in a script and breaks in an `import` is usually
+  this.
+- **`this.x = value` inside `set x` recurses.** Store under a different name.
+- **Spread turns a getter into a snapshot.** `{ ...obj }` evaluates the getter
+  once and copies the result. `Object.getOwnPropertyDescriptors` is how you
+  copy the accessor itself.
+- **Freeze is shallow and checks nothing on write in sloppy code.** Deep
+  freezing is a walk you write yourself, and usually not worth it.
+- **Non-configurable is permanent.** Once `configurable` is `false` it cannot
+  be set back, and the only attribute change still allowed is `writable` from
+  `true` to `false`.
+
+## In one picture
+
+<ConceptMap
+  center={'A property is four things'}
+  branches={[
+    {
+      label: 'Attributes',
+      summary:
+        'writable, enumerable and configurable. Literals set them true, defineProperty sets them false.',
+      nodes: [
+        'writable: does assignment stick',
+        'enumerable: does listing see it',
+        'configurable: can it be deleted or reshaped',
+      ],
+    },
+    {
+      label: 'Accessors',
+      summary: 'A get or set function in place of a value, run on every read or write.',
+      nodes: [
+        'getter only is read-only',
+        'store under another name',
+        'this is the object read through',
+      ],
+    },
+    {
+      label: 'Listing',
+      summary: 'Every listing draws a different line through own, inherited, hidden and symbol.',
+      nodes: [
+        'for...in walks the chain',
+        'keys and JSON: own enumerable strings',
+        'spread also takes symbols',
+      ],
+    },
+    {
+      label: 'Locking',
+      summary:
+        'preventExtensions, seal, freeze. Each one level deep, each throwing only in strict code.',
+      nodes: ['freeze is not deep', 'sloppy code fails silently', 'non-configurable is forever'],
+    },
+  ]}
+/>
