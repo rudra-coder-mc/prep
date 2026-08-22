@@ -29,7 +29,7 @@ Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1 to 3. Convert one topic
+## 1 to 2. Convert one topic
 
 One branch per topic, named `content/<topic-slug>`. Each blocked by nothing.
 
@@ -51,19 +51,18 @@ for that as part of the task rather than treating it as a surprise.
 
 Delete a line below when its topic is merged.
 
-1. `content/this-binding`
-2. `content/types-and-coercion`
-3. `content/value-and-reference`
+1. `content/types-and-coercion`
+2. `content/value-and-reference`
 
 **Done when** the topic passes `npm run content:check`, its audio is built, and
 every wrong option in it is wrong for a reason you can say out loud.
 
 ## 4. Enforce one open question per topic
 
-Branch `improvement/open-question-cap`. Blocked by 1 to 3.
+Branch `improvement/open-question-cap`. Blocked by 1 to 2.
 
 **What to build.** The content check stops accepting a second open question in a
-topic, which it could not do while 22 questions are still waiting to be converted.
+topic, which it could not do while 14 questions are still waiting to be converted.
 
 **Why.** An escape hatch with no lock on it becomes the default, and the
 platform is self graded again. See `0023`.
