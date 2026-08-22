@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'JSON serialisation and its edges',
   summary:
     'What stringify keeps and drops, how toJSON, the replacer and the reviver hook in, and the values that do not survive a round trip.',
-  order: 130,
+  order: 170,
   difficulty: 'medium',
   tags: ['json', 'serialisation', 'data'],
   prerequisites: ['javascript/value-and-reference', 'javascript/property-descriptors'],

@@ -1,0 +1,240 @@
+## Why this matters
+
+For most of the language's life, a "map" was an object and a "set" was an
+array you called `includes` on. Both still work, and both have edges that the
+real collections were added to remove: an object's keys are always strings or
+symbols, it inherits `toString` and friends, it has no size, and an array's
+`includes` is a linear scan. `Map` and `Set` fix each of those, and `WeakMap`
+and `WeakSet` fix a different problem entirely.
+
+Interviewers ask "when would you use a `Map` over an object?" because the
+answer has four parts and most people give one. And they ask about `WeakMap`
+because it is the one collection whose whole point is what it does not do.
+
+## What `Map` does that an object cannot
+
+A `Map` holds key-value pairs where the key can be anything: an object, a
+function, `NaN`, any primitive. An object converts every key to a string, so
+`obj[{}]` and `obj[{ a: 1 }]` are the same key, `"[object Object]"`, and
+`obj[1]` and `obj["1"]` are the same key too.
+
+<CodeWalkthrough
+  title="Keys are compared by identity, not by contents"
+  code={`const a = { id: 1 }
+const b = { id: 1 }
+const seen = new Map()
+
+seen.set(a, 'first')
+seen.set(b, 'second')
+seen.set(a, 'third')
+
+console.log(seen.size, seen.get(a), seen.get({ id: 1 }))`}
+steps={[
+{
+lines: [5],
+note: 'The key is the object a itself, by reference. Nothing is stringified.',
+variables: { size: '1' },
+},
+{
+lines: [6],
+note: 'b has the same contents and is a different object, so it is a different key. An object would have collapsed both into "[object Object]".',
+variables: { size: '2' },
+},
+{
+lines: [7],
+note: 'Setting a again replaces the value under the same key. Size does not change, and a keeps its original position in the insertion order.',
+variables: { size: '2' },
+},
+{
+lines: [9],
+note: 'A fresh object literal with the same shape is a third distinct key that was never set, so get returns undefined.',
+output: ['2 third undefined'],
+},
+]}
+/>
+
+Keys are compared with SameValueZero: the same rule `includes` uses, so `NaN`
+is a valid key that matches itself, and `0` and `-0` are one key.
+
+The rest of the list, for the interview answer:
+
+- **Insertion order is guaranteed** for iteration. An object orders
+  integer-like keys first, ascending, and the rest by insertion.
+- **`size` is a property.** An object needs `Object.keys(obj).length`, which
+  builds an array to count it.
+- **No inherited keys.** A `Map` starts empty. An object has `constructor`,
+  `toString` and `hasOwnProperty` reachable through its prototype, which is
+  why `"constructor" in obj` is `true` and why a lookup table keyed by user
+  input wants `Object.create(null)` or a `Map`.
+- **It is iterable** with `for...of`, spread and destructuring, yielding
+  `[key, value]` pairs. An object needs `Object.entries` first.
+
+When the keys are a fixed set of strings known when you write the code, an
+object is the right tool and reads better. When the keys are data, arriving at
+runtime and possibly not strings, it is a `Map`.
+
+## `Set` and what it replaces
+
+A `Set` is a collection of unique values, again by SameValueZero, again in
+insertion order. `has` is the operation it exists for: constant time, where
+`array.includes` walks the array. Deduplicating an array is `[...new Set(arr)]`,
+which is the one idiom everyone should be able to write without thinking.
+
+Uniqueness is by identity for objects, so two distinct objects with the same
+contents are two entries. A `Set` of records does not deduplicate by `id`; for
+that, a `Map` keyed by `id` does the job and keeps the last one written.
+
+The newer methods, `union`, `intersection`, `difference`,
+`symmetricDifference`, `isSubsetOf` and friends, each return a new `Set` and
+replace the `new Set([...a].filter((x) => b.has(x)))` pattern that everyone
+wrote by hand for a decade.
+
+## Iterating and converting
+
+Both collections give you three iterators, `keys()`, `values()` and
+`entries()`, and a `forEach`. For a `Set`, `keys` and `values` are the same
+thing, and `entries` yields `[value, value]` so that code written for a `Map`
+can take a `Set`.
+
+The conversions are all one line, and each direction goes through the
+iteration protocol:
+
+```js
+const map = new Map(Object.entries(obj)) // object to Map
+const obj = Object.fromEntries(map) // Map to object, keys stringified
+const pairs = [...map] // Map to array of [key, value]
+const keys = [...map.keys()] // Map to array of keys
+const unique = [...new Set(list)] // dedupe
+```
+
+Two things to know about iteration. The iterators are live: adding an entry
+during a `for...of` over the same `Map` will visit it, and deleting one that
+has not been visited yet skips it. And JSON knows nothing about either
+collection, so `JSON.stringify(map)` is `'{}'`; convert with `[...map]` or
+`Object.fromEntries` first, which the JSON topic covers.
+
+## `WeakMap` and `WeakSet`
+
+A `WeakMap` is a `Map` with three restrictions, and the restrictions are the
+feature. Keys must be objects. It cannot be iterated, has no `size`, and
+cannot be cleared. And a key that nothing else references is eligible for
+garbage collection, together with its value, as if the `WeakMap` had never
+held it.
+
+<MemoryModel
+  title="A weak key does not keep its object alive"
+  steps={[
+    {
+      note: 'A component instance is the key in both a Map and a WeakMap, with some metadata as the value. Three references hold it: the variable, and each collection.',
+      stack: [
+        { name: 'comp', ref: 'obj#1' },
+        { name: 'strong', ref: 'map#1' },
+        { name: 'weak', ref: 'weak#1' },
+      ],
+      heap: [
+        { id: 'obj#1', label: 'Component' },
+        { id: 'map#1', label: 'Map', fields: { 'obj#1': 'meta' } },
+        { id: 'weak#1', label: 'WeakMap', fields: { 'obj#1': 'meta' } },
+      ],
+    },
+    {
+      note: 'The component unmounts and comp is cleared. The Map still holds a reference, so the component and its metadata stay in memory for as long as the Map does, which is usually forever.',
+      stack: [
+        { name: 'comp', value: 'null' },
+        { name: 'strong', ref: 'map#1' },
+        { name: 'weak', ref: 'weak#1' },
+      ],
+      heap: [
+        { id: 'obj#1', label: 'Component' },
+        { id: 'map#1', label: 'Map', fields: { 'obj#1': 'meta' } },
+        { id: 'weak#1', label: 'WeakMap', fields: { 'obj#1': 'meta' } },
+      ],
+      highlight: ['map#1'],
+    },
+    {
+      note: 'With only the WeakMap holding it, the reference is not counted. The collector frees the component and the entry goes with it. This is the leak that the memory group covers in depth; WeakMap is the collection that does not cause it.',
+      stack: [
+        { name: 'comp', value: 'null' },
+        { name: 'weak', ref: 'weak#1' },
+      ],
+      heap: [{ id: 'weak#1', label: 'WeakMap', fields: {} }],
+      highlight: ['weak#1'],
+    },
+  ]}
+/>
+
+The no-iteration rule follows from the collection semantics: if you could list
+the keys, the collector could never remove one without the list changing under
+you. So a `WeakMap` is for attaching data to an object you do not own, without
+extending its lifetime: private fields before `#` existed, caches keyed by a
+DOM node or a request object, metadata for instances a framework tracks.
+
+`WeakSet` is the same deal for membership: "have I seen this object", where the
+objects come and go and you never want to list them.
+
+## The interview angle
+
+> **"When would you use a `Map` over an object?"**
+> Four things: any key type, including objects and `NaN`; guaranteed
+> insertion order; `size` without counting; no inherited keys. Then the
+> converse: when keys are a fixed set of identifiers known at write time, an
+> object reads better.
+
+> **"What is a `WeakMap` for?"**
+> Attaching data to an object without keeping it alive. Keys are objects,
+> held weakly; no iteration, no size. The example is a cache keyed by DOM
+> nodes that empties itself when the nodes are removed.
+
+> **"How do you deduplicate an array?"**
+> `[...new Set(arr)]`. Then, before being asked, that it deduplicates by
+> identity, so objects with equal contents are not merged, and a `Map` keyed
+> by the identifying field is how you merge those.
+
+## Traps
+
+- **`map[key] = value` sets a property on the `Map` object,** not an entry.
+  `get` will never find it. Use `set`.
+- **`new Set(arr)` does not deduplicate objects by contents.** Identity only.
+- **`Object.fromEntries(map)` stringifies the keys.** An object key becomes
+  `"[object Object]"` and collides.
+- **`JSON.stringify` of either collection is `{}`.** Convert first.
+- **`WeakMap` cannot be iterated or sized.** If you need to list entries, it
+  is a `Map`, and the leak is yours to manage.
+- **Primitive keys are rejected by `WeakMap`.** A string cannot be collected,
+  so it cannot be held weakly.
+
+## In one picture
+
+<ConceptMap
+  center={'Keyed collections'}
+  branches={[
+    {
+      label: 'Map',
+      summary: 'Any key, by identity with SameValueZero. Insertion order. size. No inherited keys.',
+      nodes: ['set get has delete', 'keys values entries', 'new Map(Object.entries(obj))'],
+    },
+    {
+      label: 'Set',
+      summary: 'Unique values by SameValueZero. Constant-time has.',
+      nodes: [
+        '[...new Set(arr)] dedupes',
+        'identity, not contents',
+        'union intersection difference',
+      ],
+    },
+    {
+      label: 'Object instead when',
+      summary: 'Keys are a fixed set of names known when the code is written.',
+      nodes: ['reads as a record', 'JSON-shaped already'],
+    },
+    {
+      label: 'WeakMap WeakSet',
+      summary: 'Object keys held weakly. Data attached to objects you do not own.',
+      nodes: [
+        'no iteration, no size',
+        'entry goes when the key does',
+        'caches keyed by nodes or requests',
+      ],
+    },
+  ]}
+/>

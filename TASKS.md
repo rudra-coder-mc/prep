@@ -63,11 +63,6 @@ The conventions the first groups established, so the rest stay consistent:
 Done when every group below has shipped. Each group is done when its topics
 pass the content check and read as one lesson each, not as a list of facts.
 
-## Collections and iteration
-
-The array methods worth knowing cold, the iterable protocol, generators,
-`Map`, `Set` and their weak counterparts.
-
 ## Classes
 
 Class syntax and fields, `extends` and `super`, static and private members,
