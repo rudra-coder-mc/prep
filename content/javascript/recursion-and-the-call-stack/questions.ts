@@ -2,27 +2,37 @@ import type { Question } from '@/content/schema'
 
 export const questions: Question[] = [
   {
-    id: 'what-a-frame-holds',
+    id: 'frames-alive-at-once',
     type: 'concept',
-    form: 'open',
+    form: 'choice',
     difficulty: 'easy',
-    prompt:
-      'What is the call stack, what does one frame hold, and why does recursion run out of it when a loop does not?',
-    answerInFull: `The call stack is the engine's record of which calls are currently in progress. Every call pushes a frame holding that call's parameters, its local variables, and the position to return to. The frame is popped when the function returns, and not before.
+    prompt: 'Why does a deep recursion run out of stack when a loop doing the same work does not?',
+    options: [
+      'A recursive call costs more time than a loop iteration, and the engine aborts work that runs too long',
+      'A frame cannot be popped until every call it made has returned, so all the levels of a recursion are alive at once; a loop enters and leaves a single frame',
+      'Stack frames are freed by the garbage collector, which cannot run while the function is still calling itself',
+      'It does not, unless the recursion is infinite: a recursion that reaches its base case cannot overflow',
+    ],
+    correctOption: 1,
+    answerInFull: `The call stack is the engine's record of which calls are in progress. Every call pushes a frame holding its parameters, its local variables and the position to return to, and the frame is popped when the call returns - not before.
 
-Recursion runs out because none of the frames can return until the innermost one does, so a recursion a thousand deep has a thousand frames alive at once, each with its own copy of the locals. A loop doing the same work enters and leaves one frame repeatedly, so only one is ever alive.
+That last clause is the whole answer. None of the frames in a recursion can return until the innermost call does, so a recursion a thousand deep has a thousand frames alive at once, each with its own copy of the locals. A loop doing the same work enters and leaves one frame over and over, so only one is ever alive.
 
-When there is no room for another frame the engine throws RangeError: Maximum call stack size exceeded. The limit is roughly ten thousand frames in a browser, but it depends on the engine and on how big each frame is, so it is not a number to rely on.`,
-    explanation: `The detail that makes this answer sound like experience rather than a definition is "popped when the function returns, and not before". It explains the memory cost, it explains why the work in a recursion happens on the way back up, and it is the same fact the event loop topic builds on, since the loop can only take a turn once the stack is empty.`,
+When there is no room for another frame the engine throws RangeError: Maximum call stack size exceeded. The limit is around ten thousand frames in a browser, but it depends on the engine and on the size of each frame, so it is not a number to design around.`,
+    explanation: `The timing option confuses the stack with a watchdog. Nothing aborts work for being slow; a loop can run for an hour without the engine objecting, because time costs no frames.
+
+The garbage collector has no say over the stack. Frames are popped by returning, never collected, which is its own question in this topic - the stack is not the heap.
+
+"Only infinite recursion overflows" is the belief that makes this topic's production incident surprising. Termination and depth are different properties: a walk that would finish in a millisecond still dies if the data nests deeply enough, because the frames exist all at once whether or not the end is coming.`,
     hints: ['What has to be true before a frame can be removed?'],
     tags: ['call-stack', 'recursion'],
   },
   {
     id: 'countdown-order',
     type: 'output',
-    form: 'open',
-    difficulty: 'easy',
-    prompt: 'What does this print, in order?',
+    form: 'ordering',
+    difficulty: 'medium',
+    prompt: 'Put the lines this prints in the order it prints them.',
     code: `function countdown(n) {
   if (n === 0) return
   console.log('down', n)
@@ -31,35 +41,41 @@ When there is no room for another frame the engine throws RangeError: Maximum ca
 }
 
 countdown(3)`,
-    answerInFull: `down 3
-down 2
-down 1
-up 1
-up 2
-up 3`,
-    explanation: `The first log runs before the recursive call, so all three "down" lines print as the stack grows. The recursive call then has to finish completely before the line after it runs.
+    items: ['up 1', 'down 3', 'down 0', 'up 3', 'down 1', 'up 0', 'down 2', 'up 2'],
+    correctOrder: [1, 6, 4, 0, 7, 3],
+    answerInFull: `down 3, down 2, down 1, then up 1, up 2, up 3
 
-By the time the base case returns, three frames are sitting there each waiting to run their own second log, and they run innermost first as the stack unwinds. That is why the "up" lines come out in the opposite order.
+The first log sits before the recursive call, so the three down lines print on the way in, as the stack grows: each call logs its own n and then descends.
 
-Anything you write after the recursive call happens on the way back up, and that is the mechanism behind post-order traversals and behind reversing a list by recursion.`,
+The second log sits after the call, and a line after a recursive call cannot run until that call has completely finished. By the time the base case returns, three frames are each waiting to run their second log, and they run innermost first as the stack unwinds. That is why the up lines come out in the opposite order to the down lines.
+
+Anything you write after a recursive call happens on the way back up. That is the mechanism behind post-order traversal, and behind reversing a list by recursion.`,
+    explanation: `down 0 and up 0 are the frame everybody adds. countdown(0) is a real call and a real frame, but the base case returns before either log runs, so the deepest call prints nothing. The logging stops one call short of where the calls stop.
+
+The other misreading is not in the pool because it uses the pool's own words: up 3, up 2, up 1, mirroring the downs. Building that sequence out of the real lines is the wrong answer this question exists to catch - the up lines run innermost first, not in the order their frames were created.`,
     hints: ['Which log is before the recursive call, and which is after?'],
     tags: ['recursion', 'call-stack'],
   },
   {
     id: 'base-case-missing',
     type: 'debugging',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
     prompt:
-      'This throws RangeError: Maximum call stack size exceeded for every input, including a two-element array. Explain why and fix it.',
+      'This throws RangeError: Maximum call stack size exceeded for every input, even an empty array. Why?',
     code: `function sum(list) {
   const total = list[0] + sum(list.slice(1))
   if (list.length === 0) return 0
   return total
 }`,
-    answerInFull: `There are two problems and they compound.
-
-The base case is written after the recursive call, so it is unreachable. The first line of every invocation calls sum again, and slicing an empty array gives another empty array, so the descent never stops.
+    options: [
+      'slice(1) returns a copy of the whole array rather than removing the first element, so every call sees the same list',
+      'Each slice allocates a new array, and the heap fills up before the base case can be reached',
+      'The base case is unreachable: the first line recurses before the check, and slicing an empty array gives another empty array, so the descent never stops',
+      'list[0] is undefined once the array is empty, and adding undefined to a number throws before the base case runs',
+    ],
+    correctOption: 2,
+    answerInFull: `The base case exists but can never run. The first line of every invocation calls sum again, so the length check is dead code: even sum([]) recurses before it can return 0, and slicing an empty array gives another empty array, so the descent never stops until the stack does.
 
 The fix is to check the base case before recursing:
 
@@ -68,19 +84,34 @@ The fix is to check the base case before recursing:
     return list[0] + sum(list.slice(1))
   }
 
-That is correct, but it is still a poor use of recursion. Each level allocates a new array with slice, so summing n elements allocates n arrays and uses n frames to add numbers. A loop, or reduce, does it in one frame with no allocation. Recursion pays for itself on tree-shaped data, not on a flat list.`,
-    explanation: `The rule this illustrates is that a recursive function has to be able to stop before it can be allowed to continue: the base case comes first, always. The second half of the answer is what an interviewer is really hoping for, since noticing that the recursion is wrong for the shape of the data is a better observation than fixing the ordering.`,
+That is correct, and it is still a poor use of recursion. Each level allocates a new array with slice, so summing n elements allocates n arrays and holds n frames to add numbers. A loop, or reduce, does it in one frame with no allocation. Recursion pays for itself on tree shaped data, not on a flat list.
+
+The rule this illustrates: a recursive function has to be able to stop before it can be allowed to continue. The base case comes first, always.`,
+    explanation: `The slice option misremembers the API: slice(1) really does drop the first element. It is slice with no arguments, or a confusion with splice, that copies everything - and notice the conclusion would be right anyway, which is why checking the stated mechanism matters more than checking where an option ends up.
+
+The heap option blames the right allocations for the wrong failure. The arrays pile up too, but each frame costs stack the moment the call is made, and the stack is thousands of times smaller than the heap, so it dies first - and the error names it.
+
+The last option invents a throw. Adding undefined to a number makes NaN, silently; and in this program no addition ever completes at all, because every call descends before its + has both operands.`,
     hints: ['Which line runs first in every call?', 'What does slice do on an empty array?'],
     tags: ['recursion', 'call-stack'],
   },
   {
-    id: 'flatten-both-ways',
+    id: 'flatten-explicit-stack',
     type: 'coding',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
     prompt:
-      'Write flatten(list), which flattens an arbitrarily nested array into a single level, first recursively and then iteratively, without using Array.prototype.flat.',
-    answerInFull: `// Recursive: reads well, and its depth is the nesting depth of the input.
+      'You are rewriting a recursive flatten(list) as a loop, so that input nesting depth can no longer overflow the stack. What replaces the call stack?',
+    options: [
+      'A depth counter, incremented on the way into a nested array and decremented on the way out',
+      'A closure per level of nesting, which the engine keeps alive on the heap automatically',
+      'Nothing can: enough iterations overflow the stack just as enough calls do, so the rewrite only raises the limit',
+      'An array of items still to visit: the loop takes one off, and a nested array puts its contents back on, so depth costs heap instead of frames',
+    ],
+    correctOption: 3,
+    answerInFull: `An array holding the work not yet done, which is exactly what the call stack was holding for the recursive version.
+
+// Recursive: reads well, and its depth is the nesting depth of the input.
 function flatten(list) {
   const out = []
   for (const item of list) {
@@ -103,23 +134,23 @@ function flattenIterative(list) {
   }
 
   return out
-}`,
-    explanation: `The recursive version is the one to write first, because it is shorter and says what it means. Its limit is that the depth of the recursion is the nesting depth of the input, so data that came from outside the program can choose your stack depth.
+}
 
-The iterative version moves the pending work into an array. Using shift and unshift preserves order at the cost of shifting the array each time; pushing and popping from the end is faster and reverses the result, so it needs a final reverse or a reversed push. Say which trade you took.
+Using shift and unshift preserves order at the cost of moving the array on every step; pushing and popping from the end is faster and reverses the result, so it needs a final reverse. Say which trade you took.
 
-Worth mentioning either way: out.push(...flatten(item)) spreads an array into arguments, so a flattened chunk of a hundred thousand elements is a call with a hundred thousand arguments, which has its own limit. out.push(item) inside a loop, or concat, avoids that.`,
-    hints: [
-      'What is the base case, and what is the recursive case?',
-      'What plays the part of the stack in the iterative version?',
-      'What happens if the input is nested ten thousand deep?',
-    ],
+One more limit worth naming: out.push(...flatten(item)) spreads an array into arguments, so a flattened chunk of a hundred thousand elements is a call with a hundred thousand arguments, which has its own limit. Pushing in a loop, or concat, avoids that.`,
+    explanation: `The depth counter remembers how deep you are, not what is left to do. The stack's job was never the depth - it was the pending work, and only a collection can hold that.
+
+The closure option is a true fact from the closures topic applied to nothing. Closures do outlive their frames on the heap, but a loop body creates no closure per level of nesting, and the engine automates none of this.
+
+"Enough iterations overflow the stack" confuses iterations with depth. Frames accumulate because calls nest before returning; a loop's millionth iteration runs in the same frame as its first, so there is nothing to run out of.`,
+    hints: ['What was the call stack holding for the recursive version?'],
     tags: ['recursion', 'arrays'],
   },
   {
     id: 'fib-call-count',
     type: 'output',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'What does this print?',
     code: `let calls = 0
@@ -131,12 +162,20 @@ function fib(n) {
 
 fib(10)
 console.log(calls)`,
-    answerInFull: '177',
-    explanation: `Each call above the base case makes two more, so the number of calls follows the same recurrence as the sequence itself: calls(n) = 1 + calls(n - 1) + calls(n - 2). That gives 1, 1, 3, 5, 9, 15, 25, 41, 67, 109, 177.
+    options: ['55', '109', '1024', '177'],
+    correctOption: 3,
+    answerInFull: `177
+
+Each call above the base case makes two more, so the number of calls follows the same recurrence as the sequence itself: calls(n) = 1 + calls(n - 1) + calls(n - 2). That gives 1, 1, 3, 5, 9, 15, 25, 41, 67, 109, 177.
 
 The growth is exponential, roughly 1.6 to the n, because the same subtrees are recomputed over and over. fib(8) alone is calculated twice, fib(7) three times, and so on down.
 
 The important part is that this is not a stack depth problem. The deepest the stack ever gets is 10. Memoising the results fixes it and rewriting it as a loop fixes it, but neither is fixing the stack, because the stack was never the issue.`,
+    explanation: `55 is fib(10) itself. The program prints the counter, not the result, and reading past the calls variable is a misread this question is deliberately inviting.
+
+109 is the count one step early: calls(9). The recurrence has to be run all the way out, and an off by one is the natural way to lose it.
+
+1024 is 2 to the 10, from rounding "each call makes two more" up to a full binary tree. The tree is not full - the n < 2 calls make none, and every fib(n - 2) branch bottoms out sooner - which is why the real count grows at about 1.6 to the n rather than 2 to the n.`,
     hints: ['How many calls does each non-base call make?'],
     tags: ['recursion', 'performance'],
   },
@@ -163,29 +202,37 @@ For an immediate mitigation, catching the RangeError lets the request fail clean
   {
     id: 'recursion-or-loop',
     type: 'interview',
-    form: 'open',
+    form: 'choice',
     difficulty: 'medium',
     prompt: 'How do you decide between recursion and a loop?',
+    options: [
+      'Prefer whichever reads better: modern engines make recursion and loops equivalent in both speed and depth',
+      'Let the data decide: recursion for tree shaped data whose depth something bounds, a loop for flat data, and a loop with an explicit stack when the depth comes from outside the program',
+      'Prefer a loop whenever performance matters, since the function calls are always the dominant cost',
+      'Write the recursion as a tail call, which the engine eliminates, and the choice stops mattering',
+    ],
+    correctOption: 1,
     answerInFull: `The shape of the data decides it more than taste does.
 
 Recursion when the data is a tree or a graph. A tree walk written as a loop has to carry its own stack, so the recursive version is shorter and reads much closer to the problem. Parsers, traversals and divide-and-conquer algorithms are all this case.
 
-A loop when the data is flat, or when the depth is not bounded by anything you control. Recursing down a list to add numbers costs a frame per element and buys nothing.
+A loop when the data is flat, or when the depth is not bounded by anything you control. Recursing down a list to add numbers costs a frame per element and buys nothing, and recursing over data that came from outside the program lets the caller choose your stack depth.
 
-The things I would weigh:
-- How deep can the input get, and does that depth come from outside the program?
-- Is the recursion doing repeated work, in which case memoising matters more than the choice of loop or recursion?
-- Which version will the next reader understand faster? That is usually recursion for a tree and a loop for a list.
+Worth weighing alongside the shape: whether the recursion is doing repeated work, in which case memoising matters more than the choice of loop or recursion, and which version the next reader will understand faster - usually recursion for a tree and a loop for a list.
 
 And the practical note: JavaScript has no reliable tail call elimination, so a recursion that would be safe in a language that does have it is not safe here.`,
-    explanation: `The answer interviewers want is a criterion rather than a preference. "Recursion for tree-shaped data, a loop for flat data, and an explicit stack when the depth is not mine to bound" is a rule they can hear you applying. Adding the tail call point shows you know why the advice differs from what you may have been taught in another language.`,
+    explanation: `"Equivalent in both speed and depth" would be true in a language with tail call elimination, and JavaScript is not one in practice. Readability is a real criterion; the equivalence claimed to make it the only one is not.
+
+The performance option optimises the wrong cost. Call overhead is rarely what hurts: the fib question in this topic makes 177 calls to compute a number that needs eleven, and that redundancy dwarfs the price of any individual call. A slow recursion is usually recomputing, and memoising fixes that in either style.
+
+Tail calls are in the specification and shipped only by JavaScriptCore, so writing one changes nothing in V8 or SpiderMonkey. The frames stay, and so does the choice.`,
     hints: [],
     tags: ['recursion', 'design'],
   },
   {
     id: 'catching-the-overflow',
     type: 'output',
-    form: 'open',
+    form: 'choice',
     difficulty: 'hard',
     prompt: 'What does this print?',
     code: `function depth(n) {
@@ -197,17 +244,30 @@ And the practical note: JavaScript has no reliable tail call elimination, so a r
 }
 
 console.log(typeof depth(0))`,
-    answerInFull: 'number',
-    explanation: `Each call recurses until pushing another frame fails, at which point the engine throws a RangeError. That error is an ordinary throwable, so the catch in the frame that was trying to make the call handles it and returns n.
+    options: [
+      'number',
+      'object',
+      'undefined',
+      'Nothing: the RangeError from a stack overflow cannot be caught',
+    ],
+    correctOption: 0,
+    answerInFull: `number
+
+Each call recurses until pushing another frame fails, at which point the engine throws a RangeError. That error is an ordinary throwable, so the catch in the frame that was trying to make the call handles it and returns n.
 
 That number then travels back up through every waiting frame, because each one returns the result of its own call unchanged, so depth(0) evaluates to the depth that was reached.
 
 The reason the question asks for the type is that the number itself is not fixed. It depends on the engine, on how much stack the surrounding code has already used, and on the size of this frame, so the same program prints a different value on a different day. That variability is the reason not to design around the limit.`,
+    explanation: `object is the right type for the wrong value. The catch really does receive a RangeError, and typeof on an error says object - but the function returns n, a number it had all along, not the thing it caught.
+
+undefined imagines the failed call returning nothing. The call that hit the limit never started: pushing its frame is what failed. The frame that tried to push it is intact, runs its catch, and returns normally.
+
+Treating the overflow as fatal imports the rule from other platforms. Running out of heap really is unrecoverable; running out of stack here is an ordinary RangeError thrown at the point of the call, and any frame on the way down can catch it.`,
     hints: ['Is a RangeError catchable, and which frame catches it?'],
     tags: ['recursion', 'call-stack', 'errors'],
   },
   {
-    id: 'overflow-error-mcq',
+    id: 'overflow-error-choice',
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
@@ -225,7 +285,7 @@ The reason the question asks for the type is that the number itself is not fixed
     tags: ['recursion', 'errors'],
   },
   {
-    id: 'tail-call-mcq',
+    id: 'tail-call-choice',
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
@@ -243,7 +303,7 @@ The reason the question asks for the type is that the number itself is not fixed
     tags: ['recursion', 'call-stack'],
   },
   {
-    id: 'frame-lifetime-mcq',
+    id: 'frame-lifetime-choice',
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
