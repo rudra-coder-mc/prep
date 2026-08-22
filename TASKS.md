@@ -21,7 +21,7 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 Typing an explanation and then marking yourself is a self grade with extra
 steps, and typing exact output fails you over a quote character. Both are gone.
 All three forms exist and the platform schedules them without asking anyone to
-rate themselves. What is left is the content: five topics to convert onto the
+rate themselves. What is left is the content: one topic to convert onto the
 forms, and then the rule that stops open questions spreading.
 
 Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
@@ -29,9 +29,9 @@ Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
 
 Ordered. Work top to bottom, one task per branch.
 
-## 1 to 2. Convert one topic
+## 1. Convert one topic
 
-One branch per topic, named `content/<topic-slug>`. Each blocked by nothing.
+One branch per topic, named `content/<topic-slug>`. Blocked by nothing.
 
 The full brief is `docs/tasks/converting-a-topic.md`. Read it before starting.
 It covers the mix a converted topic ships, how each existing question shape
@@ -51,18 +51,17 @@ for that as part of the task rather than treating it as a surprise.
 
 Delete a line below when its topic is merged.
 
-1. `content/types-and-coercion`
-2. `content/value-and-reference`
+1. `content/value-and-reference`
 
 **Done when** the topic passes `npm run content:check`, its audio is built, and
 every wrong option in it is wrong for a reason you can say out loud.
 
-## 4. Enforce one open question per topic
+## 2. Enforce one open question per topic
 
-Branch `improvement/open-question-cap`. Blocked by 1 to 2.
+Branch `improvement/open-question-cap`. Blocked by 1.
 
 **What to build.** The content check stops accepting a second open question in a
-topic, which it could not do while 14 questions are still waiting to be converted.
+topic, which it could not do while 7 questions are still waiting to be converted.
 
 **Why.** An escape hatch with no lock on it becomes the default, and the
 platform is self graded again. See `0023`.
