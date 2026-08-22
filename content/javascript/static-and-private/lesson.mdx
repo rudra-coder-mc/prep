@@ -1,0 +1,209 @@
+## Why this matters
+
+Two kinds of member sit outside the plain "field or method" split, and both
+get asked about because both are misused. `static` is for things that belong
+to the class rather than to any instance, and the misuse is reaching for it
+as a global. `#private` is the first real encapsulation JavaScript has had,
+and the misuse is treating it as the underscore convention with a new
+spelling, when its rules are stricter and its failures are different.
+
+The interview question behind both is the same: where does this member live,
+who can reach it, and what happens when someone tries who cannot?
+
+## What belongs to the class
+
+A static member is a property of the class function itself. `Counter.count`
+rather than `counter.count`. It is one value per class, not per instance, and
+it is the right home for three things: constants that describe the type,
+factory methods that know how to build an instance, and caches or registries
+shared by every instance.
+
+```js
+class Temperature {
+  static ABSOLUTE_ZERO = -273.15
+  static #cache = new Map()
+
+  static fromFahrenheit(f) {
+    return new Temperature(((f - 32) * 5) / 9)
+  }
+
+  static {
+    // runs once, when the class is defined
+    Temperature.#cache.set('freezing', new Temperature(0))
+  }
+
+  constructor(c) {
+    this.c = c
+  }
+}
+```
+
+Inside a static method, `this` is the class, which matters for inheritance:
+`static fromFahrenheit` writes `new this(...)`, not `new Temperature(...)`,
+so a subclass calling it gets a subclass back. A `static { }` block runs once
+when the declaration is evaluated, with `this` as the class, and exists for
+set-up that needs more than one expression.
+
+Static members are inherited through the class chain the previous topic drew.
+`Sub.ABSOLUTE_ZERO` finds the value on `Temperature`, and a static field
+assigned in a subclass shadows it without touching the base.
+
+A static is not a module-level constant with extra steps. If nothing about it
+is specific to the class, a plain `const` or function in the module is simpler
+and does not invite `this` confusion.
+
+## What `#private` guarantees
+
+A private name starts with `#` and is declared in the class body. The
+guarantee is total: **no code outside the class body can read, write, detect
+or enumerate it.** Not with bracket access, not with `Object.keys`,
+`getOwnPropertyNames` or `getOwnPropertySymbols`, not with `JSON.stringify`,
+not with a `Proxy`, not with a debugger API short of the engine's own.
+
+That is a different thing from `_private`, which is a request, and from a
+closure over a variable, which hides state but needs each method to be a
+closure too. Three rules follow from the mechanism:
+
+- **A private name is not a property.** `this.#x` is a lookup in a per-class
+  table keyed by the object, not a string key on the object. `this['#x']`
+  reads an ordinary property called `"#x"`, which is undefined.
+- **Access is lexical.** Only code written inside the class body can use
+  `#x`, so a subclass cannot reach the base's `#x` even by the same name.
+  Two classes can each declare `#x` and they are unrelated.
+- **Reading `#x` on an object that does not have it throws a `TypeError`.**
+  It is not `undefined`. The object lacks the brand.
+
+<CodeWalkthrough
+  title="Private is not a property"
+  code={`class Account {
+  #balance = 0
+
+deposit(n) {
+this.#balance += n
+}
+
+static isAccount(o) {
+return #balance in o
+}
+}
+
+const a = new Account()
+a.deposit(5)
+console.log(Object.keys(a), JSON.stringify(a))
+console.log(a['#balance'], Account.isAccount(a), Account.isAccount({}))
+console.log(Account.prototype.deposit.call({}, 1))`}
+steps={[
+{
+lines: [2],
+note: '#balance is declared in the class body. Every instance gets one, installed at construction, but it is not a property of the instance.',
+},
+{
+lines: [15],
+note: 'Object.keys sees no own enumerable property, and JSON.stringify writes an empty object. The balance is invisible to both.',
+output: ['[] {}'],
+},
+{
+lines: [16],
+note: "a['#balance'] is a normal string-keyed lookup and finds nothing. The brand check, #balance in o, is the one way to ask without throwing, and only from inside the class.",
+output: ['[] {}', 'undefined true false'],
+},
+{
+lines: [17],
+note: 'Borrowing deposit onto a plain object throws, because that object was never constructed as an Account and has no #balance. Not undefined; a TypeError.',
+output: ['[] {}', 'undefined true false', "TypeError: Cannot read private member #balance from an object whose class did not declare it"],
+},
+]}
+/>
+
+Private methods, `#validate() {}`, and private accessors, `get #total()`,
+follow the same rules, and a `static #cache` is a private static. They are
+installed on instances at construction, so they are effectively non-writable;
+`this.#validate = ...` is a `TypeError`.
+
+## Where each one breaks
+
+**Private fields and `Proxy`.** A `Proxy` around an instance is a different
+object, and it does not carry the brand. Calling a method that touches `#x`
+through the proxy throws, because inside the method `this` is the proxy.
+Libraries that wrap objects, which includes some reactivity systems, break on
+classes with private fields for this reason.
+
+**Private fields and `Object.freeze`.** Freezing an instance does not freeze
+its private fields, because they are not properties. `#balance` can still be
+assigned on a frozen `Account`.
+
+**Static `this` after borrowing.** `const make = Temperature.fromFahrenheit;
+make(50)` loses `this`, and `new this(...)` throws. A static method is an
+ordinary function with an ordinary `this`.
+
+**Static and private names are declared once.** Two `static` blocks are
+fine, two `#x` declarations in one class are a syntax error, and a `#x`
+declared in a base is not visible in a subclass.
+
+**Before private fields existed**, the usual encapsulation was a `WeakMap`
+keyed by instance, in module scope. It still works, it is what `#x` compiles
+down to under transpilers, and it is the answer if an interviewer asks how you
+would do it without the syntax.
+
+## The interview angle
+
+> **"What does `#private` actually guarantee?"**
+> No access from outside the class body, by any means. Then the rules: not a
+> property, lexically scoped, a brand that throws on the wrong object. And
+> the `Proxy` consequence, because it marks the answer as experience.
+
+> **"How would you implement private state without `#`?"**
+> A `WeakMap` in module scope, keyed by the instance. Closures in a factory
+> function are the other answer, with the cost that each instance gets its
+> own copies of the methods.
+
+> **"When is `static` right?"**
+> Factories, type-level constants and shared caches. Not as a global with a
+> namespace; a module export is simpler.
+
+## Traps
+
+- **`#x` is not a property.** Bracket access reads `"#x"`, which is
+  `undefined`.
+- **Reading a private name on the wrong object throws.** Borrowed methods
+  and proxied instances both hit this.
+- **A subclass cannot see a base `#x`.** Even by name. Expose a method.
+- **A static method's `this` is the class**, and it is lost when the method
+  is detached.
+- **`static` is not a global.** If the class has nothing to do with it, it
+  does not belong there.
+- **`Object.freeze` does not touch private fields.**
+
+## In one picture
+
+<ConceptMap
+  center={'Who can reach it'}
+  branches={[
+    {
+      label: 'static',
+      summary:
+        'One per class, on the function. this is the class, and the class chain inherits it.',
+      nodes: ['factories with new this', 'constants and caches', 'static blocks run once'],
+    },
+    {
+      label: '#private',
+      summary: 'No access outside the class body, by any route.',
+      nodes: [
+        'not a property',
+        'lexical, not inherited',
+        'brand check with in',
+        'throws on the wrong object',
+      ],
+    },
+    {
+      label: 'Breaks on',
+      summary: 'Anything that swaps the object out from under the method.',
+      nodes: ['Proxy wrappers', 'borrowed methods', 'detached statics'],
+    },
+    {
+      label: 'Without the syntax',
+      summary: 'A WeakMap keyed by instance, or closures in a factory.',
+      nodes: ['what # compiles to'],
+    },
+  ]}
+/>

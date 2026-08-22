@@ -1,0 +1,200 @@
+## Why this matters
+
+`class` is the syntax most people write objects with, and the prototypes topic
+already said what it is underneath: a constructor function, methods on its
+`prototype`, and a chain. What an interviewer probes is the part that is not
+sugar. Where does a field live, and where does a method? In what order does a
+constructor run its pieces? Why does `class` hoist differently from `function`?
+Why is a method written as an arrow field a different thing from a method?
+
+Each of those has a one-sentence answer, and each one also explains a bug.
+Methods on the prototype is why `JSON.stringify` drops them. Fields per
+instance is why an arrow field costs memory per object. Initialisation order
+is why a field that reads `this.x` sees `undefined` in a subclass. This topic
+is those sentences.
+
+## What a declaration makes
+
+A class declaration creates exactly one thing you can hold: a function. Calling
+`new` on it creates an object, and everything else in the body is placed on
+one of those two.
+
+<CodeWalkthrough
+  title="Where each piece lands"
+  code={`class Counter {
+  count = 0
+  static instances = 0
+
+constructor(start) {
+this.count = start
+Counter.instances += 1
+}
+
+increment() {
+this.count += 1
+}
+
+get double() {
+return this.count \* 2
+}
+}
+
+const c = new Counter(5)`}
+steps={[
+{
+lines: [1],
+note: 'Counter is a function. typeof Counter is "function", it has a prototype property, and it cannot be called without new.',
+variables: { 'typeof Counter': '"function"' },
+},
+{
+lines: [10, 11, 12, 14, 15, 16],
+note: 'Methods and accessors go on Counter.prototype, once, shared by every instance. They are non-enumerable, so for...in and Object.keys skip them.',
+variables: { 'Counter.prototype': '{ increment, double }' },
+},
+{
+lines: [3],
+note: 'A static member goes on the function itself. It belongs to the class, not to any instance, and c.instances is undefined.',
+variables: { 'Counter.instances': '0' },
+},
+{
+lines: [19, 2],
+note: 'new allocates an empty object whose prototype is Counter.prototype, then runs the field initialisers on it. count = 0 is an own property of c, and every instance gets its own.',
+variables: { c: '{ count: 0 }' },
+},
+{
+lines: [5, 6, 7],
+note: 'Then the constructor body runs with this bound to that object. Fields are already there by the time it starts, which is why this.count = start overwrites rather than creates.',
+variables: { c: '{ count: 5 }', 'Counter.instances': '1' },
+},
+]}
+/>
+
+That gives the rule for where something lives: **methods and accessors on the
+prototype, fields on the instance, statics on the class.** Everything about
+memory, serialisation and overriding follows from it. A method exists once no
+matter how many instances there are. A field exists once per instance. And
+`JSON.stringify(c)` writes `{"count":5}`, because it reads own enumerable
+properties and the methods are neither.
+
+## Fields and the constructor
+
+A field declaration, `count = 0`, runs as if it were `this.count = 0` at the
+top of the constructor, before any of the constructor's own code. With no
+initialiser, `count` alone, the field exists and holds `undefined`, which is
+different from not existing: `'count' in c` is `true`.
+
+Field initialisers are expressions and run per instance, with `this` bound, so
+they can reference other fields declared above them and call methods. The order
+is textual. A field that reads one declared below it reads `undefined`.
+
+The field that causes the most discussion is the arrow function:
+
+```js
+class Button {
+  label = 'ok'
+  handleClick = () => console.log(this.label)
+}
+```
+
+`handleClick` is a field, so it is an own property on every instance, created
+fresh each time, and it closes over `this` the way any arrow does. That is why
+it survives being passed to an event listener without `bind`. The price is the
+previous topic's point: it is not on the prototype, so there is one function
+per instance rather than one shared, and a subclass cannot reach it with
+`super.handleClick`, because `super` looks at the prototype and the field is
+not there.
+
+A plain method is the default. An arrow field is a deliberate choice for a
+method that will be passed around as a value.
+
+## Not just sugar
+
+Five ways a class behaves differently from the constructor function it
+replaces, and any of them can be the question:
+
+- **A class body is strict mode** whether or not the file is. `this` in a
+  detached method is `undefined`, not the global object.
+- **Calling without `new` throws.** `Counter()` is a `TypeError`. A function
+  constructor would run with `this` as whatever the call form gave it.
+- **A class declaration is in the temporal dead zone** until its line runs.
+  `new Counter()` above the declaration throws, where a function declaration
+  would have been hoisted and worked.
+- **Methods are non-enumerable**, so they do not show up in `for...in`,
+  `Object.keys` or a spread. Methods added to a function's prototype by
+  assignment are enumerable.
+- **Methods are not constructors.** `new c.increment()` throws. A function
+  assigned to a prototype can be called with `new`.
+
+The class expression form, `const Counter = class { }`, exists too and behaves
+the same way, including a named form, `class Inner { }`, whose name is visible
+only inside the body.
+
+## The interview angle
+
+> **"Is `class` just syntactic sugar?"**
+> Mostly, and then list what is not: strict mode, `new` required, temporal
+> dead zone, non-enumerable methods, methods not constructible, private
+> fields. Saying "mostly" and then the list is the answer.
+
+> **"Where does a method live, and where does a field?"**
+> Prototype and instance. Then the consequence you have been bitten by:
+> `JSON.stringify` drops the methods, and an arrow field costs one function
+> per object.
+
+> **"Why does `this.x` read `undefined` inside a field initialiser?"**
+> Fields run in textual order before the constructor body. `x` is either
+> declared below, or set in the constructor, and neither has happened yet.
+
+## Traps
+
+- **Calling a class without `new` throws.** Always.
+- **Using a class before its declaration throws.** The binding is in the
+  temporal dead zone, unlike a function declaration.
+- **A field initialiser reading a field declared below it gets
+  `undefined`.** Fields run top to bottom.
+- **An arrow field is not on the prototype.** `super.method()` cannot reach
+  it and each instance pays for a copy.
+- **Methods do not appear in `Object.keys` or a spread.** `{ ...instance }`
+  copies fields and drops behaviour.
+- **A getter with no setter silently ignores assignment** in sloppy code and
+  throws in strict, and a class body is strict.
+
+## In one picture
+
+<ConceptMap
+  center={'A class is a function plus a prototype'}
+  branches={[
+    {
+      label: 'Where things live',
+      summary:
+        'Methods and accessors on the prototype, fields on the instance, statics on the class.',
+      nodes: ['one method shared by all', 'one field per instance', 'stringify sees fields only'],
+    },
+    {
+      label: 'Constructor order',
+      summary: 'new makes the object, fields run top to bottom, then the constructor body.',
+      nodes: [
+        'fields see this',
+        'a field below is still undefined',
+        'constructor overwrites fields',
+      ],
+    },
+    {
+      label: 'Arrow fields',
+      summary:
+        'A function per instance that keeps this. Useful for callbacks, wrong as the default.',
+      nodes: ['not on the prototype', 'super cannot see it'],
+    },
+    {
+      label: 'Not sugar',
+      summary: 'The five differences from a constructor function.',
+      nodes: [
+        'strict mode',
+        'new required',
+        'temporal dead zone',
+        'non-enumerable methods',
+        'methods not constructible',
+      ],
+    },
+  ]}
+/>

@@ -1,0 +1,207 @@
+## Why this matters
+
+"Prefer composition over inheritance" is quoted in every interview and
+explained in almost none. The quote is not "never use `extends`". It is a
+claim about coupling: a subclass is coupled to every detail of its base,
+including details the base did not mean to expose, and that coupling is paid
+on every change for the life of both classes. Composition couples a class to
+an interface instead, which is smaller and yours to define.
+
+What an interviewer wants is that you can say what inheritance couples, what
+composition costs in return, and which question you ask to pick one. The
+three previous topics gave the mechanics. This one is the judgement.
+
+## What `extends` couples
+
+A subclass depends on its base in four ways that a caller of the base does
+not:
+
+- **Every method, including the ones meant to be internal.** A subclass can
+  override anything, so every method becomes part of the contract, and a
+  base that changes which methods call which others changes the subclass's
+  behaviour without touching its code. This is the fragile base class
+  problem, and the previous topic's constructor-calls-override bug is its
+  most common form.
+- **The constructor's shape.** `super(...)` has to match, so the base cannot
+  add or reorder a parameter without visiting every subclass.
+- **One parent.** A class has one prototype chain, so a `Bird` that should
+  be both `Flying` and `Swimming` has to pick one and bolt the other on.
+- **Every field name.** A subclass field that happens to share a name with a
+  base field or accessor silently shadows it.
+
+The payoff is real too: a single `extends` gives a subclass every method for
+free, `instanceof` works, and `super` lets an override extend rather than
+replace. For a genuine "is a" relationship that will not change shape, that is
+the right trade, and `class NotFound extends Error` is the everyday example.
+
+## Composition: has a, not is a
+
+Composition is holding an object and delegating to it. The class decides what
+to expose, the held object can be swapped, and nothing about the held object's
+internals is part of the class's contract.
+
+<CodeWalkthrough
+  title="The same behaviour, two shapes"
+  code={`// inheritance: Logger is a ConsoleWriter
+class ConsoleWriter {
+  write(s) { console.log(s) }
+}
+class Logger extends ConsoleWriter {
+  log(msg) { this.write(\`[log] \${msg}\`) }
+}
+
+// composition: Logger has a writer
+class Logger2 {
+#writer
+constructor(writer) { this.#writer = writer }
+log(msg) { this.#writer.write(\`[log] \${msg}\`) }
+}
+
+new Logger2({ write: (s) => buffer.push(s) }).log('hi')`}
+steps={[
+{
+lines: [5, 6, 7],
+note: 'Logger inherits write, and anyone holding a Logger can call write directly, bypassing the prefix. To log somewhere other than the console, you need a new subclass for every destination.',
+},
+{
+lines: [10, 11, 12, 13, 14],
+note: 'Logger2 holds a writer and exposes only log. The writer is anything with a write method. Its internals are not part of Logger2, and write is not reachable from outside.',
+},
+{
+lines: [16],
+note: 'The test passes a plain object that writes to an array. No subclass, no mocking library, no console. That swap is what composition buys.',
+output: ["buffer: [ '[log] hi' ]"],
+},
+]}
+/>
+
+The cost is visible in the code: a constructor parameter and a field that
+inheritance would have hidden, and a method that forwards where inheritance
+would have inherited. Composition is more typing in the small, and the typing
+is the point: each line is a decision about what the class exposes.
+
+Dependency injection is this pattern with a name. The writer arrives from
+outside rather than being constructed inside, which is what makes it
+replaceable in a test.
+
+## Mixins: sharing behaviour without a parent
+
+When several unrelated classes need the same methods and none of them "is a"
+anything in common, the JavaScript answer is a mixin: a function that takes a
+class and returns a subclass of it with the extra methods. Because `extends`
+accepts any expression, mixins compose by nesting:
+
+```js
+const Serializable = (Base) =>
+  class extends Base {
+    toJSON() {
+      return { ...this }
+    }
+  }
+
+const Observable = (Base) =>
+  class extends Base {
+    #listeners = new Set()
+    on(fn) {
+      this.#listeners.add(fn)
+    }
+    emit(e) {
+      this.#listeners.forEach((fn) => fn(e))
+    }
+  }
+
+class Model extends Serializable(Observable(Base)) {}
+```
+
+Each mixin adds one prototype to the chain, in the order applied, so
+`super.method()` inside a mixin reaches the one applied before it. That order
+is also the weakness: two mixins defining the same method silently shadow
+each other, and `instanceof` checks a class expression that was created fresh
+on every application, so `model instanceof Serializable` is not a thing.
+
+The other mixin style, `Object.assign(Model.prototype, methods)`, copies
+methods onto an existing prototype. It is simpler and it has no `super`,
+because the copied functions have no home object.
+
+## Choosing
+
+The question to ask is not "is a or has a", which usually has both answers.
+It is **"will this class need to change independently of that one?"**
+
+- If the subclass would only ever override to extend, never to replace, and
+  the base is stable, `extends` is cheap and clear. Errors, a thin layer over
+  a framework base class, a type that genuinely specialises another.
+- If behaviour needs to be swapped, tested in isolation, or combined from
+  more than one source, compose. Anything with I/O, anything a test will want
+  to fake, anything that two different classes both want.
+- If several unrelated classes want the same small capability, a mixin, with
+  the order written down once.
+
+And the signal that you picked wrong: a subclass that overrides a method just
+to call `super` and throw away the result, or a base with a method that
+exists only so a subclass can override it. Both mean the coupling is in the
+wrong place.
+
+## The interview angle
+
+> **"Why prefer composition over inheritance?"**
+> Say what inheritance couples: every method is contract, one parent, the
+> constructor's shape. Then say what composition gives: a small interface
+> you define, swappable parts, testable in isolation. Then say when you
+> would still extend, because "never" is the wrong answer.
+
+> **"How do you do multiple inheritance in JavaScript?"**
+> You do not; there is one chain. Mixins as class-returning functions give
+> you layered behaviour, with the order applied being the order of the
+> chain.
+
+> **"What is the fragile base class problem?"**
+> A base changing which of its methods call which others changes every
+> subclass that overrode one of them. The constructor calling an overridable
+> method is the version everyone has hit.
+
+## Traps
+
+- **"Prefer composition" does not mean "never extend".** `Error`
+  subclasses and thin framework bases are fine.
+- **Inheriting for code reuse alone.** If the subclass is not a kind of the
+  base, callers can pass it where the base was expected and be wrong.
+- **Deep chains.** Three levels of `extends` means a method's behaviour is
+  spread over three files.
+- **Mixin order.** Later applications shadow earlier ones, silently.
+- **`instanceof` on a mixin** is always `false`, because each application
+  makes a new class.
+- **Composition with a forwarding method for everything** is inheritance
+  with more typing. Expose what callers need, not what the held object has.
+
+## In one picture
+
+<ConceptMap
+  center={'Couple to an interface, not a parent'}
+  branches={[
+    {
+      label: 'extends couples',
+      summary: 'Every method, the constructor shape, one parent, every field name.',
+      nodes: [
+        'fragile base class',
+        'override replaces unless super',
+        'cheap when the base is stable',
+      ],
+    },
+    {
+      label: 'Composition',
+      summary: 'Hold it, delegate to it, expose only what you choose.',
+      nodes: ['swappable', 'testable with a plain object', 'injection is this with a name'],
+    },
+    {
+      label: 'Mixins',
+      summary: 'A function from class to subclass. Nest to combine.',
+      nodes: ['order is chain order', 'shadowing is silent', 'no instanceof'],
+    },
+    {
+      label: 'The question',
+      summary: 'Will this need to change independently of that?',
+      nodes: ['yes: compose', 'no and is-a: extend', 'shared capability: mixin'],
+    },
+  ]}
+/>
