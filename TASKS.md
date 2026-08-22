@@ -16,48 +16,13 @@ See `docs/decisions/0010-interview-prep-focus.md` for why it is shaped this way.
 
 ---
 
-# Now: every question is answered, never typed
-
-Typing an explanation and then marking yourself is a self grade with extra
-steps, and typing exact output fails you over a quote character. Both are gone.
-All three forms exist and the platform schedules them without asking anyone to
-rate themselves. All twelve topics are converted. What is left is the rule that
-stops open questions spreading.
-
-Decisions `0023`, `0024` and `0025` in `docs/decisions/` settle the shape, and
-`docs/glossary.md` defines the terms. Read those first.
-
-One task per branch.
-
-## 1. Enforce one open question per topic
-
-Branch `improvement/open-question-cap`. Blocked by nothing.
-
-**What to build.** The content check stops accepting a second open question in a
-topic, which it could not do while questions were still waiting to be converted.
-
-**Why.** An escape hatch with no lock on it becomes the default, and the
-platform is self graded again. See `0023`.
-
-**Acceptance criteria.**
-
-- [ ] The check fails a topic with two open questions, and fails an open
-      question whose subject is not `interview` or `scenario`.
-- [ ] The authoring convention in the next section is rewritten to the three
-      forms.
-
-**Done when** `npm run verify` passes with the rule enforced across all twelve
-topics.
-
----
-
 # Next: everything a JavaScript interview asks
 
 The goal is that anything reasonably asked in a JavaScript interview has a
 topic, and that each topic carries the full question mix.
 
-Blocked by the open question cap above. A group authored before the cap is
-enforced is a group that can drift back to self grading.
+Blocked by nothing. The content check enforces the three answer forms, so a
+group cannot drift back to self grading.
 
 This is content work, not platform work, and it is far too big for one branch,
 so it is broken into groups of three or four related topics. **One group is one
@@ -76,9 +41,13 @@ The conventions the first group established, so the rest stay consistent:
 - `order` runs in tens, in teaching order across the whole track, leaving room
   to insert. Renumber the ones below rather than squeezing a topic in at 45.
 - Every topic ships a lesson with at least one visual, ten or eleven questions
-  and two exercises. The questions cover all six subjects, and the mix of answer
-  forms is the one in `docs/tasks/converting-a-topic.md`: mostly choice, one
-  ordering where something happens in an order, at most one open.
+  and two exercises. The questions cover all six subjects.
+- No question takes typed input. Each is answered by one of three forms: `choice`
+  for nearly everything, `ordering` where something happens in an order, and
+  `open` as the last resort. The check allows at most one open question per
+  topic, and only on `interview` or `scenario`. If both resist conversion, make
+  one of them a better choice question. `docs/tasks/converting-a-topic.md` says
+  how to write the wrong options and the distractors, which is most of the work.
 - Every topic ships a `narration.ts` as well, in sections that follow the
   lesson's own headings. Written to be heard, not read: no code spoken
   character by character, and a section short enough to be one thought. Each

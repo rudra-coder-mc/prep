@@ -12,7 +12,7 @@ const validMeta = {
 }
 const validQuestion = {
   id: 'q1',
-  type: 'concept',
+  type: 'interview',
   form: 'open',
   difficulty: 'easy',
   prompt: 'p',
@@ -65,6 +65,18 @@ describe('validateTopic', () => {
     expect(() =>
       validateTopic(raw({ questions: [validQuestion, validQuestion] }), 'closures', BASE),
     ).toThrow(/id: duplicated \(q1\)/)
+  })
+
+  it('rejects a second open question, since a topic with two is self graded again', () => {
+    expect(() =>
+      validateTopic(
+        raw({
+          questions: [validQuestion, { ...validQuestion, id: 'q2', type: 'scenario' }],
+        }),
+        'closures',
+        BASE,
+      ),
+    ).toThrow(/questions\.ts[\s\S]*form: a topic may have at most 1 open question[\s\S]*q1, q2/)
   })
 
   it('rejects an exercise with no requirements, since nothing would define done', () => {

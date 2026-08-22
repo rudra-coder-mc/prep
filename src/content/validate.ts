@@ -1,6 +1,7 @@
 import type { ZodType } from 'zod'
 import {
   exerciseSchema,
+  MAX_OPEN_QUESTIONS_PER_TOPIC,
   narrationSchema,
   questionSchema,
   topicMetaSchema,
@@ -51,6 +52,15 @@ export function validateTopic(raw: RawTopic, directory: string, base: string): V
   if (duplicates.length > 0) {
     throw new Error(
       `Invalid content in ${base}/questions.ts:\n  id: duplicated (${duplicates.join(', ')})`,
+    )
+  }
+
+  // The schema sees one question at a time, so the cap on open questions is
+  // the one rule that has to be checked across the whole file.
+  const open = questions.filter((q) => q.form === 'open').map((q) => q.id)
+  if (open.length > MAX_OPEN_QUESTIONS_PER_TOPIC) {
+    throw new Error(
+      `Invalid content in ${base}/questions.ts:\n  form: a topic may have at most ${MAX_OPEN_QUESTIONS_PER_TOPIC} open question, and this one has ${open.length} (${open.join(', ')}). Make the rest choice questions`,
     )
   }
 

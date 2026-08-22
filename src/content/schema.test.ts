@@ -36,10 +36,35 @@ describe('validation', () => {
     expect(result.error?.issues[0]?.path).toEqual(['type'])
   })
 
+  it('refuses an open question about anything but an interview or a scenario', () => {
+    const result = questionSchema.safeParse({
+      id: 'q1',
+      type: 'concept',
+      form: 'open',
+      difficulty: 'easy',
+      prompt: 'x',
+      answerInFull: 'y',
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['form'])
+  })
+
+  it('allows an open question on a scenario', () => {
+    const result = questionSchema.safeParse({
+      id: 'q1',
+      type: 'scenario',
+      form: 'open',
+      difficulty: 'easy',
+      prompt: 'x',
+      answerInFull: 'y',
+    })
+    expect(result.success).toBe(true)
+  })
+
   it('defaults the optional list fields so content need not spell them out', () => {
     const parsed = questionSchema.parse({
       id: 'q1',
-      type: 'concept',
+      type: 'interview',
       form: 'open',
       difficulty: 'easy',
       prompt: 'x',
@@ -113,7 +138,7 @@ describe('choice validation', () => {
   it('refuses options on a question that is not answered by choosing', () => {
     const result = questionSchema.safeParse({
       id: 'q1',
-      type: 'concept',
+      type: 'interview',
       form: 'open',
       difficulty: 'easy',
       prompt: 'x',
@@ -215,7 +240,7 @@ describe('ordering validation', () => {
   it('refuses a pool on a question that is not answered by ordering', () => {
     const result = questionSchema.safeParse({
       id: 'q1',
-      type: 'concept',
+      type: 'interview',
       form: 'open',
       difficulty: 'easy',
       prompt: 'x',

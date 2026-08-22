@@ -19,6 +19,16 @@ export const QUESTION_TYPES = [
  */
 export const ANSWER_FORMS = ['choice', 'ordering', 'open'] as const
 
+/**
+ * The only subjects an open question may have. Open is the last resort, kept
+ * for the question with several valid routes to a good answer, and those are
+ * interview and scenario questions. On anything else it is a self grade.
+ */
+export const OPEN_QUESTION_TYPES = ['interview', 'scenario'] as const
+
+/** A topic with more open questions than this is self graded again. */
+export const MAX_OPEN_QUESTIONS_PER_TOPIC = 1
+
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 
 export const topicMetaSchema = z.object({
@@ -215,6 +225,14 @@ export const questionSchema = z
     if (question.form === 'ordering') {
       checkOrdering(question, ctx)
       return
+    }
+
+    if (!(OPEN_QUESTION_TYPES as readonly string[]).includes(question.type)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['form'],
+        message: `an open question can only be about ${OPEN_QUESTION_TYPES.join(' or ')}, and this one is about "${question.type}". Make it a choice question`,
+      })
     }
 
     if (question.items !== undefined || question.correctOrder !== undefined) {
