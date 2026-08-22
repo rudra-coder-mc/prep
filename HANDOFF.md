@@ -26,10 +26,26 @@ listened to, the lesson shows which part of itself is being spoken, and every
 question and its answer can be listened to as well.
 
 **No question takes typed input any more.** That is the largest change in the
-repository's history and it is only half done: the platform side is finished and
-eleven topics of twelve have been converted. Read the next action before anything
-else. Each of the following landed on its own branch, merged with `--no-ff`,
-most recent first.
+repository's history and the content side of it is now complete: all twelve
+topics are on the three forms. What remains is the rule that keeps them there,
+which is the next action. Each of the following landed on its own branch,
+merged with `--no-ff`, most recent first.
+
+**The value and reference topic is on the three forms**, the twelfth and last
+conversion. Eight of its ten questions are choice questions and
+`object-equality-interview` stays open, since a JSON comparison, a hand-written
+field check and an imported deep equality are three routes to a good answer;
+the scenario had one answer, the array's identity never changed, so it became a
+choice question. The ordering question, `copy-depth-order`, replaced
+`spread-versus-alias-output`, whose single printed line it absorbs: a spread and
+a `structuredClone` of the same object, four labelled logs, and a pool holding
+what each would print under the wrong depth, `name Bob` for spread as an alias,
+`tags 1` and `shared false` for spread as deep, `clone 3` for `structuredClone`
+as shallow. `deep-freeze` is four implementations, and each wrong one was run to
+find its failure: the missing null guard throws from `WeakSet.add`, the
+`Object.isFrozen` guard stops at anything frozen one level by someone else, and
+`Object.keys` leaves symbol-keyed and non-enumerable children writable. Nothing
+outside `content/` changed.
 
 **The types and coercion topic is on the three forms**, the eleventh
 conversion. Nine of its eleven questions are choice questions and
@@ -280,34 +296,21 @@ never asked for.
 
 ## The next action
 
-**Convert one topic onto the three answer forms.** `closures` is done and is the
-worked example to read before starting another, and
-`currying-and-partial-application` is a second one. `value-and-reference` is the
-one left. Take it next. One topic is one
-branch, named `content/<topic-slug>`.
+**Enforce one open question per topic.** Branch `improvement/open-question-cap`,
+described in full in `TASKS.md`. The content check currently accepts any number
+of open questions in a topic, because it had to while topics were still being
+converted. All twelve are converted now, so the check can fail a topic with two
+open questions, and fail an open question whose subject is anything but
+`interview` or `scenario`. The authoring convention in `TASKS.md` is rewritten
+to the three forms as part of the same task. Run the check across all twelve
+topics before writing the rule: every topic should already satisfy it, and any
+that does not is a content fix on the same branch.
 
-Read `docs/tasks/converting-a-topic.md` before you start. It is the whole brief:
-the mix a converted topic ships, how each existing question shape converts, what
-makes a wrong option worth writing and what makes a distractor worth writing. It
-outlives these tasks, because every content group added later is authored to the
-same rules.
+After that, the content groups in `TASKS.md` open up. Every one of them is
+authored to `docs/tasks/converting-a-topic.md`, which is why that brief outlives
+the conversions it was written for.
 
-The short version is that every question that can be a choice question becomes
-one, at most one stays open, any topic where something happens in an order gets
-an ordering question, and the questions that were already multiple choice get the
-answer in full they have never had.
-
-Budget for the tests only when the topic is one a spec drives. Converting
-`closures` reordered which form sits where and broke five end-to-end specs and
-two integration tests, none of them in a way that read as a test problem. Not one
-of the nine conversions after it touched a file outside `content/`, because the
-specs name `closures` and the reveal guard reads its ids off that topic, and the
-only other spec pinned to content is `e2e/ordering.spec.ts`, which drives
-`event-loop`. Both of those topics are converted. So the honest expectation for
-the one that remains is content only, and the way to keep it that way is to check
-`e2e/` for the slug before starting rather than after.
-
-### What the eleven conversions have taught
+### What the twelve conversions have taught
 
 Read `shadowing-output` in `content/javascript/prototypes/questions.ts`,
 `bind-output` in currying, `countdown-order` in recursion and
@@ -316,8 +319,8 @@ cases where an existing question converted straight into the ordering question
 the way the brief describes, and all four did it because the original already
 printed several lines.
 
-- **The ordering question is more often authored than converted.** Six of the
-  eleven topics had no output printing several lines, or had one whose plausible
+- **The ordering question is more often authored than converted.** Seven of the
+  twelve topics had no output printing several lines, or had one whose plausible
   misreadings all used the same words. A pool needs lines the program never
   prints, so look for a skipped element, an ignored `reject`, a default that never
   ran, a line a `throw` jumped over. If nothing in the topic can fail to print,
