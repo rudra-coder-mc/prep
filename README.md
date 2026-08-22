@@ -39,6 +39,27 @@ sitting in memory to serve nothing is load for no reason. It starts only when
 `npm run narration:build` needs it and stops again afterwards. That first run
 builds its image, which downloads the voice model and takes a few minutes.
 
+## Running it on the machine that serves it
+
+The platform also runs on a spare Ubuntu machine, `work`, published at
+<https://work.tailba5bc0.ts.net>. To send it what is in the working tree:
+
+```bash
+npm run deploy
+```
+
+That rsyncs the tree over Tailscale, rebuilds the image, and waits until the app
+answers again. Narration ships with it, `.env` does not: the server keeps its
+own, holding the public URL, its auth secret and the login password.
+
+The URL is fixed. It comes from the machine name and the tailnet name, so it
+survives reboots and deploys, and the certificate is Tailscale's to renew.
+
+That address is on the public internet, and the single seeded account is the
+only thing in front of the data. `sudo tailscale funnel --https=443 off` on the
+machine unpublishes it. See
+`docs/decisions/0026-the-platform-is-served-from-one-machine-over-tailscale.md`.
+
 ## Writing content or changing the app
 
 ```bash
