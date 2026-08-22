@@ -63,11 +63,6 @@ The conventions the first groups established, so the rest stay consistent:
 Done when every group below has shipped. Each group is done when its topics
 pass the content check and read as one lesson each, not as a list of facts.
 
-## Classes
-
-Class syntax and fields, `extends` and `super`, static and private members,
-composition against inheritance.
-
 ## Async in practice
 
 Promise combinators, error handling across async boundaries, cancellation with

@@ -1,0 +1,229 @@
+## Why this matters
+
+`extends` is one keyword and it does two things, and `super` is one keyword
+that means two different things depending on where it is written. Most
+inheritance bugs are one of those four being confused: a static that is not
+found, a `this` used before `super()` that throws, a field on the subclass
+that the base constructor cannot see, a `super.method()` that reaches the
+wrong object.
+
+The other reason this is asked is that the order of construction is fixed and
+counter-intuitive. A derived class's fields do not exist while the base
+constructor runs, so a base method called from the base constructor and
+overridden in the subclass sees `undefined` where it expected a field. That
+bug ships in every language with this construction order, and the interview
+question is whether you can say why.
+
+## Two chains, not one
+
+`class B extends A` sets up two prototype links. `B.prototype`'s prototype is
+`A.prototype`, which is the chain instances walk for methods. And `B`'s own
+prototype is `A`, which is the chain the class itself walks for statics. A
+static defined on `A` is found through `B` because of the second link, and
+that is the one people forget exists.
+
+<PrototypeChain
+  title="Two chains from one extends"
+  steps={[
+    {
+      note: 'An instance of B walks the instance chain: its own properties, then B.prototype, then A.prototype, then Object.prototype.',
+      chain: [
+        { id: 'b', label: 'new B()', properties: ['name'] },
+        { id: 'B.prototype', label: 'B.prototype', properties: ['greet'] },
+        { id: 'A.prototype', label: 'A.prototype', properties: ['describe'] },
+        { id: 'Object.prototype', label: 'Object.prototype', properties: ['toString'] },
+      ],
+      lookup: { property: 'describe', foundIn: 'A.prototype' },
+    },
+    {
+      note: 'The class B itself has a chain too: B, then A, then Function.prototype. That is how B.create() finds a static defined on A.',
+      chain: [
+        { id: 'B', label: 'B', properties: ['prototype'] },
+        { id: 'A', label: 'A', properties: ['prototype', 'create'] },
+        { id: 'Function.prototype', label: 'Function.prototype', properties: ['call', 'bind'] },
+      ],
+      lookup: { property: 'create', foundIn: 'A' },
+    },
+  ]}
+/>
+
+`instanceof` walks the first chain: `b instanceof A` asks whether
+`A.prototype` is anywhere on `b`'s chain. It is a prototype check, not a
+constructor check, which is why an object made with `Object.create(A.prototype)`
+passes it having never run `A`.
+
+## `super()` in the constructor
+
+In a base class, `new` creates the object and then runs the constructor with
+`this` bound. In a derived class it does not. `this` is **uninitialised** when
+the derived constructor starts, and it is the call to `super()` that creates
+the object, by running the base constructor, and binds `this` to the result.
+Three rules follow:
+
+- A derived constructor must call `super()` before touching `this`, and must
+  call it before returning. Either omission is a `ReferenceError`.
+- If a derived class has no constructor, it gets
+  `constructor(...args) { super(...args) }` for free.
+- The derived class's fields are initialised immediately after `super()`
+  returns, not before.
+
+That third rule is the trap:
+
+<CodeWalkthrough
+  title="The base constructor cannot see derived fields"
+  code={`class Base {
+  constructor() {
+    this.init()
+  }
+  init() {}
+}
+
+class Derived extends Base {
+items = []
+init() {
+this.items.push('ready')
+}
+}
+
+new Derived()`}
+steps={[
+{
+lines: [15],
+note: 'new Derived() starts the derived constructor. There is none written, so the default one runs, which is super(...args). this does not exist yet.',
+variables: { this: 'uninitialised' },
+},
+{
+lines: [2, 3],
+note: 'super() runs the Base constructor, which creates the object. It calls this.init(), and the lookup finds Derived.prototype.init first, because the object is a Derived.',
+variables: { this: '{}' },
+},
+{
+lines: [10, 11],
+note: 'The overridden init runs. this.items is undefined, because Derived fields have not been initialised: that happens after super() returns, and super() has not returned.',
+output: ["TypeError: Cannot read properties of undefined (reading 'push')"],
+},
+{
+lines: [9],
+note: 'Had it not thrown, this line would run next and set items to a fresh empty array, wiping anything init had managed to put there. Either way the base constructor cannot safely call an overridable method.',
+},
+]}
+/>
+
+The fix is the design rule: a constructor does not call methods that a
+subclass may override. Do the work in a method the caller invokes after
+construction, or pass what is needed as constructor arguments.
+
+## `super.method()` and where it looks
+
+Outside the constructor, `super` means "the prototype of the object this
+method was defined on". It is resolved from where the method is written, not
+from `this`, which is why it still works when the method is called on a
+deeper subclass or borrowed with `call`. `super.describe()` in a `B` method
+looks at `A.prototype` and calls what it finds with `this` left as the current
+object.
+
+That "defined on" is also why `super` works in object literal methods, which
+have a `[[HomeObject]]` too: `const b = { describe() { return 'b, ' +
+super.describe() } }` with `Object.setPrototypeOf(b, a)` works. It does not
+work in an arrow field or a function expression assigned to a property,
+because those have no home object.
+
+An overriding method that wants the base behaviour calls `super.method()`
+explicitly. There is no automatic chaining, and forgetting the call is a
+normal way to silently drop base behaviour.
+
+## Extending built-ins
+
+`class Stack extends Array` works, and the instance is a real array with
+`length` and indexes, because `super()` asks `Array` to create the object.
+Two things to know. `Array` methods that return a new array, `map`, `filter`,
+`slice`, create an instance of the subclass, through `Symbol.species`, so
+`stack.filter(...)` is a `Stack`. And that is overridable with
+`static get [Symbol.species]() { return Array }` if a plain array is wanted.
+
+`class NotFound extends Error` is the common one and has its own checklist:
+
+```js
+class NotFound extends Error {
+  constructor(resource) {
+    super(`${resource} not found`)
+    this.name = 'NotFound'
+    this.resource = resource
+  }
+}
+```
+
+`super(message)` sets `message` and captures `stack`. `name` is set by hand
+because the inherited one is `'Error'` and it is what appears in the stack
+trace. `instanceof NotFound` works in modern engines; it did not when classes
+were transpiled to ES5, which is where the advice to call
+`Object.setPrototypeOf(this, NotFound.prototype)` came from.
+
+## The interview angle
+
+> **"Why can't I use `this` before `super()`?"**
+> Because there is no object yet. In a derived class the base constructor
+> creates it, and `super()` is the call that runs the base constructor. Then
+> the follow-on: derived fields are set after `super()` returns, so the base
+> constructor cannot see them.
+
+> **"What does `extends` actually do?"**
+> Two links. `B.prototype` to `A.prototype` for instances, and `B` to `A`
+> for statics. Then `super` in a method resolves from the home object, not
+> from `this`.
+
+> **"What do you need to do when extending `Error`?"**
+> Call `super(message)`, set `name`, and know that `instanceof` works
+> natively but needed a prototype fix under old transpilers.
+
+## Traps
+
+- **`this` before `super()`** is a `ReferenceError`, and so is a derived
+  constructor that returns without calling `super()`.
+- **Derived fields do not exist in the base constructor.** Calling an
+  overridden method from the base constructor reads `undefined`.
+- **Forgetting `super.method()` in an override** drops the base behaviour
+  silently.
+- **`super` in an arrow field or assigned function** is a syntax error or
+  `undefined`, because there is no home object.
+- **`Error` subclasses inherit `name: 'Error'`.** Set it yourself.
+- **`map` on an `Array` subclass returns the subclass**, through
+  `Symbol.species`. Surprising when the subclass constructor takes different
+  arguments.
+
+## In one picture
+
+<ConceptMap
+  center={'extends links two chains'}
+  branches={[
+    {
+      label: 'Instances',
+      summary: 'B.prototype inherits from A.prototype. Methods and instanceof walk this one.',
+      nodes: ['instanceof checks the chain', 'not who constructed it'],
+    },
+    {
+      label: 'Statics',
+      summary: 'B inherits from A. A static on A is reachable as B.method.',
+      nodes: ['the link people forget'],
+    },
+    {
+      label: 'super()',
+      summary: 'Creates this by running the base constructor. Nothing exists before it.',
+      nodes: [
+        'this before super throws',
+        'derived fields run after super returns',
+        'never call overridables from a constructor',
+      ],
+    },
+    {
+      label: 'super.method',
+      summary: 'Resolved from where the method is written, with this unchanged.',
+      nodes: ['works in object literals too', 'not in arrow fields', 'no automatic chaining'],
+    },
+    {
+      label: 'Built-ins',
+      summary: 'Array and Error can be extended, each with one thing to remember.',
+      nodes: ['Symbol.species picks the result type', 'set name on an Error subclass'],
+    },
+  ]}
+/>
