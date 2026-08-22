@@ -1,0 +1,253 @@
+## Why this matters
+
+A generator is a function that can pause. Call it and nothing runs; you get an
+iterator back. Call `next()` on that and the body runs to its first `yield`,
+hands out a value, and stops, keeping every local variable alive until the
+next `next()`. That is the whole feature, and it is what lets you write an
+iterator as a loop instead of as a state machine.
+
+Interviewers ask about generators for two reasons. The first is that
+implementing an iterable is a standard task and the generator version is the
+one a senior engineer writes. The second is that `async`/`await` is a generator
+driven by a promise loop, and someone who understands `yield` understands where
+an `await` splits a function and why.
+
+## Pausing and resuming
+
+`function*` declares one. `yield` pauses and sends a value out. The function's
+frame, its locals, its position in a loop, all of it, stays in memory between
+calls, which is the thing a plain function cannot do.
+
+<CodeWalkthrough
+  title="Nothing runs until next"
+  code={`function* counter() {
+  console.log('start')
+  let n = 1
+  while (true) {
+    yield n
+    n += 1
+  }
+}
+
+const gen = counter()
+console.log(gen.next().value)
+console.log(gen.next().value)`}
+steps={[
+{
+lines: [10],
+note: "Calling a generator function runs none of its body. It returns a generator object, which is an iterator. 'start' has not printed.",
+variables: { gen: 'suspended at start' },
+},
+{
+lines: [2, 3, 5],
+note: "The first next() runs from the top until the first yield. 'start' prints, n is 1, and yield n hands out 1 and suspends the function right there, inside the loop.",
+variables: { n: '1', gen: 'suspended at yield' },
+output: ['start', '1'],
+},
+{
+lines: [6, 5],
+note: 'The second next() resumes after the yield. n becomes 2, the loop comes round, and yield hands out 2. The infinite loop is fine because it only runs one step per call.',
+variables: { n: '2', gen: 'suspended at yield' },
+output: ['start', '1', '2'],
+},
+]}
+/>
+
+The generator object has `next()`, and also `Symbol.iterator` returning
+itself, so it is an iterator and an iterable at once. That is why a generator
+drops straight into `for...of`, spread and destructuring, and why, like every
+iterator, it is one-shot: a second `for...of` over the same generator object
+finds it already finished. Call the function again for a fresh one.
+
+The range from the previous topic, as a generator:
+
+```js
+class Range {
+  constructor(from, to) {
+    this.from = from
+    this.to = to
+  }
+  *[Symbol.iterator]() {
+    for (let n = this.from; n <= this.to; n++) yield n
+  }
+}
+```
+
+The `*` before the method name makes it a generator method. Every call to
+`Symbol.iterator` starts the loop over, so the state-in-the-call rule is
+satisfied by construction.
+
+## Finishing
+
+A generator finishes when its body returns. The final `next()` then gives
+`{ value: <returned value>, done: true }`, and every `next()` after that gives
+`{ value: undefined, done: true }`.
+
+The return value is easy to misread. `for...of`, spread and destructuring all
+stop the moment `done` is `true` and discard that step's `value`. So a
+`return 'x'` at the end of a generator is invisible to every built-in consumer
+and only visible to code that calls `next()` by hand, or to `yield*`, where it
+becomes the value of the `yield*` expression.
+
+## Sending values in
+
+`next()` takes an argument, and that argument becomes the value of the `yield`
+expression the generator is paused on. This turns a generator from a sequence
+into a conversation.
+
+<CodeWalkthrough
+  title="yield is an expression"
+  code={`function* echo() {
+  const first = yield 'ready'
+  console.log('got', first)
+  const second = yield 'again'
+  console.log('got', second)
+}
+
+const gen = echo()
+gen.next('ignored')
+gen.next('A')
+gen.next('B')`}
+steps={[
+{
+lines: [9],
+note: "The first next() starts the body from the top. There is no yield paused yet to receive a value, so the argument has nowhere to go and is dropped. The body runs to yield 'ready' and stops.",
+variables: { gen: "paused at yield 'ready'" },
+},
+{
+lines: [2, 3, 4],
+note: "The second next('A') resumes at the paused yield, and 'A' becomes the value of that yield expression, so first is 'A'. The body runs on to the next yield.",
+variables: { first: "'A'", gen: "paused at yield 'again'" },
+output: ['got A'],
+},
+{
+lines: [4, 5],
+note: "next('B') does the same for the second yield. The body reaches its end, so this step is done.",
+variables: { first: "'A'", second: "'B'", gen: 'done' },
+output: ['got A', 'got B'],
+},
+]}
+/>
+
+The off-by-one is the interview question: the first `next()` primes the
+generator and its argument is discarded. Every value after that lands on the
+`yield` that was waiting for it.
+
+Two more methods complete the conversation. `gen.throw(err)` resumes the
+generator by throwing `err` at the paused `yield`, which the body can catch
+with an ordinary `try`/`catch`. `gen.return(value)` resumes as if a `return
+value` had been written at the paused `yield`, which runs any `finally` blocks
+on the way out. That is what `for...of` calls on a `break`, and it is how a
+generator gets to close a file it opened before its first `yield`.
+
+## Delegating with `yield*`
+
+`yield*` hands control to another iterable until it is exhausted, yielding
+each of its values as the outer generator's own. It is how generators compose:
+
+```js
+function* tree(node) {
+  if (!node) return
+  yield* tree(node.left)
+  yield node.value
+  yield* tree(node.right)
+}
+```
+
+Four lines for an in-order traversal that would otherwise need an explicit
+stack. `yield*` also forwards `next(value)`, `throw` and `return` through to
+the inner generator, so the conversation works across the delegation, and it
+evaluates to the inner generator's return value, which is the one place that
+value is useful.
+
+`yield* [1, 2, 3]` works on any iterable, not only generators. `yield [1, 2, 3]`
+without the star yields the array as a single value.
+
+## Where this goes
+
+Generators are lazy. A pipeline of generator functions, `take(filter(map(source)))`,
+pulls one value at a time from the source and does only the work the consumer
+asked for. A source that is infinite, or expensive, or a stream, costs nothing
+until something reads it, and `take(3)` reads three.
+
+And `async`/`await` is this machinery with one extra part. An `async` function
+is a generator that yields promises, driven by a loop that waits for each
+promise to settle and then calls `next()` with the result. Every `await` is a
+`yield`. The pause, the kept-alive locals, the resumption with a value, the
+throw into the paused point when a promise rejects: the event loop topic showed
+where each of those happens, and this is the mechanism underneath it.
+
+## The interview angle
+
+> **"What is a generator?"**
+> A function that returns an iterator over its own execution. `yield` pauses
+> and sends out a value, `next()` resumes and can send one in. Locals survive
+> the pause. Then show the range, three lines, and say that it is an iterable
+> because every call starts the loop fresh.
+
+> **"Why does the first `next(value)` discard its argument?"**
+> Because nothing is paused at a `yield` yet. The argument to `next` is the
+> value of the `yield` expression the generator is suspended on, and on the
+> first call there is none.
+
+> **"What is the relationship between generators and `async`/`await`?"**
+> `async` functions are generators driven by promises. Each `await` is a
+> `yield` of a promise; the runner waits for it and resumes the function with
+> the result or throws the rejection into it.
+
+## Traps
+
+- **Calling a generator function runs nothing.** The body starts on the first
+  `next()`.
+- **A generator object is one-shot.** Spread it twice and the second is
+  empty. Call the function again.
+- **The first `next(value)` drops `value`.** Prime first, then send.
+- **`return` from a generator is invisible to `for...of` and spread.** They
+  stop on `done` and ignore that step's value.
+- **`yield` without `*` yields the whole iterable** as one value.
+- **An arrow function cannot be a generator.** `function*` or a `*method()`
+  only.
+- **`yield` inside a nested callback is a syntax error.** It must be directly
+  in the generator body, which is why `items.forEach(x => yield x)` does not
+  work and `for...of` with `yield` does.
+
+## In one picture
+
+<ConceptMap
+  center={'A function that pauses'}
+  branches={[
+    {
+      label: 'Out',
+      summary: 'yield sends a value out and suspends. The frame stays alive.',
+      nodes: [
+        'function* and *method',
+        'calling runs nothing',
+        'return value: done true, ignored by for...of',
+      ],
+    },
+    {
+      label: 'In',
+      summary: 'next(v) resumes and v becomes the value of the paused yield.',
+      nodes: [
+        'first next primes, argument dropped',
+        'throw(err) throws at the yield',
+        'return() runs finally',
+      ],
+    },
+    {
+      label: 'Protocol',
+      summary: 'A generator object is an iterator and an iterable, and one-shot.',
+      nodes: ['for...of, spread, destructuring', 'Symbol.iterator returns itself'],
+    },
+    {
+      label: 'Compose',
+      summary: 'yield* delegates to any iterable and forwards next, throw and return.',
+      nodes: ['recursive traversal', 'lazy pipelines: map, filter, take'],
+    },
+    {
+      label: 'Underneath',
+      summary: 'async/await is a generator driven by a promise loop.',
+      nodes: ['await is yield', 'rejection is throw()'],
+    },
+  ]}
+/>

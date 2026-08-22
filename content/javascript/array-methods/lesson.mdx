@@ -1,0 +1,260 @@
+## Why this matters
+
+Every interview has a moment where you reach for an array method, and the
+interviewer is watching for two things: whether you pick the one that says what
+you mean, and whether you know what it does to the array you called it on.
+`sort` in place on props you do not own, `map` where `forEach` was meant,
+`indexOf` on `NaN`, a `reduce` that rebuilds the whole accumulator on every
+step. None of these are obscure. They are the things that go wrong with the
+dozen methods everyone uses daily.
+
+The previous topic showed that these methods are ordinary higher order
+functions. This one is the catalogue: what each returns, which ones change the
+array under you, and the four edges that keep coming up.
+
+## Mutate or copy
+
+Every array method falls on one side of a line, and the line is the first thing
+to know about any of them.
+
+**These change the array they are called on**, and most return something other
+than the array: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`,
+`reverse`, `fill` and `copyWithin`. `push` returns the new length, `pop` and
+`shift` return the removed element, `splice` returns an array of what it
+removed, and `sort` and `reverse` return the same array they just changed,
+which is what makes `const sorted = list.sort()` look like a copy when it is
+an alias.
+
+**Everything else returns a new value and leaves the original alone**: `map`,
+`filter`, `slice`, `concat`, `flat`, `flatMap`, the whole `find` family,
+`includes`, `join`, and the 2023 additions `toSorted`, `toReversed`,
+`toSpliced` and `with`, which exist precisely to give the mutating four a
+copying twin.
+
+<MemoryModel
+  title="sort returns the array it changed"
+  steps={[
+    {
+      note: 'props.items is an array the component received. It does not own it.',
+      stack: [{ name: 'items', ref: 'arr#1' }],
+      heap: [{ id: 'arr#1', label: '[ 3, 1, 2 ]' }],
+    },
+    {
+      note: 'const sorted = items.sort() reorders the elements of that same array and returns a reference to it. There is still one array, and whoever passed it in now has a sorted one without being told.',
+      stack: [
+        { name: 'items', ref: 'arr#1' },
+        { name: 'sorted', ref: 'arr#1' },
+      ],
+      heap: [{ id: 'arr#1', label: '[ 1, 2, 3 ]' }],
+      highlight: ['arr#1'],
+    },
+    {
+      note: 'items.toSorted(), or [...items].sort(), allocates a second array and sorts that. The original stays as it was received.',
+      stack: [
+        { name: 'items', ref: 'arr#1' },
+        { name: 'sorted', ref: 'arr#2' },
+      ],
+      heap: [
+        { id: 'arr#1', label: '[ 3, 1, 2 ]' },
+        { id: 'arr#2', label: '[ 1, 2, 3 ]' },
+      ],
+      highlight: ['arr#2'],
+    },
+  ]}
+/>
+
+The rule for code you share: never call a mutating method on an array you did
+not create in the same function. React state, function parameters and anything
+from a store all count as not yours.
+
+## What each one returns
+
+The second thing to know is the return value, because it decides what the next
+method in a chain sees.
+
+| Method                        | Returns                                      |
+| ----------------------------- | -------------------------------------------- |
+| `map`                         | new array, same length                       |
+| `filter`                      | new array, elements where callback is truthy |
+| `reduce`                      | whatever the accumulator ends up as          |
+| `forEach`                     | `undefined`, always                          |
+| `find` / `findLast`           | the element, or `undefined`                  |
+| `findIndex` / `findLastIndex` | the index, or `-1`                           |
+| `indexOf`                     | the index, or `-1`, by `===`                 |
+| `includes`                    | boolean, by SameValueZero                    |
+| `some` / `every`              | boolean, stops early                         |
+| `flat(depth = 1)` / `flatMap` | new array, one level flatter                 |
+| `at(-1)`                      | element from the end, or `undefined`         |
+
+Two of these rows are where the errors cluster. `forEach` returns `undefined`,
+so it cannot be chained and cannot be awaited, and a `return` inside its
+callback only ends that one call. And `map` returns the same length as the
+input, so a callback with no `return` produces an array of `undefined`, which is
+the most common sign that `forEach` was the method meant.
+
+`includes` and `indexOf` differ in one value: `[NaN].indexOf(NaN)` is `-1`
+because `===` says `NaN` is not itself, and `[NaN].includes(NaN)` is `true`
+because SameValueZero treats it as equal. Use `includes` for the question "is
+it in there".
+
+`some` and `every` on an empty array are `false` and `true` respectively, which
+is what the logic says and still catches people: `[].every(x => x > 100)` is
+`true`, because no element fails.
+
+## How `sort` compares
+
+`sort` with no argument converts every element to a string and compares the
+strings by UTF-16 code units. That is why `[10, 9, 1].sort()` is `[1, 10, 9]`:
+`'10'` comes before `'9'` because `'1'` comes before `'9'`. Numbers need a
+comparator, and the comparator contract is the thing to state precisely:
+
+<CodeWalkthrough
+  title="What a comparator promises"
+  code={`const items = [
+  { name: 'b', n: 2 },
+  { name: 'a', n: 1 },
+  { name: 'c', n: 2 },
+]
+items.sort((x, y) => x.n - y.n)
+console.log(items.map((i) => i.name))`}
+  steps={[
+    {
+      lines: [6],
+      note: 'The comparator is called with pairs. A negative result puts x before y, positive puts y before x, zero says they are equal and leaves their existing order alone.',
+    },
+    {
+      lines: [2, 3],
+      note: 'b against a: 2 minus 1 is positive, so a goes before b.',
+      variables: { compared: 'b, a -> 1' },
+    },
+    {
+      lines: [2, 4],
+      note: 'b against c: 2 minus 2 is zero. They are equal for this sort. Since ES2019 the sort is stable, so b stays ahead of c because it was ahead before.',
+      variables: { compared: 'b, c -> 0' },
+    },
+    {
+      lines: [7],
+      note: 'a, then b, then c. Stability is what lets you sort by one key and then by another and have the first order survive within ties.',
+      output: ["[ 'a', 'b', 'c' ]"],
+    },
+  ]}
+/>
+
+Two consequences. `x.n - y.n` is fine for numbers and wrong for strings, where
+subtraction gives `NaN` and the engine treats every pair as equal; use
+`localeCompare` for strings. And a comparator that returns a boolean, which
+`(x, y) => x > y` does, only ever returns `0` or `1`, so it never says "x before
+y" and the result depends on the engine's algorithm rather than on your code.
+
+Since the sort is stable, sorting by surname and then by first name is two
+sorts, the less important key first. The newer way is one comparator that
+returns the first non-zero of the two comparisons, and `||` does that neatly:
+`a.last.localeCompare(b.last) || a.first.localeCompare(b.first)`.
+
+## Holes, length and the edges
+
+An array has a `length` and it has elements, and the two can disagree. `new
+Array(3)` has length 3 and no elements; `[1, , 3]` has a hole at index 1. The
+callback methods skip holes: `map`, `forEach`, `filter` and `reduce` never call
+you for one, while `for...of`, spread and `Array.from` see them as `undefined`.
+That is why `Array(3).map(() => 0)` is still three holes and
+`Array.from({ length: 3 }, () => 0)` is `[0, 0, 0]`.
+
+Three more edges that each earn one sentence in an interview:
+
+- **`reduce` with no initial value** uses the first element as the accumulator
+  and starts from the second, and throws on an empty array. Pass the initial
+  value. Always.
+- **An `async` callback in `forEach`** fires every call at once and nothing
+  waits. `forEach` does not look at the returned promise. Use `for...of` with
+  `await` inside it for sequence, or `Promise.all(items.map(...))` for
+  parallel.
+- **`map` with `parseInt`** is the classic: `['1', '2', '3'].map(parseInt)` is
+  `[1, NaN, NaN]`, because `map` passes the index as the second argument and
+  `parseInt` reads it as the radix.
+
+## The interview angle
+
+> **"Which array methods mutate?"**
+> Name all nine without pausing: `push`, `pop`, `shift`, `unshift`, `splice`,
+> `sort`, `reverse`, `fill`, `copyWithin`. Then say that `sort` and `reverse`
+> return the same array, which is why they look like copies, and that
+> `toSorted`, `toReversed`, `toSpliced` and `with` are the non-mutating twins.
+
+> **"What is wrong with `[10, 9, 1].sort()`?"**
+> It sorts as strings. Then the comparator contract, negative, zero, positive,
+> and the two ways people get it wrong: subtraction on strings and returning
+> a boolean.
+
+> **"`forEach` or `map`?"**
+> `map` when you want the result, `forEach` when you want the side effect. A
+> `map` whose result is discarded allocates an array for nothing and tells the
+> next reader that a value was wanted.
+
+## Traps
+
+- **`const sorted = arr.sort()` is not a copy.** It is the same array.
+  `arr.toSorted()` or `[...arr].sort()`.
+- **`sort()` on numbers without a comparator** sorts them as strings.
+- **`indexOf(NaN)` is always `-1`.** `includes` finds it.
+- **`map` with a callback that does not return** gives an array of
+  `undefined`.
+- **`reduce` on an empty array with no initial value throws.**
+- **`async` inside `forEach` does not wait.** Nothing reads the promise.
+- **`Array(3).map(fn)` does nothing.** There are no elements to map.
+- **`splice(i, 1)` to remove during a `forEach`** skips the next element,
+  because the indexes shift under the iteration. Filter instead.
+
+## In one picture
+
+<ConceptMap
+  center={'Say what you mean'}
+  branches={[
+    {
+      label: 'Mutates',
+      summary:
+        'Nine methods change the array in place. Never call them on an array you did not make.',
+      nodes: [
+        'push pop shift unshift',
+        'splice sort reverse',
+        'fill copyWithin',
+        'sort and reverse return the same array',
+      ],
+    },
+    {
+      label: 'Copies',
+      summary: 'Everything else returns a new value and leaves the original alone.',
+      nodes: ['map filter slice concat flat', 'toSorted toReversed toSpliced with'],
+    },
+    {
+      label: 'Returns',
+      summary: 'The return value is what the next link in a chain receives.',
+      nodes: [
+        'forEach: undefined',
+        'find: element or undefined',
+        'findIndex: index or -1',
+        'some every: boolean, empty is false and true',
+      ],
+    },
+    {
+      label: 'sort',
+      summary:
+        'Strings by default. A comparator returns negative, zero or positive, and the sort is stable.',
+      nodes: [
+        'numbers need a comparator',
+        'booleans are not comparators',
+        'localeCompare for strings',
+      ],
+    },
+    {
+      label: 'Edges',
+      summary: 'The four that come up every time.',
+      nodes: [
+        'holes are skipped by callbacks',
+        'reduce needs an initial value',
+        'async forEach does not wait',
+        'map(parseInt)',
+      ],
+    },
+  ]}
+/>
