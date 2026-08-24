@@ -1,0 +1,200 @@
+## Why this matters
+
+`try/catch` is synchronous by reach. It catches what throws while it is on
+the stack, and an `await` puts the rejection back on your stack — that is the
+whole trick. Everything else about async errors is a story about boundaries:
+places where control crosses a gap, and the throw lands where nobody is
+catching any more.
+
+The bugs this produces are quiet. The error happened; it just never reached
+anyone who could have done something about it.
+
+## try/catch works again — if you await
+
+```js
+async function load() {
+  try {
+    const user = await fetchUser(id) // rejection throws here
+    return render(user)
+  } catch (error) {
+    return showFallback(error)
+  }
+}
+```
+
+A rejected promise that is awaited throws its reason at the `await`. This is
+the single best thing `async/await` did: after a decade of `.then` chains,
+ordinary `try/catch` works again.
+
+The rule with teeth: **a promise you do not await is not covered.** The `try`
+block finishes in microseconds; the promise rejects much later, from outside
+the block, into whatever context is around — usually nothing.
+
+## Errors that cross a boundary
+
+Every one of these loses the error from the surrounding `try`:
+
+```js
+// 1. Created but not awaited
+try {
+  riskyAsync() // rejects later, unhandled
+} catch (e) {}
+
+// 2. A callback the platform calls later
+try {
+  setTimeout(() => {
+    throw new Error('gone') // nothing above catches this
+  }, 1000)
+} catch (e) {}
+
+// 3. An event emitter's handler
+emitter.on('data', () => {
+  throw new Error('also gone')
+})
+
+// 4. Fire-and-forget with the promise discarded
+void sendBeacon() // rejection surfaces as "unhandled"
+```
+
+In each case the function that started the work has returned before the error
+exists. The fix is always the same shape: give the async work a destination.
+Await it, attach a `.catch`, or for event-style sources use their error
+channel (`'error'` events, `error-first` callbacks).
+
+## Chains: where a throw goes
+
+Inside a `.then` callback, a throw becomes a rejection of the promise _that
+callback's then returned_, and it travels down the chain to the next `catch`.
+
+<CodeWalkthrough
+  title="One throw, three handlers"
+  code={`Promise.resolve()
+.then(() => {
+  console.log('one')
+  throw new Error('boom')
+})
+.then(() => console.log('two'))
+.catch((e) => {
+  console.log('caught', e.message)
+  return 'safe'
+})
+.then((v) => console.log('after', v))`}
+  steps={[
+    {
+      lines: [2, 3, 4],
+      note: 'The first callback runs and throws. The throw rejects the promise this then produced.',
+      output: ['one'],
+      variables: { 'chain state': 'rejected: boom' },
+    },
+    {
+      lines: [5],
+      note: 'Skipped entirely. A rejection flows past then handlers until something handles it.',
+      variables: { 'chain state': 'rejected: boom' },
+    },
+    {
+      lines: [6, 7, 8, 9],
+      note: 'The catch receives the reason and returns normally, so it fulfils with what it returned.',
+      output: ['caught boom'],
+      variables: { 'chain state': 'fulfilled: safe' },
+    },
+    {
+      lines: [10],
+      note: 'Recovery is invisible to everything downstream. It receives the recovered value.',
+      output: ['after safe'],
+      variables: { 'chain state': 'fulfilled: safe' },
+    },
+  ]}
+/>
+
+A mid-chain `catch` therefore changes what continues after it. That is
+recovery when you meant it, and silent swallowing when you did not.
+
+## finally
+
+`finally` runs on both paths, and it does not swallow: a value you `return`
+from a `finally` block (or a `finally` callback on a promise) is ignored, and
+the original outcome passes through.
+
+Two exceptions worth knowing precisely:
+
+- If `finally` **throws**, that error replaces the outcome.
+- In plain functions, a `return` inside a `finally` block **does** override
+  the function's result. Promise `finally` ignores values; statement `finally`
+  does not.
+
+Use it for cleanup — timers, spinners, cursors — never for deciding the
+result.
+
+## Making failures loud again
+
+Errors get lost quietly, so the defences are deliberate:
+
+- **Attach handlers when the promise is created**, not some turns later. The
+  runtime reports unhandled rejections once microtasks drain.
+- **Keep a global net**: `process.on('unhandledRejection')` in Node,
+  `window.addEventListener('unhandledrejection', ...)` in browsers. It is a
+  bug detector, not a strategy.
+- **Throw `Error` objects**, not strings or objects. A string has no stack and
+  no `instanceof`, and `JSON.stringify(new Error('x'))` prints `{}` — log
+  `.message` and `.stack`.
+- **Catch only what you handle.** A catch that logs and rethrows is often the
+  most honest code in the file.
+
+## The interview angle
+
+> **"Where can an error get lost in asynchronous code?"** Name the boundaries:
+> a promise nobody awaited, a `setTimeout` or event-handler callback, a
+> fire-and-forget call whose promise was discarded, a mid-chain catch that
+> returns a default, and a broad try that cannot say which await failed.
+
+Expect follow-ups on how a rejection travels down a chain of `then`s, why
+`try` cannot reach a `setTimeout` throw, and what `unhandledrejection` is and
+when it fires.
+
+## Traps
+
+- **Not awaiting is the number one way errors vanish.** The `try` block ends;
+  the rejection happens somewhere else entirely.
+- **A throw inside a callback the platform schedules** — timers, events,
+  stream pipes — can never be caught by the code that registered it.
+- **An async callback passed to `forEach`** discards its promise. A throw
+  inside becomes an unhandled rejection and the loop carries on regardless.
+- **Mid-chain recovery is invisible downstream.** After a `catch` returns a
+  default, every later `then` sees success. Make sure that is the intent.
+- **`finally` runs either way but decides nothing** — unless it throws, or in
+  plain functions, unless it `return`s.
+- **Stringifying an error destroys it.** Log `message` and `stack`, not the
+  object serialised.
+
+## In one picture
+
+<ConceptMap
+  center={'Async errors'}
+  branches={[
+    {
+      label: 'Where catch reaches',
+      summary: 'Anything that throws while the try block is on the stack.',
+      nodes: ['await turns rejection into throw', 'sync throws inside the block'],
+    },
+    {
+      label: 'Where it cannot',
+      summary: 'Work running after the block has exited.',
+      nodes: ['un-awaited promises', 'timer and event callbacks', 'discarded promises'],
+    },
+    {
+      label: 'Chains',
+      summary: 'A throw rejects the promise that then returned.',
+      nodes: ['flows past thens to the nearest catch', 'mid-chain catch recovers downstream'],
+    },
+    {
+      label: 'finally',
+      summary: 'Cleanup on both paths, no swallowing.',
+      nodes: ['ignored return value', 'a throw replaces the outcome'],
+    },
+    {
+      label: 'Safety net',
+      summary: 'Detect what escaped, loudly.',
+      nodes: ['unhandledrejection listeners', 'throw Errors, log message and stack'],
+    },
+  ]}
+/>

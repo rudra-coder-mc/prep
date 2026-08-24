@@ -1,0 +1,186 @@
+## Why this matters
+
+The promises topic explained what the four combinators do. This topic is about
+the part interviews actually probe: picking one for a real requirement, and
+knowing what your choice does to the work you did not wait for.
+
+The failure modes are all variations of one mistake — treating a combinator as
+if it manages the work. It only manages the waiting.
+
+## Choosing by failure mode
+
+| Requirement                                 | Reach for            |
+| ------------------------------------------- | -------------------- |
+| Every result matters; one failure ruins all | `Promise.all`        |
+| Attempt everything, report each outcome     | `Promise.allSettled` |
+| First answer wins, even a failure           | `Promise.race`       |
+| First success wins; fail only if all fail   | `Promise.any`        |
+
+Two details separate a passable answer from a good one:
+
+> `Promise.any` rejects with an `AggregateError` whose `errors` array holds
+> every reason, in the order the rejections happened. `Promise.all` rejects
+> with the single first reason it saw and discards the rest.
+
+And the results array from `Promise.all` is in **input order**, not completion
+order, so you never need to map results back to their sources.
+
+## Fan-out with partial success
+
+A dashboard needs user, notifications and stats. Notifications 404s; the other
+two widgets should still render. `Promise.all` throws that away.
+
+<CodeWalkthrough
+  title="From all-or-nothing to per-item outcomes"
+  code={`const settled = await Promise.allSettled([
+  fetchUser(),
+  fetchNotifications(),
+  fetchStats(),
+])
+
+const widgets = settled
+.filter((r) => r.status === 'fulfilled')
+.map((r) => r.value)
+
+const failures = settled
+.filter((r) => r.status === 'rejected')
+.map((r) => r.reason)`}
+steps={[
+{
+lines: [1, 2, 3, 4, 5],
+note: 'All three requests start immediately. allSettled waits for every outcome and never rejects.',
+variables: { requests: '3', rejected: '0' },
+},
+{
+lines: [7, 8],
+note: 'Filtering on status keeps only the fulfilled entries, so the two working widgets render.',
+variables: { widgets: 'user, stats' },
+},
+{
+lines: [10, 11],
+note: 'The failure is still visible, as a reason you can log or show. Nothing was swallowed.',
+variables: { failures: 'notifications: 404' },
+output: ['rendered: user, stats', 'failed: notifications'],
+},
+]}
+/>
+
+An equally valid style attaches a `.catch(() => DEFAULT)` to each promise
+before passing them to `Promise.all`. Choose per call site: `allSettled` when
+the caller wants to see every outcome, per-promise defaults when each failure
+has its own obvious fallback.
+
+## Fallbacks and first wins
+
+`Promise.any` over several mirrors gives you the fastest working source and
+only fails once every source has failed. `Promise.race` gives you the first
+settlement of any kind, which is exactly what a timeout wants:
+
+```js
+function withTimeout(promise, ms) {
+  let timer
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('timeout')), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
+}
+```
+
+Clear the timer in `finally`. A promise that settles early otherwise leaves a
+pending timer behind, which keeps a Node process alive and accumulates in a
+long-running page.
+
+## What happens to the losers
+
+Nothing in the promise API stops work. A combinator decides who gets to
+matter, not who gets to run.
+
+When `Promise.all` rejects on the first failure, the other requests keep
+running and their results are discarded. When `race` picks your timeout, the
+request carries on. When `any` takes the first success, the mirrors you lost
+still served their responses somewhere.
+
+Abandoned promises still finish, their side effects still happen, and an
+unhandled rejection from one can surface long after you believed the failure
+was dealt with. If abandoned work must actually stop, cancellation has to be
+built beside the promises — that is `AbortController`, covered in its own
+topic.
+
+## Retrying without hammering
+
+Retries are written around a promise, never by one:
+
+```js
+async function withRetry(task, attempts = 3) {
+  for (let i = 0; ; i++) {
+    try {
+      return await task()
+    } catch (error) {
+      if (i === attempts - 1) throw error
+      await sleep(100 * 2 ** i)
+    }
+  }
+}
+```
+
+The backoff matters as much as the retry. Retrying immediately at full rate
+against an overloaded server makes the outage worse.
+
+## The interview angle
+
+> **"Load these five resources concurrently but survive individual
+> failures."** `Promise.allSettled`, then split fulfilled from rejected.
+> Follow-up: why not `Promise.all` with per-item catches? Both work; say what
+> each communicates and pick one.
+
+Expect follow-ups on writing a timeout with `race` (and clearing the timer),
+on `AggregateError`, and on capping concurrency by batching `Promise.all`
+inside a loop.
+
+## Traps
+
+- **Combinators manage the waiting, not the work.** Rejected `all`, winning
+  `race`, losing `any` — the abandoned promises keep running either way.
+- **`any` collects reasons into `AggregateError.errors`.** Reading `err.message`
+  alone hides every cause except the aggregate wrapper.
+- **`all` results arrive in input order**, no matter the settlement order.
+  Sorting or remapping them is a bug you wrote, not a property of the API.
+- **An async callback in `.map` returns nothing unless told to.**
+  `ids.map(async (id) => { await save(id) })` fulfils with `[undefined]`.
+- **A retry loop without backoff is a small denial-of-service attack** against
+  whatever just failed.
+- **Timers left running after an early settle** keep processes alive. Clear
+  them in `finally`.
+
+## In one picture
+
+<ConceptMap
+  center={'Combinators'}
+  branches={[
+    {
+      label: 'all',
+      summary: 'Every result or nothing; rejects with the first reason.',
+      nodes: ['results in input order', 'losers keep running'],
+    },
+    {
+      label: 'allSettled',
+      summary: 'Never rejects; reports every outcome.',
+      nodes: ['status fulfilled or rejected', 'partial success is data'],
+    },
+    {
+      label: 'race',
+      summary: 'First settlement wins, failure included.',
+      nodes: ['timeouts', 'clear the timer in finally'],
+    },
+    {
+      label: 'any',
+      summary: 'First success wins; AggregateError if all reject.',
+      nodes: ['redundant mirrors', 'errors array holds every reason'],
+    },
+    {
+      label: 'Built on top',
+      summary: 'Timeouts, retries and pools are combinations, not features.',
+      nodes: ['retry with backoff', 'batch allSettled for a cap', 'abort the losers separately'],
+    },
+  ]}
+/>

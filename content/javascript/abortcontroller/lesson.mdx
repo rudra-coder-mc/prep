@@ -1,0 +1,198 @@
+## Why this matters
+
+Every combinator topic lands on the same sentence: nothing in the promise API
+stops work. `AbortController` is what stops work. Interviews love it because
+it separates people who know the promise model from people who can build with
+it — a timeout that leaves the request running, a search box that renders
+stale results, a component unmount that leaks fetches are all the same missing
+piece.
+
+The one-sentence model: **a promise cannot be cancelled, so cancellation is
+cooperative.** A signal is a flag everyone can watch; stopping still has to be
+built into the code doing the work.
+
+## The pieces
+
+```js
+const controller = new AbortController()
+const { signal } = controller
+
+fetch('/api/search?q=' + q, { signal }) // opts in
+controller.abort() // everyone watching reacts
+```
+
+- `signal.aborted` — boolean, readable at any time.
+- `signal.addEventListener('abort', ...)` — react the moment it flips.
+- `signal.throwIfAborted()` — turn the flag into an exception, mid-function.
+- `controller.abort(reason)` — flip it; the reason becomes the rejection
+  reason for anything listening.
+
+Aborting while a `fetch` is in flight rejects its promise with an
+`AbortError` (`e.name === 'AbortError'`). If you pass your own reason to
+`abort(reason)`, that reason arrives instead — which is how callers tell "the
+user navigated away" from a generic abort.
+
+Aborting **after** completion does nothing. The signal settles once, like a
+promise; late aborts are silently ignored.
+
+## Wiring fetch to a deadline
+
+`Promise.race` against a timer stops your _waiting_. Passing an abort signal
+stops the _request_:
+
+<CodeWalkthrough
+  title="Two timeouts, only one of them works"
+  code={`// Stops waiting; request continues in the background
+const result = await Promise.race([
+  fetch(url),
+  sleep(2000).then(() => {
+    throw new Error('timeout')
+  }),
+])
+
+// Stops the request too
+const result = await fetch(url, {
+signal: AbortSignal.timeout(2000),
+})`}
+steps={[
+{
+lines: [1, 2, 3, 4, 5],
+note: 'At 2s the race rejects and your code moves on. Nothing told the server to stop.',
+variables: { 'your await': 'rejected at 2s', request: 'still running' },
+},
+{
+lines: [8, 9, 10],
+note: 'AbortSignal.timeout builds a signal that aborts itself at the deadline. fetch sees the abort and its promise rejects with AbortError.',
+variables: { 'your await': 'rejected at 2s', request: 'aborted at 2s' },
+output: ['AbortError: signal timed out'],
+},
+]}
+/>
+
+`AbortSignal.timeout(ms)` needs no controller and no cleanup. Reach for it
+first; build a controller by hand when something other than time should do the
+aborting.
+
+## Cancelling your own async work
+
+A signal means nothing until code checks it. Multi-step work checks between
+steps:
+
+```js
+async function generateReport(signal) {
+  const data = await queryDb({ signal })
+  signal.throwIfAborted()
+  const shaped = shapeData(data)
+  signal.throwIfAborted()
+  return renderPdf(shaped)
+}
+```
+
+Between steps there is no natural checkpoint, so `throwIfAborted()` makes one.
+Without those lines the function runs to completion no matter what the caller
+wanted — the signal was accepted and then ignored, which is worse than not
+accepting one, because it lies.
+
+Long-running loops check `signal.aborted` per iteration. Event-style sources
+listen:
+
+```js
+signal.addEventListener('abort', () => stream.close())
+```
+
+## Stale requests: the pattern worth memorising
+
+A search box fires a request per keystroke. Responses arrive out of order;
+the last-rendered one wins by accident. One controller per request, aborting
+its predecessor, makes ordering deliberate:
+
+```js
+let current
+
+async function search(q) {
+  current?.abort()
+  const controller = (current = new AbortController())
+  try {
+    const res = await fetch('/search?q=' + q, { signal: controller.signal })
+    return await res.json()
+  } catch (e) {
+    if (e.name === 'AbortError') return // superseded, not failed
+    throw e
+  }
+}
+```
+
+The `AbortError` branch is not error handling; it is control flow. An aborted
+request is the mechanism working, and swallowing exactly that one case — while
+letting every real failure propagate — is the discipline the pattern teaches.
+
+## Combining signals
+
+One operation, several reasons to stop: user navigation _and_ a deadline.
+`AbortSignal.any([userSignal, timeoutSignal])` returns a signal that aborts
+when any input does, passing through whichever reason fired first. Without it,
+you wire listeners manually and re-abort — doable, noisy, easy to leak.
+
+## The interview angle
+
+> **"How do you cancel an async operation in JavaScript?"** Start with the
+> constraint: promises cannot be cancelled, so cancellation is cooperative via
+> `AbortController`. Then show you can wire it end to end: signal into fetch,
+> `throwIfAborted` between steps of your own work, `AbortError` treated as
+> control flow, `AbortSignal.timeout` or `any` for composition.
+
+Expect follow-ups on cancelling CPU-bound synchronous work (you cannot; it
+must yield or move to a worker), on why racing a timer is not cancellation,
+and on cleaning up listeners when a signal outlives the operation.
+
+## Traps
+
+- **Racing a timer is not cancellation.** Your await ends; the request keeps
+  running. Only a signal reaches the work.
+- **Accepting a signal and never checking it** cancels nothing. Checkpoints
+  between steps are the whole implementation.
+- **Late `abort()` calls do nothing.** The signal settles once; abort after
+  completion is ignored silently.
+- **Swallowing every error under the guise of handling AbortError** hides real
+  failures. Match on `e.name === 'AbortError'`, nothing wider.
+- **CPU-bound work ignores signals until it yields.** A tight loop never
+  observes `aborted`; chunk the work or use a worker.
+- **Listeners on long-lived signals accumulate.** Remove them when the
+  operation ends, or pass `{ once: true }`.
+
+## In one picture
+
+<ConceptMap
+  center={'AbortController'}
+  branches={[
+    {
+      label: 'Why it exists',
+      summary: 'A promise cannot be cancelled; there is no state to move it to.',
+      nodes: ['cancellation is cooperative', 'combinators manage waiting, not work'],
+    },
+    {
+      label: 'The signal',
+      summary: 'A flag plus an event, settled once.',
+      nodes: ['aborted', 'abort event', 'throwIfAborted', 'abort(reason)'],
+    },
+    {
+      label: 'Built-in opt-ins',
+      summary: 'Platform APIs already watch the signal.',
+      nodes: ['fetch rejects with AbortError', 'AbortSignal.timeout(ms)', 'AbortSignal.any([...])'],
+    },
+    {
+      label: 'Your own work',
+      summary: 'Checkpoints make cancellation real.',
+      nodes: ['throwIfAborted between steps', 'check per loop iteration', 'close sources on abort'],
+    },
+    {
+      label: 'Discipline',
+      summary: 'AbortError is control flow, not failure.',
+      nodes: [
+        "match e.name === 'AbortError'",
+        'let everything else propagate',
+        'remove stale listeners',
+      ],
+    },
+  ]}
+/>
