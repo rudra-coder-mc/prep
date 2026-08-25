@@ -63,14 +63,6 @@ The conventions the first groups established, so the rest stay consistent:
 Done when every group below has shipped. Each group is done when its topics
 pass the content check and read as one lesson each, not as a list of facts.
 
-## Async in practice
-
-Promise combinators, error handling across async boundaries, cancellation with
-`AbortController`, async iteration.
-
-Sits after the existing event loop and promises topics rather than replacing
-them: those two explain the model, this group is what you do with it.
-
 ## Modules and the runtime
 
 ES modules against CommonJS, resolution and side effects, strict mode and

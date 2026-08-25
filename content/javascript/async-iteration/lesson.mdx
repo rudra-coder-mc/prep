@@ -1,0 +1,195 @@
+## Why this matters
+
+Async iteration is the bridge between two worlds. Events, streams and queues
+**push** values at you whenever they arrive; loops want to **pull** one value
+at a time, on their own schedule. `for await...of` and async generators are
+the machinery that lets a pull-shaped loop consume push-shaped sources — and
+interviews use it to test whether someone understands the iterator protocol
+well enough to see it twice, once with promises.
+
+It also hides the most misunderstood await in the language: the one inside the
+loop.
+
+## for await...of
+
+```js
+for await (const chunk of readLines(file)) {
+  console.log(chunk)
+}
+```
+
+The loop awaits each value before running the body: it works over any object
+with `Symbol.asyncIterator`, whose `next()` returns a promise of
+`{ value, done }`. Yielded promises are unwrapped transparently — an async
+generator can `yield Promise.resolve(1)` and the consumer still sees `1`.
+
+The classic bug is reaching for plain `for...of`. An async iterable has no
+`Symbol.iterator`, so it throws immediately — or worse, over an array of
+promises it "works" and hands you pending promise objects as values.
+
+## Async generators
+
+`async function*` is a generator whose yields can await:
+
+<CodeWalkthrough
+  title="Pages pulled only as needed"
+  code={`async function* pages(fetchPage) {
+let page = 0
+while (true) {
+  const items = await fetchPage(page)
+  if (items.length === 0) return
+  yield* items
+  page++
+}
+}
+
+for await (const item of pages(fetchPage)) {
+if (item.id === target) break`}
+steps={[
+{
+lines: [3, 4],
+note: 'The first fetch happens when the loop asks for the first value, not when pages() was called. Nothing runs until pulled.',
+variables: { 'page': '0', 'fetches': '1' },
+},
+{
+lines: [6],
+note: 'yield\* hands the fetched items to the consumer one at a time. The next page is not requested until these are used up.',
+variables: { 'page': '0', 'fetches': '1', delivered: 'items so far' },
+},
+{
+lines: [11],
+note: 'The consumer breaks. That calls return() on the generator, which runs finally blocks and ends it.',
+output: ['stopped after page 2'],
+variables: { 'page': '1', 'fetches': '2' },
+},
+]}
+/>
+
+That is the payoff shape: pagination logic written once in the producer,
+consumed with a three-line loop, and lazy by construction. The generator
+fetches page 2 only because the loop survived page 1.
+
+## The pull model
+
+Between two `yield`s sits code that runs **when the consumer asks for the
+next value** — not eagerly, not on a timer. This is what makes async
+generators converters from push to pull: an event emitter shoves values into
+a queue; the async generator holds them until `next()` comes; the loop decides
+the pace.
+
+Two consequences worth saying out loud:
+
+- **Two `next()` calls queue.** A generator executes one step at a time; the
+  second call waits for the first to settle.
+- **`await` before `yield` delays delivery**, which is sequencing you wrote
+  on purpose — or accidentally, which is how slow producers get diagnosed.
+
+## What stays sequential
+
+`for await` processes one item at a time: the body finishes before the next
+value is pulled. For independent work that is a bottleneck, and the fix is to
+separate acquisition from processing — start everything (or a bounded batch),
+then iterate results:
+
+```js
+const results = await Promise.all(pages.map(load))
+for (const r of results) render(r)
+```
+
+Keep the async-generator loop when order matters, when memory argues against
+loading everything, or when the source genuinely trickles. Choose per case;
+neither shape is the default.
+
+## Ending early: break calls return()
+
+Breaking, throwing, or returning out of a `for await` loop calls `return()`
+on the iterator. In a generator, that resumes it at the current yield inside
+a `finally`-friendly completion — cleanup written in the producer runs even
+though the consumer walked away:
+
+```js
+async function* cursor(query) {
+  const handle = db.open(query)
+  try {
+    while (true) yield await handle.next()
+  } finally {
+    await handle.close()
+  }
+}
+
+for await (const row of cursor(q)) {
+  if (row.id === stop) break // handle.close() still runs
+}
+```
+
+This is the answer to "how do you avoid leaking a connection when the
+consumer stops early": put cleanup in the producer's `finally` and let the
+protocol deliver the news. It is the same rule sync generators follow, with
+promises underneath.
+
+## Errors across the loop
+
+A throw inside the generator rejects the promise that `next()` returned, so
+from the consumer's side it surfaces as a throw from the `for await`
+statement — catchable with the try/catch around the loop. After a throw the
+generator is done; there is no resuming a failed iterator.
+
+## The interview angle
+
+> **"What is the difference between an iterator and an async iterator?"**
+> Same protocol — `next()` returning `{ value, done }` — but async iterators
+> are found via `Symbol.asyncIterator` and each `next()` returns a promise.
+> `for await...of` is the consumer syntax, and yielded promises are awaited
+> automatically.
+
+Expect follow-ups on turning an event emitter into an async iterable (the
+push-to-pull converter), on what `break` does to the generator's `finally`,
+and on where the loop is secretly sequential.
+
+## Traps
+
+- **`for...of` on an async iterable throws** — it looks for
+  `Symbol.iterator`, which async iterables do not have.
+- **Over an array of promises, `for...of` silently gives you pending
+  promises** as values. `for await` over the same array is what people meant.
+- **The body is sequential.** Each iteration waits for the previous body and
+  the next pull. Independent work needs batching outside the loop.
+- **Cleanup lives in the producer.** Break triggers `return()`, which runs
+  the generator's `finally`. Cleanup attempted in the consumer races the leak.
+- **Two rapid `next()`s queue rather than parallelise.** One step at a time,
+  always.
+- **An error ends the generator permanently.** Catch around the loop, not
+  inside hopes of continuation.
+
+## In one picture
+
+<ConceptMap
+  center={'Async iteration'}
+  branches={[
+    {
+      label: 'Protocol',
+      summary: 'The iterator protocol, one promise deeper.',
+      nodes: ['Symbol.asyncIterator', 'next() returns a promise', 'yields are auto-awaited'],
+    },
+    {
+      label: 'Consumers',
+      summary: 'Pull-shaped loops over push-shaped sources.',
+      nodes: ['for await...of', 'body waits for each value', 'break calls return()'],
+    },
+    {
+      label: 'Producers',
+      summary: 'async function* awaits between yields.',
+      nodes: ['runs when pulled, not when created', 'finally cleans up on early exit'],
+    },
+    {
+      label: 'Push to pull',
+      summary: 'Queue events, hand them over one next() at a time.',
+      nodes: ['event emitters become loops', 'the consumer sets the pace'],
+    },
+    {
+      label: 'Concurrency',
+      summary: 'The loop is sequential by design.',
+      nodes: ['batch outside the loop for speed', 'keep the loop for order and memory'],
+    },
+  ]}
+/>
