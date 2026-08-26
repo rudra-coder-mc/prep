@@ -1,0 +1,307 @@
+## Why this matters
+
+Nothing in this topic is exotic. It is `find`, `includes`, `shift` and spread,
+the operations you already use, and the only new idea is what each one does to
+every element it does not need to touch.
+
+That matters because the code that breaks is never slow on the data you wrote it
+with. A lookup inside a loop is instant over the ten rows in your fixture and
+takes four seconds over the ten thousand rows in production, and nothing in the
+diff says which one it will be. Interviews ask about this in one specific shape:
+here is a working function, make it fast. The answer is almost always to stop
+scanning.
+
+## The costs worth memorising
+
+There is a short list, and it covers nearly every decision you will make.
+
+**Constant, whatever the size.** Reading and writing an object property.
+`map.get`, `map.set`, `map.has`, `map.delete`. `set.has` and `set.add`. Reading
+an array by index. `push` and `pop`, amortised: the array occasionally grows into
+a larger block, and averaged over the pushes that is still constant.
+
+**Linear, one pass over everything.** `indexOf`, `includes`, `find`, `filter`,
+`map`, `some`, `every`, `reduce`, `join`, spreading into a new array,
+`Object.keys`. Also `shift`, `unshift` and `splice`, which are the surprising
+ones: they move every element after the change to a new index.
+
+**Linearithmic.** `sort`, at `n log n` comparisons, and each comparison calls
+your comparator.
+
+The `Map` guarantee is worth being precise about, because interviewers pick at
+it. The specification does not say "hash table". It says a `Map` must be
+implemented so that access times are, on average, sublinear in the number of
+entries. That is a real promise about growth and not a promise about a specific
+number of nanoseconds.
+
+## The loop inside a loop
+
+This is the one that matters. Two collections, and a scan of the second inside a
+walk over the first.
+
+<CodeWalkthrough
+  title="Ten thousand orders, ten thousand lines"
+  code={`// n orders, m lines. For every line, a scan of every order.
+const enriched = lines.map((line) => {
+  const order = orders.find((o) => o.id === line.orderId)
+  return { ...line, customer: order.customer }
+})
+
+// The same result, with the scan done once.
+const byId = new Map(orders.map((o) => [o.id, o]))
+const better = lines.map((line) => {
+const order = byId.get(line.orderId)
+return { ...line, customer: order.customer }
+})`}
+steps={[
+{
+lines: [2, 3],
+note: 'find walks orders from the start until it matches. On average that is half of them, and for a line whose order is missing it is all of them.',
+variables: { lines: '10,000', orders: '10,000', 'comparisons so far': '~5,000' },
+},
+{
+lines: [2, 3, 4],
+note: 'That happens once per line. The work is lines times orders: the two sizes multiply rather than add.',
+variables: { 'comparisons so far': '~50,000,000' },
+},
+{
+lines: [8],
+note: 'The rewrite pays for one pass over orders to build an index keyed by id. Ten thousand set calls, each constant.',
+variables: { 'comparisons so far': '10,000' },
+},
+{
+lines: [9, 10],
+note: 'Now each line is one get, constant whatever orders holds. Ten thousand more.',
+variables: { 'comparisons so far': '20,000' },
+},
+{
+lines: [7, 8, 9, 10],
+note: 'Fifty million down to twenty thousand, for four lines of code and one extra Map. Double the data and the first version quadruples while the second doubles.',
+output: ['n x m becomes n + m'],
+},
+]}
+/>
+
+The move has one name and several disguises. `find` inside `map`, `includes`
+inside `filter`, `some` inside a `for`, a `filter` over the same array inside its
+own `forEach`. Every one of them is a scan per element, and every one is fixed
+the same way: build the index once, outside the loop, then look up.
+
+Two details make it real work rather than a reflex. Build the index outside the
+loop, because building it inside is the same nested scan with extra allocation.
+And key it by the thing you actually search on, which is why `new Map(rows.map(r
+=> [r.id, r]))` is the shape you write most often.
+
+## The copies you did not write
+
+Spread makes a new collection every time it runs. In a `reduce`, that means a
+new one per element, each holding a copy of everything already accumulated.
+
+<MemoryModel
+  title="Ten items, ten arrays, forty-five copies"
+  steps={[
+    {
+      note: 'reduce with [...acc, item] starts with an empty array as the accumulator. Nothing has been copied yet.',
+      stack: [{ name: 'acc', ref: 'arr#0' }],
+      heap: [{ id: 'arr#0', label: '[]', fields: { length: '0' } }],
+    },
+    {
+      note: 'The first callback allocates a new array, copies nothing into it, and appends one item. The old accumulator is now unreachable.',
+      stack: [{ name: 'acc', ref: 'arr#1' }],
+      heap: [
+        { id: 'arr#0', label: '[] unreachable', fields: { length: '0' } },
+        { id: 'arr#1', label: 'new array', fields: { length: '1', copied: '0' } },
+      ],
+      highlight: ['arr#1'],
+    },
+    {
+      note: 'The second allocates again and copies the one element across before appending. The third copies two. Each step copies everything gathered so far.',
+      stack: [{ name: 'acc', ref: 'arr#3' }],
+      heap: [
+        { id: 'arr#1', label: 'unreachable', fields: { length: '1' } },
+        { id: 'arr#2', label: 'unreachable', fields: { length: '2', copied: '1' } },
+        { id: 'arr#3', label: 'new array', fields: { length: '3', copied: '2' } },
+      ],
+      highlight: ['arr#3'],
+    },
+    {
+      note: 'After ten items: ten arrays allocated, nine of them garbage, and 0+1+2+...+9 = 45 element copies for a list of ten. At a thousand items it is half a million copies.',
+      stack: [{ name: 'acc', ref: 'arr#10' }],
+      heap: [
+        { id: 'arr#10', label: 'the only one you keep', fields: { length: '10', copies: '45' } },
+      ],
+      highlight: ['arr#10'],
+    },
+  ]}
+/>
+
+The sum `0 + 1 + 2 + ... + n` is `n²/2`, so a linear-looking `reduce` is
+quadratic. `{ ...acc, [key]: value }` in a reduce is the same shape and the more
+common one, usually written while turning a list into a lookup object.
+
+The fix is not to give up on immutability. It is to mutate the accumulator you
+just created, which nothing outside the `reduce` has ever seen:
+
+```js
+const byId = items.reduce((acc, item) => {
+  acc[item.id] = item
+  return acc
+}, {})
+```
+
+Or skip the `reduce` entirely: `Object.fromEntries(items.map(i => [i.id, i]))`,
+or a `Map`, or a plain `for...of` with a `push`. A local mutation inside a
+function that returns a fresh value is not shared state, and pretending
+otherwise costs a factor of `n`.
+
+The old advice about building strings with `+=` in a loop no longer belongs on
+this list. Engines represent a concatenation as a rope rather than copying both
+sides, so `+=` in a loop is not quadratic and is usually as fast as collecting
+into an array and joining. Arrays and objects have no equivalent, which is
+exactly why they still bite.
+
+## The operations that move everything
+
+`shift` takes the first element out, and every remaining element moves down one
+index. That is fine once and quadratic in a loop, which is what a queue built on
+`shift` is.
+
+```js
+// Every dequeue moves the rest of the queue.
+while (queue.length > 0) {
+  const job = queue.shift()
+  run(job)
+}
+
+// The same order of work, with nothing moved.
+let head = 0
+while (head < queue.length) {
+  const job = queue[head++]
+  run(job)
+}
+```
+
+The pointer version leaves the elements where they are and moves an integer
+instead. For a long-lived queue you eventually want to drop the consumed prefix,
+but for draining a batch this is the whole fix.
+
+`unshift` and `splice` have the same problem for the same reason. `splice` in
+particular is worth watching for inside a loop, because it costs twice: the move
+itself, and the way it changes the indexes of everything the loop has not
+reached yet.
+
+Two more array shapes cost something invisible. `delete arr[1]` does not shorten
+the array, it leaves a hole, and an array with holes loses the fast
+representation the engine had been using for it. `arr.length = 0` versus
+`arr = []` matters only when something else holds a reference to the same array.
+
+## When the constant beats the curve
+
+Growth is not the same thing as speed, and the list above is about growth.
+
+Building a `Set` allocates, hashes every element, and only then makes `has`
+constant. For six elements checked once, `includes` on the array is faster, and
+the `Set` is a slower way to look tidy. The break-even is small, usually in the
+low tens, and it moves with the element type and the engine, which is the honest
+version of the answer.
+
+The rule that survives contact with real code: care about growth when the size
+comes from data you do not control, and care about the constant when the size is
+fixed and small. A list of the seven days of the week is not a scaling problem. A
+list of orders is.
+
+When it does matter, measure it rather than reasoning about it. `performance.now()`
+around the real operation, with the real data size, is worth more than any
+argument about which method is faster, and a micro-benchmark that runs the same
+pure expression a million times mostly measures whether the engine noticed it
+could skip the work.
+
+## The interview angle
+
+> **"This function is fine in staging and takes six seconds in production. Where
+> do you look?"**
+> First for a scan inside a loop, because that is the one whose cost multiplies.
+> Then for repeated work that could be hoisted, then for copying in an
+> accumulator. All three are invisible on a small fixture and none of them need a
+> profiler to spot.
+
+> **"When would you reach for a `Set` over an array?"**
+> When the same collection is tested for membership more than a handful of
+> times. One pass to build it, then constant lookups instead of a scan each time.
+> For one membership test on a short array it is not worth the allocation.
+
+> **"What is the complexity of `arr.filter((x, i) => arr.indexOf(x) === i)`?"**
+> Quadratic: `indexOf` is a scan and it runs once per element. `[...new Set(arr)]`
+> is linear and says what it means, and the difference is only about duplicates
+> by identity rather than by contents.
+
+Expect a follow-up asking why `shift` is more expensive than `pop`, and one
+asking what `Map` actually guarantees.
+
+## Traps
+
+- **A `find` or `includes` inside a loop.** The two sizes multiply. Build an
+  index once and look up.
+- **`[...acc, item]` in a reduce.** A new array and a full copy per element.
+  Mutate the accumulator, or use `Object.fromEntries`.
+- **`shift` as a dequeue.** Every element moves. Use an index into the array.
+- **`splice` inside a loop over the same array.** Everything after the removal
+  shifts down, so the next iteration skips an element.
+- **`delete arr[i]`.** Leaves a hole, keeps the length, and drops the array out
+  of the engine's fast path. `splice` or `filter` instead.
+- **Rebuilding the index on every call.** The lookup is constant and building it
+  is not, so a `Map` created inside the function that uses it saved nothing.
+- **A micro-benchmark with no real data.** Fast on empty inputs is not a result.
+
+## In one picture
+
+<ConceptMap
+  center={'What an operation costs'}
+  branches={[
+    {
+      label: 'Constant',
+      summary: 'Size does not matter.',
+      nodes: [
+        'object property read and write',
+        'map get set has delete, set has',
+        'array by index, push and pop',
+      ],
+    },
+    {
+      label: 'Linear',
+      summary: 'One touch per element, every time.',
+      nodes: [
+        'indexOf includes find filter map',
+        'spread into a new collection',
+        'shift unshift splice move everything after them',
+      ],
+    },
+    {
+      label: 'The multiplying bug',
+      summary: 'A scan inside a loop is n times m.',
+      nodes: [
+        'find inside map, includes inside filter',
+        'build a Map index once, outside',
+        'n x m becomes n + m',
+      ],
+    },
+    {
+      label: 'Hidden copies',
+      summary: 'Spread allocates every time it runs.',
+      nodes: [
+        'reduce with spread is quadratic',
+        'mutate the accumulator you just made',
+        'string += is fine, engines use ropes',
+      ],
+    },
+    {
+      label: 'Judgement',
+      summary: 'Growth for data you do not control, constants for fixed sizes.',
+      nodes: [
+        'a Set of six is slower than includes',
+        'measure with the real size',
+        'fast on a fixture proves nothing',
+      ],
+    },
+  ]}
+/>

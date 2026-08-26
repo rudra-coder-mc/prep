@@ -1,0 +1,285 @@
+## Why this matters
+
+You never free anything, so it is easy to believe memory is not your problem.
+It is, and it arrives in the least convenient form: a process that is fine for an
+hour, slow after a day and dead after a week, on a machine you cannot attach a
+debugger to.
+
+The whole subject rests on one sentence. **The collector frees what your program
+cannot reach, not what your program has finished with.** Every leak in JavaScript
+is the gap between those two, and every fix is finding the reference you forgot
+you were still holding.
+
+## Reachable, not used
+
+Collection starts from a set of roots: the global object, every binding on the
+current call stack, and the things the host holds, which in a browser includes
+the document tree. Anything reachable by following references from a root
+survives. Everything else is garbage, whether or not your code would ever have
+looked at it again.
+
+<MemoryModel
+  title="Two objects pointing at each other, and nothing pointing at them"
+  steps={[
+    {
+      note: 'A parent and a child, each holding a reference to the other. The variable tree is a root, so both are reachable and both are alive.',
+      stack: [{ name: 'tree', ref: 'parent' }],
+      heap: [
+        { id: 'parent', label: 'Parent', fields: { child: '-> child' } },
+        { id: 'child', label: 'Child', fields: { parent: '-> parent' } },
+      ],
+    },
+    {
+      note: 'tree is reassigned. The two objects still reference each other, so a naive count of references to each of them is one, not zero.',
+      stack: [{ name: 'tree', value: 'null' }],
+      heap: [
+        { id: 'parent', label: 'Parent', fields: { child: '-> child' } },
+        { id: 'child', label: 'Child', fields: { parent: '-> parent' } },
+      ],
+      highlight: ['parent', 'child'],
+    },
+    {
+      note: 'The collector does not count references, it walks from the roots. Neither object is on any path from a root, so the pair is collected together. A cycle is not a leak.',
+      stack: [{ name: 'tree', value: 'null' }],
+      heap: [],
+    },
+  ]}
+/>
+
+This is why "does JavaScript use reference counting?" is a real interview
+question with a real consequence. Counting references cannot free a cycle,
+because every object in one is referenced by another object in it. Mark and sweep
+from the roots has no such problem, and it is what every current engine does.
+The historical exception is worth knowing: old Internet Explorer had a
+reference-counted COM heap for DOM objects and a tracing heap for JavaScript
+objects, and a reference between them formed a cycle that neither side could
+free. That is where the folklore about nulling out every reference comes from.
+
+## How the collector actually runs
+
+Two facts about the runtime shape the advice.
+
+**Most objects die young.** So the heap is split by generation. New objects go
+into a small young space that is collected often and quickly, by copying the few
+survivors out and discarding the rest wholesale. Something that survives a
+couple of those is promoted into the old space, which is collected rarely, by
+marking everything reachable and sweeping the rest, with compaction to keep
+allocation cheap. V8 calls the two collectors the scavenger and mark-compact,
+and does most of the marking on other threads to keep the pause short.
+
+**You cannot ask for a collection.** There is no way to trigger it from ordinary
+code, no way to know when it will happen, and no way to observe that it has,
+which is deliberate: a program whose behaviour depends on collection timing
+would behave differently on every engine. Node's `--expose-gc` and the button in
+DevTools exist for debugging and belong nowhere near production code.
+
+The consequence is what a memory graph looks like. Allocation pushes usage up,
+each collection drops it, and healthy memory is a sawtooth: up, down, up, down,
+around a flat baseline. **A leak is a sawtooth whose bottoms keep rising.** The
+peak means nothing on its own; the floor after a collection is the number to
+watch.
+
+Setting a variable to `null` is not freeing anything. It removes one reference,
+which matters only if that reference is the one keeping the object reachable.
+Inside a function that is about to return, it does nothing at all. In a
+long-lived module-level array, it is the entire fix.
+
+## The shapes of a leak
+
+Four shapes cover nearly everything you will meet.
+
+**A collection that only grows.** A module-level `Map` used as a cache, a memo
+table keyed by request, an array of recent events. Nothing is ever removed, so
+the process holds every key it has ever seen. This is the most common leak in
+server code by a wide margin, and it is invisible in development because the
+process restarts every time you save a file.
+
+**Timers and listeners that outlive what they were for.** `setInterval` holds
+its callback forever, and the callback holds everything it closes over.
+`addEventListener` on something long-lived, such as `window` or a shared event
+emitter, holds the handler until you remove it, and removing it needs the same
+function reference you added:
+
+```js
+// Never removed: the two arrows are different functions.
+window.addEventListener('resize', () => this.reflow())
+window.removeEventListener('resize', () => this.reflow())
+
+// Removable, because there is one function to name.
+const onResize = () => this.reflow()
+window.addEventListener('resize', onResize)
+window.removeEventListener('resize', onResize)
+
+// Or hand the listener a signal and abort it once, for all of them.
+const controller = new AbortController()
+window.addEventListener('resize', onResize, { signal: controller.signal })
+controller.abort()
+```
+
+**Detached DOM kept alive from JavaScript.** A node removed from the document is
+only garbage if nothing in your code still points at it. A cached list of rows,
+a `Map` keyed by element, or a single reference to one cell is enough, and the
+last one is worse than it sounds: a node holds its parent, so keeping one cell
+alive keeps the entire detached table alive. In a heap snapshot these show up
+by name, as `Detached HTMLTableRowElement` and its relatives.
+
+**A closure holding more than it needs.** This is the subtle one, because the
+code looks innocent.
+
+<CodeWalkthrough
+  title="The small function that keeps the big buffer"
+  code={`function handler() {
+  const buffer = new Uint8Array(50_000_000)
+  const id = buffer[0]
+
+const rare = () => console.log(buffer.length)
+const often = () => console.log(id)
+
+registry.set('often', often)
+return often
+}`}
+steps={[
+{
+lines: [2, 3],
+note: 'Fifty megabytes allocated, and one number pulled out of it. Nothing is wrong yet.',
+variables: { buffer: '50 MB', id: 'a number' },
+},
+{
+lines: [5, 6],
+note: 'Two closures are created in the same scope. The engine gives that scope one environment record, holding every variable any inner function refers to.',
+variables: { environment: 'buffer, id' },
+},
+{
+lines: [8, 9],
+note: 'Only often is kept, and often only reads id. But often shares the environment with rare, and rare refers to buffer, so the environment holds both.',
+variables: { 'kept alive': 'often -> environment -> buffer' },
+output: ['50 MB retained by a function that logs a number'],
+},
+{
+lines: [5],
+note: 'Deleting the unused closure, or reading id in a scope that never sees buffer, is what releases it. The rule: closures created together share what they capture.',
+output: ['no reference to buffer in the shared scope, so it goes'],
+},
+]}
+/>
+
+The same shape appears whenever a long-lived callback is created next to
+short-lived data: an error handler defined beside a request body, a retry
+function beside a response. A promise that never settles is a variant of it, since
+the chain and everything the `await` captured stay alive for as long as something
+holds the promise.
+
+## Telling a leak from a cache
+
+A cache is a leak you decided to have. What separates them is a bound, and there
+are only three kinds worth knowing.
+
+**By size.** Keep the last N entries and evict the least recently used. This is
+the default answer, and it is the one to give in an interview.
+
+**By time.** Evict on age. Right for data that goes stale rather than data that
+gets big.
+
+**By the lifetime of a key.** Hold the key weakly, so the entry disappears when
+the thing it describes does. That is the next topic, and it is the only bound
+that needs no policy at all.
+
+To confirm a suspected leak, the technique that works is repetition and
+comparison. Do the thing you suspect, several times. Take a heap snapshot,
+repeat the interaction, take another, and compare: what you are looking for is
+objects allocated between the two that are still there in the second. Then read
+the retainer path, which is the chain of references from a root to the object,
+and the answer is somewhere on it. In Node the same thing is done with
+`writeHeapSnapshot`, and `process.memoryUsage().heapUsed` after a few cycles is
+the cheap version.
+
+The one thing not to do is reason about it from the code alone. Retainer paths
+are routinely surprising, and every hour spent guessing which line it is would
+have been a snapshot.
+
+## The interview angle
+
+> **"What is a memory leak in a garbage-collected language?"**
+> An object that is still reachable and no longer needed. The collector is doing
+> its job correctly; the program is holding a reference it forgot about. Then
+> name the shapes: an unbounded collection, an uncleared timer or listener,
+> detached DOM, an over-capturing closure.
+
+> **"Does JavaScript use reference counting?"**
+> No, and the reason matters: counting cannot free a cycle. Engines trace from
+> roots, so two objects referring only to each other are collected together. Old
+> IE's DOM heap was reference counted, which is where the folklore comes from.
+
+> **"How would you find a leak in production?"**
+> Watch the floor of the sawtooth rather than the peak. Then reproduce it
+> locally with a repeated interaction, compare two heap snapshots, and read the
+> retainer path.
+
+Expect a follow-up on whether you can force a collection, which is no, and one
+on what `= null` actually does, which is remove one reference and nothing more.
+
+## Traps
+
+- **`setInterval` never stops itself.** It holds its callback, and the callback
+  holds its scope, until something calls `clearInterval`.
+- **`removeEventListener` needs the same function.** An inline arrow cannot be
+  removed, because the second arrow is a different function.
+- **One detached node retains the whole detached tree.** A node references its
+  parent, so holding a cell holds the table.
+- **A module-level `Map` is a leak by default.** Every entry lives as long as the
+  process unless something evicts it.
+- **Closures created together share one environment.** A small function can
+  retain a large object it never mentions.
+- **`= null` frees nothing on its own.** It removes one reference, which helps
+  only when that reference was the one keeping the object alive.
+- **Peak memory is not the measurement.** The floor after a collection is.
+
+## In one picture
+
+<ConceptMap
+  center={'Garbage collection'}
+  branches={[
+    {
+      label: 'The rule',
+      summary: 'Reachable from a root, or collected.',
+      nodes: [
+        'roots are globals, the stack and the host',
+        'unused is not the same as unreachable',
+        'a leak is reachable and no longer needed',
+      ],
+    },
+    {
+      label: 'How it runs',
+      summary: 'Generational, tracing, and not yours to schedule.',
+      nodes: [
+        'young space collected often, old space rarely',
+        'tracing frees cycles, counting cannot',
+        'no way to force it or observe it',
+      ],
+    },
+    {
+      label: 'The four shapes',
+      summary: 'Nearly every real leak is one of these.',
+      nodes: [
+        'a collection that only grows',
+        'timers and listeners never removed',
+        'detached DOM held from JavaScript',
+        'a closure capturing more than it needs',
+      ],
+    },
+    {
+      label: 'Caches',
+      summary: 'A cache is a leak with a bound on it.',
+      nodes: ['bound by size with eviction', 'bound by age', 'bound by the key living or dying'],
+    },
+    {
+      label: 'Finding one',
+      summary: 'Repeat, snapshot, compare, read the retainer path.',
+      nodes: [
+        'watch the floor of the sawtooth',
+        'two snapshots around the same interaction',
+        'the retainer path names the reference',
+      ],
+    },
+  ]}
+/>

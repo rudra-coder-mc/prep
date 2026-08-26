@@ -200,8 +200,9 @@ objects come and go and you never want to list them.
 - **`JSON.stringify` of either collection is `{}`.** Convert first.
 - **`WeakMap` cannot be iterated or sized.** If you need to list entries, it
   is a `Map`, and the leak is yours to manage.
-- **Primitive keys are rejected by `WeakMap`.** A string cannot be collected,
-  so it cannot be held weakly.
+- **String keys are rejected by `WeakMap`.** A string cannot become
+  unreachable, so it cannot be held weakly. Objects can, and so can the symbols
+  `Symbol()` makes.
 
 ## In one picture
 

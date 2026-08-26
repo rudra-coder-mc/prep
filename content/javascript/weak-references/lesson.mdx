@@ -1,0 +1,292 @@
+## Why this matters
+
+The previous topic ended with a bound you do not have to write: hold the key
+weakly, and the entry disappears when the thing it describes does. This topic is
+that bound and its edges.
+
+It is also the interview question that separates people who have read about
+`WeakMap` from people who have used one. Everybody can say "the keys are held
+weakly". Rather fewer can say why it cannot be iterated, what happens to the
+value, or why `WeakRef` exists when `WeakMap` already does.
+
+## What weak actually means
+
+A reference is strong when it keeps its target alive, and every reference you
+have written so far is strong. A variable, an array element, a property, a `Map`
+key, a captured closure variable: all of them are edges the collector follows
+when it walks from the roots.
+
+A weak reference is an edge it does not follow. If the only paths to an object
+are weak, the object is unreachable, and it goes.
+
+That is the whole idea, and it has one consequence worth stating before the
+syntax. **A weak reference is only useful when someone else owns the lifetime.**
+A `WeakMap` keyed by a DOM node is useful because the document decides when the
+node dies. A `WeakMap` keyed by an object that only your collection refers to is
+a complicated way to write an empty collection.
+
+## The rules, and the reasons
+
+`WeakMap` and `WeakSet` have the API you would expect with pieces missing, and
+each missing piece has the same explanation.
+
+- **Keys must be objects.** Also unregistered symbols, in current engines. A
+  string cannot be a weak key because two equal strings are the same value: there
+  is no identity to become unreachable. Passing a string, a number or a
+  registered `Symbol.for` symbol to `set` or `add` throws a `TypeError`.
+- **No `size`, no iteration, no `clear`, no `forEach`.** Not an oversight. If you
+  could list the entries, the list would change on its own, at a moment nothing
+  in your program caused, and you would be reading collection timing. Everything
+  the engine wants to keep unobservable is exactly what these methods would
+  expose.
+- **`get` and `has` on a missing key are quiet.** `get` returns `undefined` and
+  `has` returns `false`, including for a primitive. Only writing rejects one.
+- **The entry goes with the key.** Not on a schedule you can see, and never
+  before the key is unreachable.
+
+The specification also closes the obvious hole. If a key is reachable only by
+following references that start inside the `WeakMap` itself, the entry is
+inaccessible and gets removed, so a value that points back at its own key does
+not keep it alive. That is the ephemeron rule, and it is why
+`registry.set(node, { node, height })` is safe.
+
+## The value is still strong
+
+What is weak is the key. The value is an ordinary strong reference, held for as
+long as the entry exists, and that is the part people get wrong.
+
+<MemoryModel
+  title="A strong value chains to the next key"
+  steps={[
+    {
+      note: 'A WeakMap with two entries. Key a maps to object b, and b happens to be the key of the second entry. Only a is referenced from the outside.',
+      stack: [{ name: 'a', ref: 'obj-a' }],
+      heap: [
+        { id: 'obj-a', label: 'a' },
+        { id: 'obj-b', label: 'b' },
+        { id: 'wm', label: 'WeakMap', fields: { 'a (weak)': '-> b', 'b (weak)': '-> state' } },
+        { id: 'state', label: 'big state object' },
+      ],
+    },
+    {
+      note: 'a is reachable, so its entry stands, and the entry holds b strongly. That makes b reachable, so the second entry stands too, and the big state object is alive. One live key retains the whole chain.',
+      stack: [{ name: 'a', ref: 'obj-a' }],
+      heap: [
+        { id: 'obj-a', label: 'a, alive' },
+        { id: 'obj-b', label: 'b, alive through the value' },
+        { id: 'wm', label: 'WeakMap', fields: { 'a (weak)': '-> b', 'b (weak)': '-> state' } },
+        { id: 'state', label: 'big state object' },
+      ],
+      highlight: ['obj-b', 'state'],
+    },
+    {
+      note: 'Drop the last outside reference to a and the whole chain becomes unreachable at once: no root reaches a, so nothing reaches b, so nothing reaches the state. All three entries go together.',
+      stack: [{ name: 'a', value: 'null' }],
+      heap: [{ id: 'wm', label: 'WeakMap', fields: {} }],
+      highlight: ['wm'],
+    },
+  ]}
+/>
+
+None of that is a leak; it is the semantics working. The mistake it causes is
+the assumption that a `WeakMap` puts a bound on memory. It bounds the entries by
+the lifetimes of their keys, and if the keys live for the life of the process,
+so does everything the values reach.
+
+The other version of the same mistake is the one to watch for in review. A
+`WeakMap` keyed by objects that are also held in a module-level array is not
+weak in any way that matters: the array is a strong reference from a root, so
+nothing is ever collected and the `WeakMap` bought nothing but an inability to
+inspect it.
+
+## What they are actually for
+
+Four jobs, and they are worth recognising by shape.
+
+**Metadata about objects you do not own.** Measurements keyed by DOM node,
+state keyed by a request, timing keyed by a socket. Your data disappears exactly
+when the thing it describes does, with no teardown to remember and none to
+forget.
+
+**Private data, before and beside `#`.** The pattern predates private fields and
+is still the way to attach state to an object you did not construct.
+
+```js
+const internals = new WeakMap()
+
+export class Session {
+  constructor(token) {
+    internals.set(this, { token, startedAt: Date.now() })
+  }
+  get age() {
+    return Date.now() - internals.get(this).startedAt
+  }
+}
+```
+
+For a class you write, `#token` is better: it is syntax, it is checked, and it
+does not need a module-level collection. The `WeakMap` earns its place when the
+objects come from somewhere else.
+
+**Memoisation keyed by an object argument.** A parsed form of a config object, a
+derived index for a large record. The cache empties itself as callers drop their
+objects, which is the only cache bound that needs no policy.
+
+**Membership, with `WeakSet`.** Have I seen this object before. The canonical use
+is cycle detection while walking a graph: a deep clone, a serialiser, a validator.
+Marking objects as seen in a `Set` would keep every visited object alive after the
+walk; a `WeakSet` does not.
+
+## `WeakRef` and `FinalizationRegistry`
+
+These two are different in kind from the collections above, and it is worth being
+precise about why. A `WeakMap` gives you weakness without ever letting you see
+collection happen. `WeakRef` lets you look, and `FinalizationRegistry` tells you
+afterwards. Observation is the dangerous part, and the specification says so
+directly: correct programs should not depend on the timing of collection, and
+these two make it possible to write programs that do.
+
+```js
+const ref = new WeakRef(bigThing)
+
+// Later, in some other turn:
+const thing = ref.deref() // the object, or undefined if it has gone
+if (thing === undefined) rebuild()
+```
+
+`deref` gives you back the object or `undefined`, and there is one guarantee
+attached: if it hands you the object, the object stays alive until at least the
+end of the current job. So within one synchronous run you can `deref` once and
+use the result freely. Across turns of the event loop, two `deref` calls can give
+two different answers, and code that assumes otherwise fails rarely and
+mysteriously.
+
+`FinalizationRegistry` runs a callback after a registered object has been
+collected:
+
+```js
+const registry = new FinalizationRegistry((key) => cache.delete(key))
+registry.register(value, key, value) // target, held value, unregister token
+```
+
+The held value must not reference the target, or the target can never be
+collected and the callback can never run. And the callback may simply never run
+at all: not if the program exits first, not if the engine never collects that
+object, not on any schedule you can predict. It is a backstop, never a mechanism.
+
+The one pattern that justifies them is a cache whose keys are primitives, so a
+`WeakMap` cannot be used, and whose values are large and also referenced
+elsewhere:
+
+```js
+const cache = new Map() // string -> WeakRef<Value>
+const registry = new FinalizationRegistry((key) => cache.delete(key))
+
+function get(key) {
+  const hit = cache.get(key)?.deref()
+  if (hit) return hit
+
+  const value = build(key)
+  cache.set(key, new WeakRef(value))
+  registry.register(value, key, value)
+  return value
+}
+```
+
+Even here, a size-bounded cache with LRU eviction is usually the better answer,
+because it is predictable and testable. Reach for `WeakRef` when the value's
+lifetime is genuinely decided somewhere else and you want to follow it rather
+than guess at it.
+
+## The interview angle
+
+> **"What is a `WeakMap` for?"**
+> Attaching data to an object whose lifetime someone else owns, so the data goes
+> when the object does. Then the two details that show you have used one: the
+> keys are weak and the values are not, and you cannot iterate it.
+
+> **"Why can't you iterate a `WeakMap`?"**
+> Because the contents change without your program doing anything. Listing them
+> would expose when the collector ran, and collection timing is deliberately
+> unobservable.
+
+> **"When would you use `WeakRef` over a `WeakMap`?"**
+> Rarely, and only when the key is not an object, which is the case a `WeakMap`
+> cannot serve. Then say what the specification says: correct programs should not
+> depend on collection timing, so a bounded cache is usually the better answer.
+
+Expect a follow-up on whether a `WeakMap` is faster than a `Map`, which it is
+not, and on what happens to a value that references its own key, which is
+nothing, because of the ephemeron rule.
+
+## Traps
+
+- **A weak key held strongly elsewhere is not weak.** The array or closure
+  holding it is a root, so nothing is collected.
+- **The value is a strong reference.** Everything reachable from it lives as long
+  as the key does.
+- **`set` with a primitive key throws; `get` with one does not.** A typo that
+  passes an id string returns `undefined` forever.
+- **No `size`, no iteration, no `clear`.** If you need any of them, you need a
+  `Map` and an eviction policy.
+- **A `FinalizationRegistry` callback may never run.** Never put a required
+  cleanup in one.
+- **A held value that references its target prevents everything.** The object
+  cannot be collected, so the callback cannot fire.
+- **`WeakMap` is not a performance optimisation.** It is a lifetime tool, and a
+  `Map` is at least as fast.
+
+## In one picture
+
+<ConceptMap
+  center={'Weak references'}
+  branches={[
+    {
+      label: 'The idea',
+      summary: 'An edge the collector does not follow.',
+      nodes: [
+        'strong keeps alive, weak does not',
+        'only useful when someone else owns the lifetime',
+        'the entry goes when the key does',
+      ],
+    },
+    {
+      label: 'The rules',
+      summary: 'Objects as keys, and nothing that reveals timing.',
+      nodes: [
+        'primitives rejected by set, quietly missed by get',
+        'no size, no iteration, no clear',
+        'a value pointing at its own key is fine',
+      ],
+    },
+    {
+      label: 'Still strong',
+      summary: 'The value is an ordinary reference.',
+      nodes: [
+        'a live key retains everything its value reaches',
+        'values chain to other keys',
+        'a key in a module array is never collected',
+      ],
+    },
+    {
+      label: 'What they are for',
+      summary: 'Data about objects you did not create.',
+      nodes: [
+        'metadata keyed by node, request or socket',
+        'private state for objects you do not own',
+        'memoisation by object argument',
+        'WeakSet for have I seen this, and cycle detection',
+      ],
+    },
+    {
+      label: 'WeakRef',
+      summary: 'The one that lets you watch, and therefore the last resort.',
+      nodes: [
+        'deref gives the object or undefined',
+        'alive until the end of the current job, no longer',
+        'a finalizer may never run',
+        'prefer a bounded cache',
+      ],
+    },
+  ]}
+/>
