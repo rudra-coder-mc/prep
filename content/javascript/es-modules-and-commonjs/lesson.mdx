@@ -1,0 +1,259 @@
+## Why this matters
+
+JavaScript spent a decade with two module systems, and both are still in every
+codebase you will open. CommonJS is what Node shipped and what most of npm was
+published as. ES modules are what the language specified, what browsers load,
+and what every bundler and every new project targets.
+
+They are not two spellings of the same idea. One resolves at run time and hands
+you a value; the other resolves before any code runs and hands you a live view.
+Interviews ask about them because the seam between the two is where a whole
+class of real bugs lives: a stale import, a cycle that returns half an object, a
+dependency that cannot be loaded conditionally.
+
+## The two systems side by side
+
+The differences that matter come in pairs, ES modules first:
+
+- **Syntax.** `import` and `export`, against `require` and `module.exports`.
+- **When it resolves.** Before any code runs, against when the `require` call
+  runs.
+- **What you get.** A live binding onto the exporter's variable, against the
+  value `module.exports` held at that moment.
+- **How it loads.** Asynchronously, against synchronously.
+- **Which mode.** Always strict, against sloppy unless the directive is there.
+- **Conditional loading.** `import()` only, against an `if` around a `require`.
+
+Everything below follows from the first two.
+
+## Live bindings against copied values
+
+An ES module export is a binding, not a value. The importer sees whatever the
+exporting module's variable currently holds, and cannot assign to it. A
+CommonJS `require` evaluates the module and hands back whatever `module.exports`
+pointed at when it finished.
+
+<CodeWalkthrough
+  title="The same counter, both systems"
+  code={`// counter.mjs
+export let count = 0
+export const bump = () => count++
+
+// app.mjs
+import { count, bump } from './counter.mjs'
+bump()
+console.log(count)
+
+// counter.cjs
+let count = 0
+module.exports = { count, bump: () => count++ }
+
+// app.cjs
+const { count, bump } = require('./counter.cjs')
+bump()
+console.log(count)`}
+steps={[
+{
+lines: [6, 7, 8],
+note: 'The module import is a live binding onto counter.mjs, so reading it after bump() sees the new value.',
+output: ['1'],
+variables: { 'counter.mjs count': '1', 'what app.mjs holds': 'a view of that binding' },
+},
+{
+lines: [11, 12],
+note: 'The CommonJS module builds an object once. The number in it was copied out of count at that moment.',
+variables: { 'module.exports.count': '0', 'module count': '0' },
+},
+{
+lines: [15, 16, 17],
+note: 'bump() increments the module variable, and nothing updates the copy the object holds or the const destructured out of it.',
+output: ['0'],
+variables: { 'module count': '1', 'destructured count': '0' },
+},
+{
+lines: [6],
+note: 'The binding imported on this line is read only. Assigning to it is a TypeError: the exporting module owns it, and the importer only reads.',
+output: ['TypeError: Assignment to constant variable'],
+},
+]}
+/>
+
+CommonJS can get close to live by exporting an object and reading properties off
+it, `config.retries` rather than a destructured `retries`, because then both
+sides share one object. That is the actual rule behind the advice never to
+destructure a `require` when the module mutates its exports.
+
+## Static structure, and what it buys
+
+`import` and `export` are declarations, not calls. They are hoisted to the top
+of the module, they cannot be nested inside a block or a function, and their
+specifiers must be string literals. That is a deliberate restriction, and three
+things fall out of it:
+
+- **The graph is known before anything runs.** Every module in it can be fetched
+  and parsed in parallel, which is what makes ES modules loadable over a network.
+- **Names are checked at link time.** Importing something a module does not
+  export fails before a line of either file executes.
+- **Unused exports can be dropped.** Tree shaking is only possible because the
+  bundler can see every use of every export without running the program.
+
+`require` is an ordinary function call, so none of that is available. The
+trade is that it can go anywhere: inside an `if`, inside a function, computed
+from a variable.
+
+## Cycles
+
+Both systems handle a cycle without hanging, and both hand you something
+incomplete. What differs is how it fails.
+
+CommonJS gives the second module a partially populated `exports` object: whatever
+had been assigned before the cycle came back round. The result is `undefined`
+properties at run time, often far from the cause.
+
+ES modules hoist the whole graph first, so function declarations are already
+initialised and cycles between functions usually work. A `const` or `let` read
+during evaluation, before its module has run, throws a `ReferenceError` from the
+temporal dead zone instead.
+
+```js
+// a.mjs
+import { b } from './b.mjs'
+export const a = 'a'
+console.log(b)
+
+// b.mjs
+import { a } from './a.mjs'
+export const b = 'b'
+console.log(a) // ReferenceError: Cannot access 'a' before initialization
+```
+
+Neither is pleasant. The difference worth knowing is that the module version
+throws at the point of the read and names the binding, and the CommonJS version
+does not.
+
+## Loading one on purpose: import()
+
+`import(specifier)` is the escape hatch from the static form. It is an operator
+rather than a declaration, it works in both systems, and it returns a promise
+for the module's namespace object.
+
+```js
+if (user.wantsCharts) {
+  const { renderChart } = await import('./charts.js')
+  renderChart(data)
+}
+```
+
+The default export arrives as `.default` on that namespace, which is the detail
+people trip over. It is how a route splits a bundle, how a CLI loads a plugin
+named at run time, and how CommonJS code loads an ES module at all.
+
+Top level `await` is the other half, and modules only. It makes the module
+itself asynchronous: importers wait for it to finish before they evaluate. That
+is useful for a module that has to fetch its configuration, and it is also the
+thing that stops such a module being loaded synchronously from CommonJS.
+
+## Interop, and what Node actually does
+
+Node decides which system a file is by its extension and the nearest
+`package.json`: `.mjs` is a module, `.cjs` is CommonJS, `.js` is whichever
+`"type"` says, defaulting to CommonJS.
+
+From an ES module, `import thing from 'some-cjs-package'` gives you
+`module.exports` as the default export. Named imports from a CommonJS file work
+when Node's static analysis can spot the assignments, and fail when the exports
+are built dynamically — which is why the safe form is a default import followed
+by destructuring.
+
+The other direction was closed for years: `require` of an ES module threw, and
+the workaround was `await import()`. Recent Node versions allow it when the
+module graph has no top level await, since that is the case where the load can
+finish synchronously. Most interop advice in circulation was written before that
+and assumes the hard wall.
+
+Two more differences bite during a migration: `__dirname` and `__filename` do
+not exist in a module, where `import.meta.url` and `import.meta.dirname` replace
+them, and a module's top level `this` is `undefined` rather than
+`module.exports`.
+
+## The interview angle
+
+> **"What is the difference between ES modules and CommonJS?"**
+> Lead with resolution: modules are resolved and linked before evaluation,
+> `require` runs when the call runs. Then live bindings against a copied value,
+> then that modules are always strict and always deferred. Finish with
+> conditional loading, which is `import()` on one side and an `if` on the other.
+
+> **"Why can't I `import` inside an `if`?"**
+> Because the import graph has to be known without running the code. That
+> restriction is what makes parallel fetching, link time name checking and tree
+> shaking possible. `import()` exists for the cases that genuinely need a
+> decision.
+
+Expect follow-ups on what happens to a cycle, on why a destructured `require`
+went stale, and on whether the package you are shipping should be dual published.
+
+## Traps
+
+- **Destructuring a `require` freezes the values.** If the module reassigns its
+  exports later, you are holding the old ones.
+- **`exports = something` breaks the export.** It rebinds a local parameter.
+  `module.exports = something` is the one that works.
+- **Imported bindings are read only.** Assigning to one is a `TypeError`, even
+  though the exporting module can change it freely.
+- **`import` statements hoist.** Code at the top of your file does not run
+  before the modules it imports; every dependency is evaluated first.
+- **A default import of a CommonJS package is `module.exports`.** Named imports
+  from one are best effort, and a package that builds its exports in a loop will
+  not give you any.
+- **Top level await makes a module asynchronous for everyone above it.** That is
+  a design decision, not a free convenience.
+
+## In one picture
+
+<ConceptMap
+  center={'ES modules and CommonJS'}
+  branches={[
+    {
+      label: 'Resolution',
+      summary: 'Before evaluation, or at the call.',
+      nodes: [
+        'imports hoist and link first',
+        'require runs where it is written',
+        'specifiers must be literals',
+      ],
+    },
+    {
+      label: 'What you get',
+      summary: 'A live binding, or a value.',
+      nodes: [
+        'imported bindings are read only',
+        'destructuring a require copies',
+        'shared object is the CommonJS workaround',
+      ],
+    },
+    {
+      label: 'What static buys',
+      summary: 'The graph is knowable without running it.',
+      nodes: ['parallel fetching', 'link time name checks', 'tree shaking'],
+    },
+    {
+      label: 'Cycles',
+      summary: 'Both incomplete, differently.',
+      nodes: [
+        'CommonJS: half filled exports',
+        'modules: temporal dead zone error',
+        'function declarations survive both',
+      ],
+    },
+    {
+      label: 'The escape hatch',
+      summary: 'import() and top level await.',
+      nodes: [
+        'returns a promise of the namespace',
+        'default lands on .default',
+        'top level await delays importers',
+      ],
+    },
+  ]}
+/>

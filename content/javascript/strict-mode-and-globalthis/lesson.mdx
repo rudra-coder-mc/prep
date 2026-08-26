@@ -1,0 +1,245 @@
+## Why this matters
+
+Two pieces of the runtime decide what your code means before a line of it runs:
+which set of language rules is in force, and what the word "global" refers to.
+Both are invisible in the source. Both change the behaviour of code that looks
+identical either way.
+
+Strict mode is not a linter setting and not a style choice. It is a second set
+of rules the same syntax is read under, and almost nobody types the directive
+any more, because modules and class bodies switch it on for you. `globalThis`
+is the other half: one name for the global object in a browser, a worker and
+Node, and a much smaller thing than most people assume.
+
+## What strict mode changes
+
+The changes fall into three piles.
+
+**Silence becomes an error.** Assigning to a name that was never declared
+creates a global in sloppy mode and throws a `ReferenceError` in strict mode.
+Writing to a non-writable property, to an accessor with only a getter, or to
+anything on a frozen object fails silently in sloppy mode and throws a
+`TypeError` in strict mode. `delete` on a variable or a non-configurable
+property returns `false` in sloppy mode and is a `SyntaxError` in strict mode.
+
+**`this` stops falling back to the global object.** In a plain function call
+`this` is `undefined` in strict mode and `globalThis` in sloppy mode. That one
+line is why a method pulled off its object throws in modern code instead of
+quietly reading and writing globals.
+
+```js
+function Counter() {
+  this.count = 0 // strict: TypeError. sloppy: globalThis.count = 0
+}
+Counter() // called without new
+```
+
+**Some syntax is simply gone.** Duplicate parameter names, octal literals like
+`010`, and `with` are all syntax errors. `arguments` no longer aliases the named
+parameters, so reassigning a parameter leaves `arguments[0]` alone.
+`arguments.callee` throws. Words reserved for the future — `implements`,
+`interface`, `package`, `private`, `protected`, `public`, `static` — cannot be
+used as identifiers, and `eval` can no longer declare variables into the scope
+that called it.
+
+<CodeWalkthrough
+  title="The same function under both sets of rules"
+  code={`function applyDiscount(order) {
+totl = order.total * 0.9
+order.total = totl
+return order
+}
+
+const frozen = Object.freeze({ total: 100 })
+applyDiscount(frozen)`}
+steps={[
+{
+lines: [2],
+note: 'Sloppy mode: totl was never declared, so the assignment creates a property on globalThis and the typo becomes a working global.',
+variables: { 'globalThis.totl': '90', mode: 'sloppy' },
+},
+{
+lines: [3],
+note: 'The object is frozen, so the write does nothing at all. No error, no change, and the function returns an order that looks untouched.',
+variables: { 'frozen.total': '100', returned: 'the same frozen object' },
+},
+{
+lines: [2],
+note: 'Strict mode: the same line throws a ReferenceError, naming totl, at the moment the typo runs.',
+output: ['ReferenceError: totl is not defined'],
+variables: { mode: 'strict' },
+},
+{
+lines: [3],
+note: 'Fix the typo and the next line throws a TypeError instead. Both bugs surface where they happen rather than three functions later.',
+output: ['TypeError: Cannot assign to read only property total'],
+variables: { mode: 'strict' },
+},
+]}
+/>
+
+## Where the mode comes from
+
+`'use strict'` at the top of a file or as the first statement of a function body
+turns it on for that scope and everything nested inside it. It cannot be turned
+off again further in.
+
+You rarely write it, because three things are strict whether you ask or not:
+
+- **ES modules**, every one of them, including anything a bundler treats as a
+  module.
+- **Class bodies**, declarations and expressions alike, including static blocks
+  and every method inside.
+- **Node `.mjs` files**, and any `.js` file in a package whose `type` is
+  `module`.
+
+What is left sloppy is a classic `<script>` tag, a CommonJS file without the
+directive, and code passed to `eval` from sloppy code.
+
+The directive is a string expression, which is where the one real trap lives: it
+only counts as a directive when nothing comes before it. A comment is fine, a
+statement is not.
+
+```js
+const setup = init() // anything at all
+;('use strict') // now just a string sitting on its own line
+```
+
+## globalThis and the global object
+
+Every runtime has one object at the root of the environment, and each one used to
+call it something else: `window` in a page, `self` in a worker, `global` in Node.
+`globalThis` is the name that works in all of them, and reaching for it is what
+lets one piece of code detect a feature or install a polyfill anywhere.
+
+It holds the built-ins the environment provides — `setTimeout`, `fetch`,
+`JSON`, `console` — and whatever the page or process put there deliberately. What
+surprises people is how little of their own code is on it.
+
+<ScopeChain
+  title="Three scopes people all call global"
+  steps={[
+    {
+      note: 'Top level of a classic script: var and function declarations become properties of the global object, so globalThis.total is 0.',
+      scopes: [
+        {
+          name: 'global object (globalThis)',
+          bindings: { total: '0', greet: 'function', setTimeout: 'built-in' },
+        },
+        { name: 'global lexical scope', bindings: {} },
+      ],
+      lookup: { name: 'total', foundIn: 'global object (globalThis)' },
+    },
+    {
+      note: 'let, const and class at the top level of the same script land one scope in. The name resolves, but globalThis.rate is undefined.',
+      scopes: [
+        {
+          name: 'global object (globalThis)',
+          bindings: { total: '0', greet: 'function', setTimeout: 'built-in' },
+        },
+        { name: 'global lexical scope', bindings: { rate: '0.2' } },
+      ],
+      lookup: { name: 'rate', foundIn: 'global lexical scope' },
+    },
+    {
+      note: 'Inside a module nothing at the top level is global at all. Every declaration stays in module scope, which is why modules stopped colliding with each other.',
+      scopes: [
+        {
+          name: 'global object (globalThis)',
+          bindings: { setTimeout: 'built-in' },
+        },
+        { name: 'global lexical scope', bindings: {} },
+        { name: 'module scope', bindings: { total: '0', rate: '0.2' } },
+      ],
+      lookup: { name: 'total', foundIn: 'module scope' },
+    },
+  ]}
+/>
+
+So there are three answers to "is this global", and they differ by declaration
+and by file kind. Only the first pile is reachable as `globalThis.something`. The
+only way a module puts a name there is to write it: `globalThis.appConfig = {}`.
+
+`this` at the top level follows the same split: `globalThis` in a sloppy script,
+`undefined` in a module, and `module.exports` in a CommonJS file.
+
+## The interview angle
+
+> **"What does strict mode change?"**
+> Lead with the two that bite: undeclared assignments throw instead of creating
+> a global, and `this` is `undefined` in a plain call instead of the global
+> object. Then say silent write failures become `TypeError`s, and finish with the
+> syntax it removes — duplicate parameters, octals, `with`, `arguments` aliasing.
+
+> **"Do you still write 'use strict'?"**
+> Only in a script or a CommonJS file. Modules and class bodies are strict
+> already, so in most codebases the directive is redundant, and a directive that
+> is not the first statement does nothing at all.
+
+> **"Why is `globalThis.x` undefined when `x` is declared at the top of my
+> file?"**
+> Either the file is a module, in which case top level declarations are module
+> scoped, or the declaration is `let` or `const`, which live in the global
+> lexical scope rather than on the global object.
+
+## Traps
+
+- **A directive placed after any statement is just a string.** The file runs
+  sloppy and looks strict.
+- **Strict mode is lexical, not dynamic.** A strict function calling a sloppy
+  one does not make it strict, and the reverse is equally true. The mode is
+  decided by where the code is written.
+- **A frozen object under sloppy rules swallows writes.** The assignment
+  evaluates, the value never changes, and nothing anywhere reports it.
+- **`typeof window !== 'undefined'` is a browser check, not a global check.**
+  `globalThis` is the portable name; `window` exists in a page and not in a
+  worker or in Node.
+- **`var` at the top level of a script is a global property, at the top level of
+  a module it is not.** The same line means two different things in two files.
+- **Removing the directive from an old file changes behaviour, it does not tidy
+  it.** Sloppy rules come back with it.
+
+## In one picture
+
+<ConceptMap
+  center={'Strict mode and globalThis'}
+  branches={[
+    {
+      label: 'Errors instead of silence',
+      summary: 'The failures sloppy mode hides.',
+      nodes: [
+        'undeclared assignment throws',
+        'writes to frozen or read-only throw',
+        'delete of a variable is a syntax error',
+      ],
+    },
+    {
+      label: 'this in a plain call',
+      summary: 'undefined in strict, globalThis in sloppy.',
+      nodes: ['constructors called without new throw', 'no accidental global writes'],
+    },
+    {
+      label: 'Where the mode comes from',
+      summary: 'Almost never from the directive.',
+      nodes: [
+        'modules are always strict',
+        'class bodies are always strict',
+        'lexical, inherited by nested functions',
+      ],
+    },
+    {
+      label: 'globalThis',
+      summary: 'One name for the environment root.',
+      nodes: ['window, self and global unified', 'holds built-ins and what you put there'],
+    },
+    {
+      label: 'What is actually global',
+      summary: 'Three scopes, one word.',
+      nodes: [
+        'var in a script becomes a property',
+        'let and const stay lexical',
+        'modules keep everything to themselves',
+      ],
+    },
+  ]}
+/>

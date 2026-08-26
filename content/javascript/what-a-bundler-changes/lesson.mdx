@@ -1,0 +1,204 @@
+## Why this matters
+
+The code that runs in production is not the code you wrote. Between the two sits
+a bundler, and it has rewritten your modules into functions, dropped exports it
+decided nobody used, replaced some of your expressions with constants, renamed
+almost every identifier, and split the result into files with hashes in their
+names.
+
+Nearly all of that is invisible, which is exactly why it is worth understanding.
+The bugs it causes are the ones that only exist in a production build, and the
+optimisations it offers only work if you write code it can reason about.
+
+## What a bundler actually does
+
+Five jobs, in roughly this order.
+
+- **Resolve the graph.** It implements the resolution rules itself, plus aliases
+  and conditions you configured. This is why a build can find a module the
+  runtime would not, and the reverse.
+- **Transform each file.** TypeScript, JSX, newer syntax down to older syntax.
+  By the time modules are joined together they are all plain JavaScript.
+- **Join the graph into chunks.** Each module becomes a function, collected in a
+  registry, with a small runtime that evaluates them on demand and caches the
+  result — the module registry, rebuilt in user code.
+- **Remove what is unreachable.** Unused exports, branches behind conditions
+  that are constant after inlining, whole modules nobody imports.
+- **Minify and emit.** Identifiers renamed, whitespace gone, file names hashed
+  for caching, and a source map to get back to what you wrote.
+
+<CodeWalkthrough
+  title="Your two modules, as the bundle sees them"
+  code={`// what you wrote
+export const rate = 0.2
+import { rate } from './rate.js'
+console.log(rate)
+
+// roughly what is emitted
+const modules = {
+'./rate.js': (exports) => {
+exports.rate = 0.2
+},
+'./app.js': (exports, require) => {
+const rateModule = require('./rate.js')
+console.log(rateModule.rate)
+},
+}`}
+steps={[
+{
+lines: [2, 3, 4],
+note: 'Two modules in the source: one exports a binding, the other imports and reads it.',
+variables: { modules: '2', 'top level scope': 'module scope, one per file' },
+},
+{
+lines: [7, 8, 9, 10],
+note: 'Each module becomes a function. Module scope is now function scope, which is why nothing at your top level was ever global.',
+variables: { 'top level scope': 'function body' },
+},
+{
+lines: [11, 12, 13, 14],
+note: 'Imports become property reads on an exports object, so the live binding is emulated rather than native. Bundlers use getters where the value can change.',
+output: ['0.2'],
+},
+{
+lines: [7],
+note: 'A small runtime holds the registry and evaluates each module once on first require, which is the same guarantee the platform gives.',
+variables: { evaluated: 'once per module, on demand' },
+},
+]}
+/>
+
+## Tree shaking, and what it needs from you
+
+Removing an unused export sounds simple and is not, because removing code is
+only safe if the code does nothing else. Three things have to be true.
+
+**The graph has to be static.** Only `import` and `export` declarations can be
+followed without running the program, which is why tree shaking works on ES
+modules and barely works on CommonJS.
+
+**Side effects have to be knowable.** A module that registers something, patches
+a prototype or writes to `globalThis` cannot be dropped just because its exports
+are unused. The bundler assumes the worst unless `"sideEffects": false` in
+`package.json` tells it otherwise.
+
+**The use has to be visible.** A named import that is never referenced can go. An
+export reached through a computed property, or re-exported through several barrel
+files that each pull in their neighbours, usually cannot.
+
+That last one is where real bundles get fat. A barrel file — `index.js`
+re-exporting forty modules — turns one small import into a graph the bundler has
+to prove is safe to discard, and one module in it with a side effect keeps the
+lot.
+
+## Code splitting
+
+A dynamic `import()` is a split point. The bundler emits the imported subgraph
+as a separate chunk and turns the call into "fetch that chunk, then evaluate it".
+Modules needed by more than one chunk are usually hoisted into a shared chunk so
+they are downloaded once.
+
+That gives you the actual rule for splitting: it pays where a large subgraph is
+genuinely conditional — a route not visited, an editor not opened, an admin panel
+most users never see. Splitting something the first screen needs turns one
+request into two, sequentially.
+
+## Values that stop being values
+
+`process.env.NODE_ENV` is not read at run time in a bundled browser app. It is
+replaced with a string at build time, so the branch around it becomes constant
+and the dead half is removed. That is how a development-only warning costs
+nothing in production.
+
+Everything else exposed to your code the same way follows the same rule: an env
+var baked into a bundle is a value chosen when the bundle was built, and changing
+it afterwards requires a rebuild rather than a restart. This is the single most
+common surprise when a frontend is deployed as a container.
+
+## Where development and production diverge
+
+Modern dev servers do not bundle. They serve your modules to the browser as
+modules, transformed one at a time, which is what makes a reload fast. The
+production build is a different pipeline over the same source.
+
+So the two differ in ways worth knowing before they bite:
+
+- Tree shaking and dead code removal usually only run in the production build,
+  so a mistaken `sideEffects` flag has no symptom in development.
+- Minification renames things, so anything depending on `fn.name` or
+  `constructor.name` works in development and fails in production.
+- Module count and evaluation order can differ, because bundling concatenates a
+  graph the dev server evaluates as separate files.
+
+The rule that follows is simple enough to state: any behaviour you rely on must
+be verified against a production build, not the dev server.
+
+## The interview angle
+
+> **"What does a bundler do?"**
+> Resolves the module graph, transforms each file, joins them into chunks where
+> each module becomes a function with a tiny registry runtime, removes what it
+> can prove is unused, and minifies. Then say what that costs and buys: tree
+> shaking needs static imports and honest side effect information, dynamic
+> imports become split points, and some values are inlined at build time.
+
+> **"Why is this only broken in production?"**
+> Because the production build is the one that shakes, inlines and minifies. The
+> three usual causes are a wrong `sideEffects` claim, a build time constant you
+> expected to be read at run time, and code depending on a name the minifier
+> changed.
+
+## Traps
+
+- **Env values are baked in.** Rebuilding, not restarting, is what changes them.
+- **`constructor.name` is not stable.** The minifier renames classes and
+  functions.
+- **Barrel files defeat shaking.** One `index.js` re-exporting everything can
+  pull a whole directory into the bundle.
+- **A dynamic import you always call is a slower static import.** It is two
+  round trips instead of one.
+- **The dev server is not the build.** Verify anything load-bearing against the
+  production output.
+- **A bundler can resolve what the runtime cannot.** Aliases and extensionless
+  imports work in the build and fail if the same file is ever run directly.
+
+## In one picture
+
+<ConceptMap
+  center={'What a bundler changes'}
+  branches={[
+    {
+      label: 'The five jobs',
+      summary: 'Resolve, transform, join, remove, minify.',
+      nodes: ['its own resolution rules', 'modules become functions', 'chunks with hashed names'],
+    },
+    {
+      label: 'Tree shaking',
+      summary: 'Only what it can prove is unused.',
+      nodes: [
+        'needs static import and export',
+        'needs honest sideEffects',
+        'barrel files defeat it',
+      ],
+    },
+    {
+      label: 'Code splitting',
+      summary: 'import() is the split point.',
+      nodes: ['shared modules hoisted to a common chunk', 'pays for genuinely conditional work'],
+    },
+    {
+      label: 'Build time values',
+      summary: 'Some expressions are constants before they run.',
+      nodes: ['NODE_ENV inlined, dead branch removed', 'env changes need a rebuild'],
+    },
+    {
+      label: 'Dev against production',
+      summary: 'Two pipelines over one source.',
+      nodes: [
+        'shaking and minifying are production only',
+        'names are not stable',
+        'verify against the real build',
+      ],
+    },
+  ]}
+/>
