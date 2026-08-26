@@ -1,0 +1,295 @@
+## Why this matters
+
+The built-in types describe how code broke, not what went wrong in your domain.
+`TypeError` is the engine's vocabulary. "This payment was declined", "this
+upload is too large", "this token expired" is yours, and a caller can only
+respond to a failure it can recognise.
+
+Writing one is four lines, and three of them are easy to get subtly wrong. The
+name says `Error`, `instanceof` stops working under a build step, and the fields
+you attached vanish the moment the error is serialised. All three are things
+interviewers ask about because all three have shipped.
+
+## The smallest custom error that works
+
+```js
+class ValidationError extends Error {
+  constructor(message, options) {
+    super(message, options)
+    this.name = new.target.name
+    this.code = 'VALIDATION_FAILED'
+  }
+}
+```
+
+Four things are happening, and each one is doing a job:
+
+- **`extends Error`** puts `Error.prototype` on the chain, so `message`,
+  `stack` and `toString` all work and `instanceof Error` is true.
+- **`super(message, options)`** forwards both arguments. Passing only the
+  message is the common version, and it silently drops `cause`, since the base
+  constructor is what installs it.
+- **`this.name`** has to be set, because the name comes from the prototype and
+  the prototype you inherited says `Error`. `new.target.name` is the form that
+  keeps working when somebody subclasses your subclass.
+- **`this.code`** is a stable string for callers to switch on. It survives
+  serialisation and realm boundaries, which `instanceof` does not.
+
+## Where the name comes from
+
+Nothing about a subclass changes where `name` is looked up, and that is the
+whole reason the default is wrong.
+
+<PrototypeChain
+  title="Looking up properties on a custom error"
+  steps={[
+    {
+      note: 'message and stack are own properties, put there by the Error constructor when super ran. So is anything you assigned after it.',
+      chain: [
+        {
+          id: 'error',
+          label: 'the thrown error',
+          properties: ['message', 'stack', 'code', 'field'],
+        },
+        {
+          id: 'ValidationError.prototype',
+          label: 'ValidationError.prototype',
+          properties: ['constructor'],
+        },
+        {
+          id: 'Error.prototype',
+          label: 'Error.prototype',
+          properties: ['name', 'message', 'toString', 'constructor'],
+        },
+        { id: 'Object.prototype', label: 'Object.prototype', properties: ['hasOwnProperty'] },
+      ],
+      lookup: { property: 'message', foundIn: 'error' },
+    },
+    {
+      note: 'Now the same subclass without the name assignment. name is not on the instance and not on your prototype either, so the search walks past both and finds Error.prototype.name, which is the string "Error". That is why the log says Error even though the class is right.',
+      chain: [
+        { id: 'error', label: 'the thrown error', properties: ['message', 'stack'] },
+        {
+          id: 'ValidationError.prototype',
+          label: 'ValidationError.prototype',
+          properties: ['constructor'],
+        },
+        {
+          id: 'Error.prototype',
+          label: 'Error.prototype',
+          properties: ['name', 'message', 'toString', 'constructor'],
+        },
+        { id: 'Object.prototype', label: 'Object.prototype', properties: ['hasOwnProperty'] },
+      ],
+      lookup: { property: 'name', foundIn: 'Error.prototype' },
+    },
+    {
+      note: 'Assigning this.name in the constructor puts it on the instance, so the search stops there. toString still comes from Error.prototype, and it reads whatever name it finds now.',
+      chain: [
+        { id: 'error', label: 'the thrown error', properties: ['message', 'stack', 'name'] },
+        {
+          id: 'ValidationError.prototype',
+          label: 'ValidationError.prototype',
+          properties: ['constructor'],
+        },
+        {
+          id: 'Error.prototype',
+          label: 'Error.prototype',
+          properties: ['name', 'message', 'toString', 'constructor'],
+        },
+        { id: 'Object.prototype', label: 'Object.prototype', properties: ['hasOwnProperty'] },
+      ],
+      lookup: { property: 'name', foundIn: 'error' },
+    },
+    {
+      note: 'Formatting is never overridden. String(error) walks all the way to Error.prototype.toString, which reads this.name and this.message when it is called, so a name assigned late still fixes every line the error is printed on.',
+      chain: [
+        { id: 'error', label: 'the thrown error', properties: ['message', 'stack', 'name'] },
+        {
+          id: 'ValidationError.prototype',
+          label: 'ValidationError.prototype',
+          properties: ['constructor'],
+        },
+        {
+          id: 'Error.prototype',
+          label: 'Error.prototype',
+          properties: ['name', 'message', 'toString', 'constructor'],
+        },
+        { id: 'Object.prototype', label: 'Object.prototype', properties: ['hasOwnProperty'] },
+      ],
+      lookup: { property: 'toString', foundIn: 'Error.prototype' },
+    },
+  ]}
+/>
+
+One nuance comes with the fix. Assigning `this.name` creates an own enumerable
+property, where `message` and `stack` are non-enumerable. So a stringified
+custom error is not empty any more, it is worse: `{"name":"ValidationError"}`,
+with the message gone. Half a serialisation reads like a working one, which is
+why the field-copying comes up again below.
+
+## Carrying data, not just words
+
+A message is for a human. Anything a caller has to branch on belongs in a field:
+
+```js
+class ValidationError extends Error {
+  constructor(field, rule, options) {
+    super(`${field} failed ${rule}`, options)
+    this.name = new.target.name
+    this.code = 'VALIDATION_FAILED'
+    this.field = field
+    this.rule = rule
+  }
+}
+```
+
+Now an HTTP layer can answer `422` with the field name, a form can highlight the
+input, and a retry policy can tell a rejected card from a network timeout. None
+of that requires parsing English.
+
+The field to add first is `code`. It is what every mature library exposes, it is
+what survives `JSON.stringify` once you have a serialiser, and it is the only
+identity check that works across a worker, a process or a network hop.
+
+Treat the codes as a public interface. Renaming one is a breaking change for
+every caller that switched on it, exactly like renaming a method.
+
+## Classes or codes
+
+The instinct after learning this is a class per failure. Resist it.
+
+A class earns its place when callers handle that failure _differently_ —
+different recovery, different HTTP status, different retry decision. Fourteen
+subclasses that all end up in the same `catch` are fourteen files and one
+behaviour.
+
+The shape that scales is a small number of classes and a larger number of codes:
+
+```js
+class AppError extends Error {} // everything the domain throws
+class ValidationError extends AppError {} // callers respond differently
+class ConflictError extends AppError {} // so do these
+```
+
+with `code` distinguishing the cases inside each one. `instanceof AppError` at
+the boundary separates your failures from bugs, and the code says which failure
+it was.
+
+The other half of the same judgement: a bug does not need a class. A
+`TypeError` from your own code is not something a caller should recover from,
+and giving it a friendly type invites somebody to try.
+
+## Crossing a boundary
+
+Two things break when an error leaves the process it was made in, and both have
+the same shape.
+
+**`instanceof` stops working.** It is an identity check against this realm's
+constructor, so an error from a worker, a `vm` context or a second copy of your
+package fails it while being entirely genuine. The `code` field does not care.
+
+**Serialisation drops everything.** `JSON.stringify` sees only enumerable own
+properties, so `message` and `stack` never survive. Give the class a `toJSON`
+and the problem goes away wherever `JSON.stringify` is used, because it calls
+`toJSON` when there is one:
+
+```js
+toJSON() {
+  return { name: this.name, message: this.message, code: this.code, stack: this.stack }
+}
+```
+
+Whether to include the stack depends on where the JSON goes. Into your own log
+pipeline, yes. Into an HTTP response a user reads, no: it names your files and
+your dependency versions.
+
+There is one more trap worth knowing if the build targets ES5. Down-levelled
+classes call `Error` as a function, which returns a fresh object rather than
+initialising `this`, and every `instanceof` on your subclass becomes false. The
+fix is one line in the constructor, `Object.setPrototypeOf(this, new.target.prototype)`,
+and the real fix is to stop targeting ES5.
+
+## The interview angle
+
+> **"How do you write a custom error?"**
+> Extend `Error`, call `super` with the message _and_ the options so `cause`
+> survives, set `name` because it comes from the prototype and would otherwise
+> say `Error`, and add a `code` for callers to switch on. Then say what the code
+> is for: it survives serialisation and realm boundaries, and `instanceof` does
+> not.
+
+> **"When would you make one at all?"**
+> When a caller has to do something different. Not for every failure, and not
+> for bugs. The test is whether two failures end up in the same `catch` doing
+> the same thing; if they do, they are one type with two codes.
+
+Expect follow-ups on why the name is wrong by default, on what happens to a
+custom error in a log, and on how you would design the error surface of a
+library.
+
+## Traps
+
+- **`name` is inherited, so it says `Error`.** Set it in the constructor.
+- **`super(message)` alone drops `cause`.** Forward the options object.
+- **Assigning `this.name` makes it enumerable.** A stringified error then shows
+  the name and nothing else, which looks like it worked.
+- **`instanceof` fails across realms and duplicate copies.** Branch on `code`
+  at any boundary.
+- **`Error.captureStackTrace` is V8 only.** Useful for hiding the constructor
+  frame, and it has to be guarded or it throws elsewhere.
+- **A class per failure is a taxonomy nobody uses.** Classes for different
+  handling, codes for different causes.
+
+## In one picture
+
+<ConceptMap
+  center={'Custom error types'}
+  branches={[
+    {
+      label: 'The four lines',
+      summary: 'Each one is doing a job.',
+      nodes: [
+        'extends Error for the prototype and the stack',
+        'super(message, options) keeps cause',
+        'set name, add code',
+      ],
+    },
+    {
+      label: 'Why the name is wrong',
+      summary: 'It is looked up, not generated.',
+      nodes: [
+        'name lives on Error.prototype',
+        'your prototype does not have one',
+        'assigning it makes it enumerable',
+      ],
+    },
+    {
+      label: 'Data over words',
+      summary: 'A message is for a human.',
+      nodes: [
+        'code is the field to add first',
+        'field, rule, status for the caller',
+        'codes are a public interface',
+      ],
+    },
+    {
+      label: 'How many types',
+      summary: 'Classes for handling, codes for causes.',
+      nodes: [
+        'one base class per domain',
+        'subclass only where handling differs',
+        'bugs do not need a class',
+      ],
+    },
+    {
+      label: 'Boundaries',
+      summary: 'Identity and fields both get lost.',
+      nodes: [
+        'instanceof fails across realms',
+        'stringify drops message and stack',
+        'toJSON fixes it wherever JSON is used',
+      ],
+    },
+  ]}
+/>
