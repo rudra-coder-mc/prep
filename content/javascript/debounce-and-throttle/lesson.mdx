@@ -1,0 +1,279 @@
+## Why this matters
+
+An input handler runs on every keystroke. A scroll handler runs dozens of times
+a second. A resize handler runs throughout the drag. Each of them is fine until
+the work inside it is a network request, a layout read, or anything that takes
+longer than the gap between calls.
+
+Debounce and throttle are the two answers, and they are asked about constantly,
+for two good reasons. The distinction is a real design decision that people get
+backwards, and writing one from scratch uses closures, `setTimeout`, rest
+parameters, `this` and cleanup in about ten lines. It is the smallest piece of
+code that shows whether you know the language.
+
+## The two shapes
+
+**Debounce waits for quiet.** Every call cancels the pending run and starts the
+wait again, so the function runs once, after the calls stop. Type ten characters
+quickly and one search happens.
+
+**Throttle enforces a rate.** The function runs at most once per interval,
+however many calls arrive. Scroll for two seconds with a 100ms throttle and it
+runs about twenty times, spread evenly.
+
+The question that picks between them: **do you want the last one, or do you want
+regular ones?** A search box wants the last one, because the intermediate
+searches are wasted work whose results nobody wants. A scroll position indicator
+wants regular ones, because a version that only updates when scrolling stops is
+broken.
+
+| Behaviour           | Debounce                                         | Throttle                                 |
+| ------------------- | ------------------------------------------------ | ---------------------------------------- |
+| Runs                | once, after the quiet period                     | at most once per interval                |
+| During a long burst | nothing happens                                  | steady updates                           |
+| Fits                | search, autosave, validation, resize-then-reflow | scroll, mousemove, progress, rate limits |
+| Risk                | may never run while input continues              | runs on stale intermediate values        |
+
+## Debounce, written out
+
+<CodeWalkthrough
+  title="Four keystrokes, one search"
+  code={`function debounce(fn, wait) {
+  let timer
+
+function debounced(...args) {
+clearTimeout(timer)
+timer = setTimeout(() => fn.apply(this, args), wait)
+}
+
+debounced.cancel = () => clearTimeout(timer)
+return debounced
+}
+
+const search = debounce(query => fetchResults(query), 300)`}
+steps={[
+{
+lines: [1, 2],
+note: 'The closure holds one variable, the pending timer id. Everything the function remembers between calls lives there.',
+variables: { timer: 'undefined' },
+},
+{
+lines: [4, 5, 6],
+note: 'First keystroke, at 0ms. clearTimeout with undefined is a no-op, and a timer is scheduled for 300ms with the arguments of this call.',
+variables: { timer: '#1', pending: "'r'" },
+},
+{
+lines: [5, 6],
+note: 'Second keystroke, at 90ms. The pending timer is cleared before it ever fires, and a new one is scheduled with the newer arguments. This is the whole mechanism.',
+variables: { timer: '#2', pending: "'re'" },
+},
+{
+lines: [5, 6],
+note: 'Third and fourth keystrokes, at 180ms and 250ms. Same again: cancel, reschedule. Three timers have been created and discarded without running.',
+variables: { timer: '#4', pending: "'redis'" },
+},
+{
+lines: [6],
+note: 'No keystroke for 300ms. Timer #4 fires and calls fn with the arguments of the last call and the this it was called with. One request, for the query the user actually finished typing.',
+output: ['fetchResults("redis") at 550ms'],
+},
+{
+lines: [9],
+note: 'cancel exists because the component can go away while a timer is pending. Without it, a save fires against a form nobody is looking at.',
+},
+]}
+/>
+
+Three details in those ten lines are worth naming, because an implementation
+without them is the one that gets marked down.
+
+`function debounced(...args)` is a `function`, not an arrow, and the timer
+callback is an arrow. That combination is what preserves `this`: the arrow takes
+`this` from `debounced`, so a debounced method still works when called as
+`obj.method()`.
+
+The arguments are captured per call, and the last call's arguments are the ones
+that run. That is what makes a search debounce correct rather than merely
+cheaper.
+
+And `cancel` is not optional in real code. A pending timer holds its callback,
+its arguments and everything they close over, so an uncancelled debounce is both
+a stale write and one of the leak shapes from two topics ago.
+
+## Throttle, written out
+
+Throttle has one design question that debounce does not: when in the interval
+does it run.
+
+```js
+function throttle(fn, interval) {
+  let last = 0
+  let timer
+
+  return function throttled(...args) {
+    const remaining = interval - (Date.now() - last)
+
+    if (remaining <= 0) {
+      last = Date.now()
+      fn.apply(this, args)
+      return
+    }
+
+    // Nothing scheduled yet: run once at the end of this window,
+    // with whatever the newest arguments turn out to be.
+    if (timer === undefined) {
+      timer = setTimeout(() => {
+        last = Date.now()
+        timer = undefined
+        fn.apply(this, args)
+      }, remaining)
+    }
+  }
+}
+```
+
+**Leading edge** means the first call runs immediately, which is what the
+`remaining <= 0` branch does. It matters more than it sounds: a throttle without
+it feels broken, because the first scroll event does nothing for a whole
+interval.
+
+**Trailing edge** means one more run at the end of the window, so the final
+position is not lost. Without it, a scroll that stops mid-interval leaves the
+indicator wrong forever.
+
+Most real throttles do both, and the libraries make both configurable. If you
+are asked to write one on a whiteboard, write the leading edge version and then
+say out loud that a trailing call is needed so the last event is not dropped.
+
+There is a simpler throttle for anything visual, and it is usually the right
+one:
+
+```js
+let queued = false
+
+window.addEventListener('scroll', () => {
+  if (queued) return
+  queued = true
+  requestAnimationFrame(() => {
+    queued = false
+    updateIndicator(window.scrollY)
+  })
+})
+```
+
+That runs at most once per frame, which is exactly as often as the screen can
+show a change, and it pauses when the tab is hidden instead of burning a timer.
+
+## What the timers actually promise
+
+`setTimeout(fn, 300)` means "not before 300ms", and the gap between that and
+"at 300ms" contains several real behaviours.
+
+A timer callback is a task, so it waits for the current synchronous run to
+finish and for the microtask queue to drain. A promise chain that keeps queueing
+microtasks can delay a zero-millisecond timer indefinitely.
+
+Nested timers are clamped. After five levels of nesting, browsers force a
+minimum of 4ms, so a `setTimeout(..., 0)` loop is a 4ms loop.
+
+Background tabs throttle timers hard, to about once a second and less for pages
+hidden a long time. Code that assumes a 100ms throttle keeps ticking while the
+user is in another tab is wrong about it.
+
+`setInterval` drifts, and its callbacks can bunch up if the work takes longer
+than the interval. For repeating work of uncertain duration, a `setTimeout` that
+reschedules itself at the end of each run keeps the gap rather than the rate.
+
+## The interview angle
+
+> **"What is the difference between debounce and throttle?"**
+> Debounce waits for the calls to stop and then runs once. Throttle runs at most
+> once per interval regardless. Then the deciding question: do you want the last
+> one, or regular ones.
+
+> **"Write debounce."**
+> Ten lines, and say the three details while writing them: `this` and arguments
+> forwarded, the last call's arguments winning, and a `cancel` for teardown. An
+> implementation that drops `this` works for arrow callbacks and breaks for
+> methods, and interviewers ask specifically about that.
+
+> **"Which would you use for a search-as-you-type box?"**
+> Debounce, around 300ms. Then, before being asked: debouncing does not solve
+> out-of-order responses, because two requests can still be in flight if the
+> user pauses twice, so the request itself needs cancelling with an
+> `AbortController` or a sequence check on the response.
+
+Expect a follow-up on why the debounced function cannot return the result, which
+is that it has not run yet, so a real one returns a promise resolved when it
+eventually does.
+
+## Traps
+
+- **Creating the debounced function inside the handler.** Each call gets a fresh
+  closure and its own timer, so nothing is ever cancelled and nothing is
+  debounced.
+- **Losing `this`.** Calling `fn(...args)` instead of `fn.apply(this, args)`
+  breaks every debounced method.
+- **No cancel on teardown.** The pending callback still runs, against something
+  that no longer exists, and holds it alive until it does.
+- **Expecting a return value.** A debounced function returns `undefined`,
+  because the real call has not happened.
+- **Debounce where throttle belongs.** A progress indicator that only updates
+  when the user stops scrolling is a broken progress indicator.
+- **Throttle with no trailing call.** The final event of a burst is dropped, so
+  the last position is never rendered.
+- **Assuming the wait is exact.** Timers are a floor, they are clamped when
+  nested, and they are throttled in background tabs.
+
+## In one picture
+
+<ConceptMap
+  center={'Debounce and throttle'}
+  branches={[
+    {
+      label: 'Debounce',
+      summary: 'Wait for quiet, then run once.',
+      nodes: [
+        'every call cancels the pending run',
+        'the last arguments win',
+        'search, autosave, validation',
+      ],
+    },
+    {
+      label: 'Throttle',
+      summary: 'At most once per interval.',
+      nodes: [
+        'leading edge so the first one is not swallowed',
+        'trailing edge so the last one is not lost',
+        'scroll, mousemove, progress',
+      ],
+    },
+    {
+      label: 'Choosing',
+      summary: 'Do you want the last one, or regular ones?',
+      nodes: [
+        'wasted intermediate work means debounce',
+        'a display that must keep up means throttle',
+        'anything visual means requestAnimationFrame',
+      ],
+    },
+    {
+      label: 'What a real one keeps',
+      summary: 'The parts that turn a snippet into a utility.',
+      nodes: [
+        'this and the arguments forwarded',
+        'cancel, and often flush',
+        'a promise if the caller needs the result',
+      ],
+    },
+    {
+      label: 'Timer reality',
+      summary: 'The delay is a floor, not a promise.',
+      nodes: [
+        'tasks wait for microtasks to drain',
+        'nested timers clamp to 4ms',
+        'background tabs throttle to about a second',
+      ],
+    },
+  ]}
+/>

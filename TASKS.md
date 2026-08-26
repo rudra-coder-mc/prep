@@ -63,11 +63,6 @@ The conventions the first groups established, so the rest stay consistent:
 Done when every group below has shipped. Each group is done when its topics
 pass the content check and read as one lesson each, not as a list of facts.
 
-## Memory and performance
-
-Garbage collection and the shapes of a leak, `WeakMap` and `WeakRef`, debounce
-and throttle, the real cost of common collection operations.
-
 ## The browser, not the language
 
 The DOM, events and delegation, `fetch` and the network, storage.
