@@ -7,14 +7,15 @@ mark it learned, and from then on answer active-recall questions about it on a
 schedule until you can explain and apply it without help. Every topic can also be
 listened to, in a voice synthesised on the machine it runs on.
 
-The JavaScript track covers thirty-two topics, in teaching order: types and
+The JavaScript track covers thirty-five topics, in teaching order: types and
 coercion, scope and hoisting, values and references, destructuring, optional
 chaining and nullish handling, parameters and arguments, closures, higher order
 functions, array methods, currying and partial application, `this` and binding,
 strict mode and `globalThis`, prototypes, property descriptors and accessors,
 class syntax, `extends` and `super`, static and private members, composition
 against inheritance, iterables and the iteration protocol, generators, `Map` and
-`Set`, JSON serialisation, recursion and the call stack, the event loop and
+`Set`, JSON serialisation, recursion and the call stack, throwing and catching,
+error objects and the built-in types, custom error types, the event loop and
 microtasks, promises with async/await, promise combinators, async error
 handling, `AbortController`, async iteration, ES modules against CommonJS,
 module resolution and side effects, and what a bundler changes. Each has an

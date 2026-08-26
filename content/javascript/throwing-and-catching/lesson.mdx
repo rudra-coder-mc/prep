@@ -1,0 +1,282 @@
+## Why this matters
+
+Every function you write has two ways out. It can return, and it can fail. The
+return is the one people design; the failure is the one that decides whether the
+program is debuggable at three in the morning.
+
+`try`/`catch`/`finally` is a small piece of syntax with a surprising number of
+exact rules, and interviews go straight at them because most people learn the
+happy shape and never read the specification. What order do the blocks run in.
+What happens to the frames between the throw and the handler. What a `return`
+inside `finally` does to the value you thought you were returning. Each of those
+is a real bug someone has shipped.
+
+## What throw does to the stack
+
+`throw` takes any value and stops the current function immediately. The engine
+then walks back down the call stack looking for a `try` block that has a
+`catch`. Every frame it passes is discarded: the rest of that function's body
+never runs, and it never returns anything to its caller.
+
+<CallStack
+  title="A throw four frames deep"
+  steps={[
+    {
+      frames: ['main'],
+      note: 'main calls load, which is the function that has the try/catch in it.',
+    },
+    {
+      frames: ['main', 'load'],
+      note: 'load enters its try block and calls parse. Nothing has failed yet.',
+    },
+    {
+      frames: ['main', 'load', 'parse'],
+      note: 'parse calls field for each column. It has no try of its own.',
+    },
+    {
+      frames: ['main', 'load', 'parse', 'field'],
+      note: 'field throws. Its own frame is abandoned on the spot: the lines below the throw do not run.',
+    },
+    {
+      frames: ['main', 'load', 'parse'],
+      note: 'parse has no catch, so this frame is discarded rather than returned from. The remaining columns are never parsed.',
+    },
+    {
+      frames: ['main', 'load'],
+      note: 'load does have a catch, so the unwinding stops here. This is the first frame that gets a say.',
+      output: ['caught: column 3 is not a number'],
+    },
+    {
+      frames: ['main'],
+      note: 'The catch returned a fallback, so load completes normally. From main, nothing unusual happened at all.',
+    },
+  ]}
+/>
+
+If no frame has a handler, the exception reaches the top. In a browser that
+fires `window.onerror` and logs to the console; in Node it fires
+`process.on('uncaughtException')` and, with nothing listening, prints the stack
+and exits non-zero. Crashing is the correct behaviour there: a program that has
+already gone wrong is not a program you want continuing.
+
+You can throw anything — a string, a number, an object, `undefined`. You should
+throw an `Error`, because only an `Error` captures where it was thrown. A thrown
+string arrives at the handler with no `message`, no `name`, and no `stack`, and
+the log that was supposed to tell you what happened says `undefined`.
+
+## try, catch, finally
+
+The rules fit in a short list, and every one of them is asked about:
+
+- **`try` needs at least one of the other two.** `catch` alone, `finally` alone,
+  or both, in that order.
+- **`catch` runs only if something was thrown**, and only for a throw from
+  inside the `try` block, including from anything it called.
+- **`finally` runs either way.** After the `try` if nothing failed, after the
+  `catch` if something did, and on the way out if nothing caught it at all.
+- **`finally` runs on `return`, `break` and `continue` too.** Any way of leaving
+  the block, not only the exceptional one.
+- **The catch binding is block scoped**, and optional. `catch {}` is legal when
+  you do not need the value.
+
+The only things that skip a `finally` are the ones that stop the program:
+`process.exit()`, a hard crash, or a loop inside the `try` that never ends.
+
+## The return value finally replaces
+
+This is the trap, and it comes in two halves that look the same and are not.
+
+<CodeWalkthrough
+  title="Two functions, one difference"
+  code={`function read() {
+  let value = 'from try'
+  try {
+    return value
+  } finally {
+    value = 'from finally'
+  }
+}
+// the same shape, with a return in the finally
+function write() {
+  try {
+    return 'from try'
+  } finally {
+    return 'from finally'
+  }
+}`}
+  steps={[
+    {
+      lines: [3, 4],
+      note: 'read enters its try and hits the return. The return expression is evaluated now: the string is copied out of value and held as the pending result.',
+      variables: { value: "'from try'", 'pending result': "'from try'" },
+    },
+    {
+      lines: [5, 6],
+      note: 'The finally block runs before the function actually leaves. It reassigns value, and nothing is watching value any more.',
+      variables: { value: "'from finally'", 'pending result': "'from try'" },
+    },
+    {
+      lines: [4, 8],
+      note: 'read returns the pending result. Reassigning the variable after the return was evaluated changes nothing.',
+      output: ["read() === 'from try'"],
+    },
+    {
+      lines: [11, 12],
+      note: 'write does the same thing: the string is evaluated and held pending.',
+      variables: { 'pending result': "'from try'" },
+    },
+    {
+      lines: [13, 14],
+      note: 'This finally does not assign to a variable, it returns. A return is an abrupt completion, and it replaces the one already pending.',
+      variables: { 'pending result': "'from finally'" },
+    },
+    {
+      lines: [12, 16],
+      note: 'write returns from finally. The same replacement happens to a throw: a return in finally discards an exception that was on its way out.',
+      output: ["write() === 'from finally'"],
+    },
+  ]}
+/>
+
+The rule underneath is that `finally` cannot change a pending completion, only
+replace it with a completion of its own. Assigning to a variable is not a
+completion. A `return`, a `throw`, a `break` or a `continue` is, and it wins.
+
+That last part is why a `return` in a `finally` is worth treating as a bug on
+sight. It silently swallows every exception passing through, and the failure
+turns into a normal-looking value somewhere the reader has no reason to look.
+
+## Catching narrowly
+
+A `catch` catches everything, which is almost never what you meant. The useful
+shape is to handle the failure you expected and rethrow the rest:
+
+```js
+try {
+  return JSON.parse(raw)
+} catch (error) {
+  if (error instanceof SyntaxError) return null
+  throw error
+}
+```
+
+The wide version, `catch (error) { return null }`, turns a typo in your own
+handler into an empty result. The bug is now a missing value two layers away
+with nothing in the log, and the code that was supposed to make failures safe is
+what hid this one.
+
+Logging is not handling. `catch (error) { console.error(error); return null }`
+looks responsible and does the same thing: the caller still cannot tell the
+difference between no data and broken data, and now there is a line in a log
+nobody reads. Catch it if you can do something about it, and let it go past if
+you cannot.
+
+## Cleanup that does not lie
+
+`finally` earns its place on cleanup: a lock to release, a connection to close,
+a spinner to stop. The thing to be careful about is that the cleanup can fail
+too, and a throw from `finally` replaces the exception already in flight the
+same way a `return` does.
+
+```js
+let connection
+try {
+  connection = await pool.acquire()
+  return await connection.query(sql)
+} finally {
+  try {
+    await connection?.release()
+  } catch (releaseError) {
+    logger.warn({ releaseError }, 'failed to release connection')
+  }
+}
+```
+
+The inner `try` is the point. Without it, a query that failed for a real reason
+gets reported as a release failure, and the cause is gone. Cleanup should be
+quiet: do the work, record its own problems, never overwrite somebody else's.
+
+## The interview angle
+
+> **"What is the order of execution with try, catch and finally?"**
+> The `try` body until it either finishes or throws. Then the `catch`, only if
+> it threw. Then the `finally`, either way. Then the function leaves with
+> whatever completion was pending, unless `finally` supplied one of its own.
+
+> **"Does finally run if the try block returns?"**
+> Yes, and that is the interesting part. The return value is evaluated first and
+> held, then `finally` runs, then the function returns. So `finally` can replace
+> the value by returning, and cannot change it by assigning to the variable it
+> came from.
+
+Expect follow-ups on what happens to the frames in between, on whether you can
+throw a non-`Error`, and on where in a request handler a `catch` actually
+belongs.
+
+## Traps
+
+- **`return` in `finally` swallows exceptions.** Every one that passes through,
+  silently, with the function reporting success.
+- **A `throw` in `finally` replaces the original error.** Guard cleanup with its
+  own `try`.
+- **Throwing a string loses the stack.** `error.message` and `error.stack` are
+  both `undefined`, which is exactly when you need them.
+- **`catch` does not reach a callback that runs later.** The `try` has already
+  finished by the time a timer or an event handler fires.
+- **A bare `catch` is a decision, not a safety net.** It swallows the failures
+  you did not predict along with the one you did.
+- **The catch binding does not outlive the block.** Reading it after the closing
+  brace is a `ReferenceError`.
+
+## In one picture
+
+<ConceptMap
+  center={'Throwing and catching'}
+  branches={[
+    {
+      label: 'What a throw does',
+      summary: 'Stops here, unwinds until something catches.',
+      nodes: [
+        'passed frames are discarded, not returned from',
+        'their finally blocks still run',
+        'no handler means the program exits',
+      ],
+    },
+    {
+      label: 'The order',
+      summary: 'try, then catch if it threw, then finally always.',
+      nodes: [
+        'finally runs on return, break and continue',
+        'only process exit skips it',
+        'catch binding is block scoped and optional',
+      ],
+    },
+    {
+      label: 'Completions',
+      summary: 'finally replaces, it does not edit.',
+      nodes: [
+        'the return value is evaluated before finally',
+        'return in finally discards a pending throw',
+        'throw in finally replaces the original error',
+      ],
+    },
+    {
+      label: 'Catching well',
+      summary: 'Handle what you expected, rethrow the rest.',
+      nodes: [
+        'instanceof check then throw error',
+        'logging is not handling',
+        'a bare catch hides your own bugs',
+      ],
+    },
+    {
+      label: 'Cleanup',
+      summary: 'Quiet, and never overwrites a failure.',
+      nodes: [
+        'wrap cleanup in its own try',
+        'record its problem, do not throw it',
+        'always throw an Error, never a string',
+      ],
+    },
+  ]}
+/>

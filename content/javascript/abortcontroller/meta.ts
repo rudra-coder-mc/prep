@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Cancellation with AbortController',
   summary:
     'Why promises cannot be cancelled, how fetch and your own async work get stopped through a signal, timeouts that actually abort, and combining signals.',
-  order: 280,
+  order: 310,
   difficulty: 'hard',
   tags: ['promise', 'async', 'abort'],
   prerequisites: ['javascript/promise-combinators', 'javascript/promises'],

@@ -1,0 +1,241 @@
+## Why this matters
+
+Catching an error is easy. Deciding what to do with it means knowing what it is,
+and that is where most error handling falls apart: a `catch` that treats every
+failure identically is a `catch` that cannot recover from any of them
+specifically.
+
+The language gives you a small, fixed vocabulary for this. Seven built-in error
+constructors, a shape they all share, and a set of rules about which one the
+engine throws for which mistake. Interviews ask because it separates people who
+read the error from people who read the first line of the error.
+
+## What is actually in an Error
+
+An `Error` is an ordinary object with a well known shape. Three properties do
+all the work, and where each of them lives is worth knowing:
+
+- **`message`** is the string you passed to the constructor. It is an own
+  property, and non-enumerable.
+- **`name`** is not an own property at all. It comes from the prototype, which
+  is how `new TypeError('x').name` is `'TypeError'` without anything assigning
+  it.
+- **`stack`** is added by the engine at the moment the `Error` is constructed,
+  not at the moment it is thrown. It is not in the specification, every engine
+  formats it differently, and it is the most useful thing in the object.
+
+Two consequences follow from those properties being non-enumerable, and both
+bite in real code. `JSON.stringify(error)` produces `{}`, and `{ ...error }`
+produces an empty object too. An error copied by spreading is not an error any
+more, and a logger that stringifies one sends nothing at exactly the moment it
+matters.
+
+Reading the object directly is what works. `console.error(error)` formats it
+with the stack; `String(error)` gives `"TypeError: message"` from
+`Error.prototype.toString`, which is the name and message and nothing else.
+
+## The types the engine throws
+
+Five of the seven come up constantly, and each has a rule you can state.
+
+<CodeWalkthrough
+  title="Five lines, five different failures"
+  code={`const config = JSON.parse(raw)
+const port = config.server.port
+const label = port.toFixed(20000)
+const name = decodeURIComponent(raw)
+applyDefaults(config)`}
+  steps={[
+    {
+      lines: [1],
+      note: 'SyntaxError. Text that is not valid JSON. Thrown at run time here, because JSON.parse is parsing at run time — unlike a syntax error in your own file.',
+      output: ['SyntaxError: Unexpected token } in JSON at position 14'],
+    },
+    {
+      lines: [2],
+      note: 'TypeError. config.server is undefined, and reading a property of undefined is an operation the value does not support. The commonest error in JavaScript by a wide margin.',
+      output: ["TypeError: Cannot read properties of undefined (reading 'port')"],
+    },
+    {
+      lines: [3],
+      note: 'RangeError. The value is the right type and outside what the operation allows: toFixed takes 0 to 100 digits. A negative array length and a blown call stack are the same category.',
+      output: ['RangeError: toFixed() digits argument must be between 0 and 100'],
+    },
+    {
+      lines: [4],
+      note: 'URIError. The one narrow type: the URI encoding functions and nothing else. A stray percent sign with no hex pair after it.',
+      output: ['URIError: URI malformed'],
+    },
+    {
+      lines: [5],
+      note: 'ReferenceError. Nothing in scope is called applyDefaults. The same type covers reading a let or const before its declaration has run, which is the temporal dead zone.',
+      output: ['ReferenceError: applyDefaults is not defined'],
+    },
+  ]}
+/>
+
+The remaining two are special cases. `EvalError` is never thrown by anything any
+more and exists so that old code still runs. `AggregateError` is thrown when
+several failures have to be reported at once, which today means `Promise.any`
+rejecting because every input rejected; its `errors` array holds one entry per
+input, in input order.
+
+The distinction worth having ready is `TypeError` against `RangeError`. Wrong
+kind of value is a `TypeError`; right kind, wrong value, is a `RangeError`.
+
+## Naming a cause
+
+Since ES2022 the `Error` constructor takes an options object with one property
+in it:
+
+```js
+try {
+  await driver.save(row)
+} catch (error) {
+  throw new Error('could not save the order', { cause: error })
+}
+```
+
+`cause` is an own, non-enumerable property holding whatever you passed, and it
+is meant to hold the error you are wrapping. That gives the caller a message in
+their own vocabulary and keeps the driver's message, type and stack reachable
+underneath.
+
+Before it existed, wrapping meant choosing between a useful message and a useful
+stack, so people either rethrew the raw driver error or lost it. Node's console
+and every serious error reporter print the chain, so a wrapped error reads as
+the domain failure first and the real cause below it.
+
+The rule is to wrap when you can say something the original could not, and to
+rethrow unchanged when you cannot. Wrapping to restate the same thing in worse
+words just adds a frame.
+
+## Checking which one you have
+
+`instanceof` is the usual check and it is right most of the time:
+
+```js
+if (error instanceof SyntaxError) return DEFAULTS
+throw error
+```
+
+What it actually asks is whether this realm's `SyntaxError.prototype` is on the
+value's prototype chain, and that is an identity question. Across a realm
+boundary — an iframe, a worker, Node's `vm` module, two copies of the same
+package in one bundle — the object is a genuine `SyntaxError` built from a
+different constructor, and the check is false.
+
+Three fallbacks, in the order worth reaching for them:
+
+- **A field you control.** Node's system errors carry `error.code`, a stable
+  string like `'ENOENT'`, and your own errors can do the same. This is the
+  sturdiest check because it does not depend on identity or on wording.
+- **`error.name`.** A plain string comparison that crosses realms fine. It is
+  weaker than it looks: anything can set a `name`.
+- **`Object.prototype.toString.call(error)`**, which reports `'[object Error]'`
+  for a real error object from any realm. Recent engines also have
+  `Error.isError`, which answers the same question directly; check support
+  before relying on it.
+
+What is never a check is `error.message.includes('not found')`. The message is
+prose, it is written for a human, and it changes between versions of the library
+that wrote it. A guard built on it fails silently on an upgrade.
+
+## Errors from outside the language
+
+Not everything you catch was made by the `Error` constructor.
+
+Node's failures from the filesystem, the network and child processes are `Error`
+objects with extra properties bolted on: `code`, `errno`, `syscall`, and often
+`path`. The `code` is the documented contract; the message is not.
+
+Browsers throw `DOMException` for platform failures, which behaves like an
+`Error` and is not one of the seven. Its `name` is what identifies it —
+`'AbortError'`, `'QuotaExceededError'`, `'NotAllowedError'` — which is a good
+reason to be comfortable checking a name rather than a constructor.
+
+## The interview angle
+
+> **"What error types does JavaScript have?"**
+> Name the seven, then say what each one means rather than reciting. `TypeError`
+> for the wrong kind of value, `RangeError` for the right kind out of range,
+> `ReferenceError` for a name that does not resolve including the temporal dead
+> zone, `SyntaxError` for text that will not parse, `URIError` for the URI
+> functions, `AggregateError` for several at once, and `EvalError` which nothing
+> throws any more.
+
+> **"How do you know which error you caught?"**
+> `instanceof` normally, and then the honest caveat: it is an identity check, so
+> it fails across an iframe, a worker or two copies of a package. For anything
+> crossing a boundary, use a `code` field or the name.
+
+Expect follow-ups on why `JSON.stringify` of an error is empty, on what `cause`
+is for, and on where the stack comes from.
+
+## Traps
+
+- **`stack` is captured at construction, not at throw.** An error object built
+  early and thrown later points at the wrong place.
+- **`message` and `stack` are non-enumerable.** Stringifying or spreading an
+  error loses everything worth having.
+- **A `RangeError` is what a blown call stack throws.** Catchable, and normally
+  a sign of a missing base case rather than something to catch.
+- **`instanceof` fails across realms.** Real errors from a worker or a `vm`
+  context are not instances of your `TypeError`.
+- **Matching on the message is not a check.** Use `code`, or `name`, or your own
+  field.
+- **A `SyntaxError` in your own file is not catchable by a `try` in that file.**
+  It is thrown before any of the file runs.
+
+## In one picture
+
+<ConceptMap
+  center={'Error objects and their types'}
+  branches={[
+    {
+      label: 'The shape',
+      summary: 'Three properties, in three different places.',
+      nodes: [
+        'message: own, non-enumerable',
+        'name: from the prototype',
+        'stack: engine added, at construction',
+      ],
+    },
+    {
+      label: 'The five you meet',
+      summary: 'Each has a rule you can state.',
+      nodes: [
+        'TypeError: wrong kind of value',
+        'RangeError: right kind, out of range',
+        'ReferenceError, SyntaxError, URIError',
+      ],
+    },
+    {
+      label: 'The two special cases',
+      summary: 'One is dead, one carries a list.',
+      nodes: [
+        'EvalError: nothing throws it',
+        'AggregateError: errors array',
+        'Promise.any is where it comes from',
+      ],
+    },
+    {
+      label: 'cause',
+      summary: 'Wrap without losing the original.',
+      nodes: [
+        'second constructor argument',
+        'own and non-enumerable, like message',
+        'wrap only when you can add something',
+      ],
+    },
+    {
+      label: 'Which one is it',
+      summary: 'instanceof, until a boundary is involved.',
+      nodes: [
+        'instanceof is an identity check',
+        'code first, then name',
+        'never match on the message',
+      ],
+    },
+  ]}
+/>

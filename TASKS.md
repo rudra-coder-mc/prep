@@ -63,11 +63,6 @@ The conventions the first groups established, so the rest stay consistent:
 Done when every group below has shipped. Each group is done when its topics
 pass the content check and read as one lesson each, not as a list of facts.
 
-## Errors
-
-The built-in error types, custom errors, `try`/`catch`/`finally` semantics
-including the return value trap, and errors that cross an async boundary.
-
 ## Memory and performance
 
 Garbage collection and the shapes of a leak, `WeakMap` and `WeakRef`, debounce
