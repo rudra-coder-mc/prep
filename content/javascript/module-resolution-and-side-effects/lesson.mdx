@@ -1,0 +1,216 @@
+## Why this matters
+
+Every import is two questions the runtime answers for you. Which file does this
+name mean, and has it already run?
+
+Both are invisible until they go wrong, and then they go wrong in ways that look
+like anything but a module problem: a package that works in Node and not in the
+browser, a polyfill that never installed itself, a configuration module that
+appears to run twice, two copies of a library that refuse to recognise each
+other's objects. All four are resolution or evaluation, and none of them says so.
+
+## Three kinds of specifier
+
+The string in an import decides which resolution algorithm runs.
+
+- **Relative**, starting with `./` or `../`. Resolved against the importing
+  module's own URL. In Node's ES module loader the extension is required, since
+  nothing guesses `.js` for you the way `require` did.
+- **Absolute**, a full URL or a path from the root. Taken as written.
+- **Bare**, a package name such as `lodash` or `@scope/thing`. This is the one
+  with machinery behind it: Node walks up the directory tree looking in each
+  `node_modules`, and the browser refuses outright unless an import map tells it
+  what the name means.
+
+The old CommonJS extras — an extension guessed for you, a directory resolving to
+its `index.js` — belong to `require` and are not part of the module loader. That
+is the single most common failure when moving a file from one system to the
+other.
+
+## What a package decides
+
+Once a package is found, its `package.json` decides which file you actually get,
+and the modern answer is the `exports` field:
+
+```json
+{
+  "exports": {
+    ".": { "import": "./dist/index.mjs", "require": "./dist/index.cjs" },
+    "./parser": "./dist/parser.mjs"
+  }
+}
+```
+
+Two things follow from that, and both surprise people.
+
+**Conditions mean one package can hand out different files.** `import` and
+`require` are the two everyone meets; `node`, `browser`, `types` and `default`
+are the rest. It is how a package ships both module systems, and it is also how
+the same package ends up loaded twice in one process, once through each
+condition, each copy with its own state. That is the dual package hazard, and it
+breaks `instanceof` and any singleton the package holds.
+
+**`exports` is an allow list.** Anything not named in it cannot be imported at
+all. Reaching into `some-package/lib/internal.js` worked for years and stops
+working the day the package adds the field, which is why that upgrade breaks a
+build with a resolution error rather than a deprecation.
+
+Older packages use `main`, and bundlers additionally honour `module`. `exports`
+wins wherever it exists.
+
+## Evaluated once, keyed by what it resolved to
+
+A module is evaluated the first time it is imported and never again. Every later
+import of the same resolved URL gets the same namespace object, in the same
+state. That is what makes a module a reliable place to put a singleton, and what
+makes an import a bad way to reset anything.
+
+The key is the resolved URL, not the string you wrote. Two spellings that
+resolve to the same file share a module; two paths that resolve to different
+files do not, however identical their contents.
+
+<CodeWalkthrough
+  title="One evaluation, three importers, and one that is not the same"
+  code={`// tracker.mjs
+globalThis.runs = (globalThis.runs ?? 0) + 1
+console.log('tracker run ' + globalThis.runs)
+
+// a.mjs
+import './tracker.mjs'
+
+// b.mjs
+import '../src/tracker.mjs'
+
+// c.mjs
+import './tracker.mjs?v=2'`}
+steps={[
+{
+lines: [2, 3, 6],
+note: 'a.mjs is loaded first. The specifier resolves to a URL, nothing is in the registry for it, so the module evaluates and its top level code runs.',
+output: ['tracker run 1'],
+variables: { registry: 'tracker.mjs', 'globalThis.runs': '1' },
+},
+{
+lines: [9],
+note: 'b.mjs writes a different path to the same file. It resolves to the same URL, so the registry answers and nothing is evaluated again.',
+variables: { registry: 'tracker.mjs', 'globalThis.runs': '1' },
+},
+{
+lines: [12],
+note: 'The query string makes a different URL, so it is a different module: a second evaluation, a second copy of everything the module holds.',
+output: ['tracker run 2'],
+variables: { registry: 'tracker.mjs, tracker.mjs?v=2', 'globalThis.runs': '2' },
+},
+]}
+/>
+
+Two copies of a package in `node_modules`, or one package reached through both
+its `import` and its `require` condition, are the same situation with a more
+expensive shape: two modules, two sets of state, and objects from one that fail
+an `instanceof` from the other.
+
+## Importing for a side effect
+
+An import with no bindings runs a module for what it does rather than for what
+it exports:
+
+```js
+import './polyfills.js'
+import 'reflect-metadata'
+import './styles.css' // a bundler convention, not the language
+```
+
+The module's top level code runs once, at the point in the graph where it was
+reached, and that is the whole contract. It is how polyfills install themselves,
+how decorators get their metadata, and how a design system injects its styles.
+
+It is also fragile in one specific way. A side effect import has no bindings, so
+nothing in the importing file uses it, and a bundler is allowed to conclude the
+import can be dropped. `"sideEffects": false` in a package's `package.json` is
+exactly that promise — nothing in this package does anything but define exports —
+and a package that makes the promise falsely loses its polyfill in production and
+not in development. The fix is to list the files that do have effects:
+
+```json
+{ "sideEffects": ["./src/polyfills.js", "*.css"] }
+```
+
+The order of side effects is the graph order, depth first through each import
+list, which means a module's effects have happened before any module that
+imports it runs. Relying on more than that — on two unrelated branches of the
+graph running in a particular order — is relying on the order you happened to
+write your imports in.
+
+## The interview angle
+
+> **"How does `import 'lodash'` find a file?"**
+> A bare specifier sends Node up the directory tree through `node_modules`. The
+> package's `exports` field, if it has one, maps the subpath and the condition —
+> `import` or `require`, `node` or `browser` — to an actual file, and restricts
+> everything not listed. Browsers do not do any of this; they need an import map
+> or a bundler.
+
+> **"Why did my module run twice?"**
+> Because it resolved to two different URLs. Two copies in `node_modules`, both
+> package conditions loaded, a query string, or a symlink resolved differently.
+> The registry is keyed by what the specifier resolved to, not by file contents.
+
+Expect a follow-up on the dual package hazard, and on why a bundler might drop
+an import that has no bindings.
+
+## Traps
+
+- **No extension guessing in modules.** `import './utils'` fails in Node where
+  `require('./utils')` worked.
+- **`exports` hides everything it does not list.** Deep imports into a package
+  are a privilege, not a right.
+- **A query string makes a new module.** Convenient for cache busting a reload,
+  and a duplicate module with duplicate state if you meant it as an ordinary
+  import.
+- **`"sideEffects": false` is a promise about your code.** Make it wrongly and
+  the only symptom is a production build missing something.
+- **Import order is graph order.** Rearranging imports to fix an initialisation
+  bug is a symptom, not a fix; the module that needs something should import it.
+- **`__dirname` does not exist in a module.** `new URL('./data.json',
+import.meta.url)` is how a module finds a file next to itself.
+
+## In one picture
+
+<ConceptMap
+  center={'Resolution and side effects'}
+  branches={[
+    {
+      label: 'Three specifiers',
+      summary: 'The string decides the algorithm.',
+      nodes: [
+        'relative, against the importer URL',
+        'absolute, as written',
+        'bare, through node_modules or an import map',
+      ],
+    },
+    {
+      label: 'The package decides',
+      summary: 'exports maps subpaths and conditions.',
+      nodes: ['import against require', 'node against browser', 'anything unlisted is unreachable'],
+    },
+    {
+      label: 'The registry',
+      summary: 'Evaluated once, keyed by resolved URL.',
+      nodes: [
+        'same URL, same namespace',
+        'query string means a new module',
+        'two copies means two states',
+      ],
+    },
+    {
+      label: 'Side effects',
+      summary: 'Top level code, run once, in graph order.',
+      nodes: ['polyfills and registrations', 'effects happen before the importer body'],
+    },
+    {
+      label: 'What tooling assumes',
+      summary: 'sideEffects is a promise you are held to.',
+      nodes: ['an unused import can be dropped', 'list the files that do something'],
+    },
+  ]}
+/>

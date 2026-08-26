@@ -7,17 +7,20 @@ mark it learned, and from then on answer active-recall questions about it on a
 schedule until you can explain and apply it without help. Every topic can also be
 listened to, in a voice synthesised on the machine it runs on.
 
-The JavaScript track covers twenty-four topics, in teaching order: types and
+The JavaScript track covers thirty-two topics, in teaching order: types and
 coercion, scope and hoisting, values and references, destructuring, optional
 chaining and nullish handling, parameters and arguments, closures, higher order
 functions, array methods, currying and partial application, `this` and binding,
-prototypes, property descriptors and accessors, class syntax, `extends` and
-`super`, static and private members, composition against inheritance, iterables
-and the iteration protocol, generators, `Map` and `Set`, JSON serialisation,
-recursion and the call stack, the event loop and microtasks, and promises with
-async/await. Each has an animated lesson, ten or eleven questions in the forms
-interviews actually use, and two practical exercises. The remaining groups
-needed for full interview coverage are listed in `TASKS.md`.
+strict mode and `globalThis`, prototypes, property descriptors and accessors,
+class syntax, `extends` and `super`, static and private members, composition
+against inheritance, iterables and the iteration protocol, generators, `Map` and
+`Set`, JSON serialisation, recursion and the call stack, the event loop and
+microtasks, promises with async/await, promise combinators, async error
+handling, `AbortController`, async iteration, ES modules against CommonJS,
+module resolution and side effects, and what a bundler changes. Each has an
+animated lesson, ten or eleven questions in the forms interviews actually use,
+and two practical exercises. The remaining groups needed for full interview
+coverage are listed in `TASKS.md`.
 
 The architecture supports adding TypeScript, React, Next.js, Node, Express,
 NestJS, MongoDB and PostgreSQL later without schema changes. Adding a topic is
