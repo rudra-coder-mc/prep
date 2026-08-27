@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'staff',
     prompt: 'Where do name, message and stack live on a newly constructed Error?',
     options: [
       'All three are own enumerable properties, which is why an error can be copied with spread',
@@ -39,6 +40,7 @@ A stack computed on read would be more useful and is not what happens. By the ti
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const attempts = [
   () => applyDefaults(),
@@ -85,6 +87,7 @@ Swapping the first two is the common mistake. A name that does not resolve is a 
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This throws "ReferenceError: Cannot access \'limit\' before initialization", but limit is declared right there. What is the engine telling you?',
     code: `function paginate(items) {
@@ -126,6 +129,7 @@ Nothing is evaluated bottom to top. The lines run in order, and the read simply 
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does the second argument to the Error constructor do?',
     options: [
       'It sets properties on the error, so anything in that object becomes a field you can read back',
@@ -162,6 +166,7 @@ It is a language feature from ES2022, not a Node one, and it is in every current
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This worked for two years and started returning nothing after a Node upgrade, on missing files and on permission failures alike. What is wrong with the guard?',
     code: `try {
@@ -202,6 +207,7 @@ There is nothing to await on the error. It is a fully built object by the time t
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function depth(n) {
   return depth(n + 1) + 1
@@ -245,6 +251,7 @@ Believing it is uncatchable is the most interesting wrong answer, because it is 
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A download races three mirrors with Promise.any. All three fail, and you want the log to say why each one did. Which catch block gets you that?',
     options: [
@@ -283,6 +290,7 @@ allSettled is a real alternative if you want every outcome regardless, but reach
     type: 'scenario',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'A validation library runs user rules inside a Node vm context. A rule fails with what is clearly a TypeError, and error instanceof TypeError is false in the host code. What is going on, and what do you check instead?',
     options: [
@@ -315,6 +323,7 @@ Abandoning instanceof over-corrects. It is the right check within one realm, whi
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'Which SyntaxErrors can a try/catch written in the same file catch?',
     options: [
       'None: a SyntaxError is thrown by the parser and is never catchable',
@@ -351,6 +360,7 @@ eval is not special here. new Function and JSON.parse parse at run time in exact
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A repository catches a database driver error and wants callers to see a failure in its own vocabulary, without the driver detail becoming unreachable. Which line does that?',
     options: [
@@ -384,6 +394,7 @@ Throwing a fresh error with no cause is the common shape and the lossy one. Trus
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'An error arrives in a catch block. Walk me through what you look at, and how you decide what to do with it.',
     answerInFull: `- First, whether it is an error at all. Anything can be thrown, so a boundary handler has to cope with a string or an undefined arriving, usually by wrapping it in a real Error rather than by teaching everything downstream to be defensive.
