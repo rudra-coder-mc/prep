@@ -19,8 +19,8 @@ What a question is about, written as its `type`. One of `concept`, `output`,
 `debugging`, `coding`, `scenario` or `interview`. The subject decides which
 answer forms are allowed but never which one a question uses.
 
-Not to be confused with: difficulty, which says how hard the question is within
-its subject.
+Not to be confused with: the tier, which says which level of interview asks a
+question. A `concept` question exists at every tier.
 
 ## Answer form
 
@@ -109,3 +109,62 @@ only ever inserted, so the history of a question stays readable.
 
 Not to be confused with: the review schedule, which holds one row per question
 saying when it is next due, and is overwritten by each new attempt.
+
+## Tier
+
+The level of interview a question belongs to, and the level a learner is
+preparing for. One of `swe-1`, `swe-2`, `senior` or `staff`, named after the
+roles interviews hire for rather than after how hard a question feels.
+
+Every question carries exactly one. A topic carries none: a topic belongs to a
+tier when it has at least one question at that tier, so the topics somebody sees
+follow from the questions rather than from a second list. Tiers are cumulative,
+so preparing for SWE-2 means the SWE-1 and SWE-2 questions together.
+
+Not to be confused with: the subject, which says what a question is about and is
+independent of level.
+
+## SWE-1
+
+The first tier. Zero to two years, and the round that decides whether somebody
+knows the language. One concept at a time, definitions, and what a piece of code
+prints.
+
+Not to be confused with: SWE-2, which asks about two concepts meeting.
+
+## SWE-2
+
+The second tier. Two to five years, and the round about being a working
+developer. Two concepts interacting, the bug that actually happens, and broken
+code to fix.
+
+Not to be confused with: Senior, which asks what you would do instead, rather
+than what went wrong.
+
+## Senior
+
+The third tier. Five years and up. Trade-offs and judgement, where "it depends"
+is the correct answer and the interview is about what it depends on.
+
+Not to be confused with: Staff, which asks what it costs and how it fails rather
+than which option to take.
+
+## Staff
+
+The fourth tier. Internals, failure modes and cost, and the follow-up after the
+follow-up. It is the deep end of a senior loop rather than a whole interview
+level, because a real staff loop is mostly system design and behaviour, which
+this platform does not cover.
+
+Not to be confused with: Senior, whose questions have a decision at the end of
+them.
+
+## Readiness
+
+How much of a tier somebody has retained, and the only thing behind the claim
+that they are prepared for that level of interview. A question counts toward
+readiness once its place on the interval ladder reaches step 3, which takes three
+correct answers spread over at least four days.
+
+Not to be confused with: a topic's status, which describes one topic, or the
+streak, which describes attendance rather than knowledge.

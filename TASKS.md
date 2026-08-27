@@ -7,13 +7,201 @@ This file carries the whole task, not a link to one. There is no ticket tracker:
 `CLAUDE.md` explains why. Everything a person needs to pick a task up cold is
 written here, or in the brief a task points at under `docs/tasks/`.
 
-**Nothing is scheduled.** The loop works, the platform is finished, and the
-JavaScript and browser tracks between them cover what a front end interview
-asks. Everything below is real work left unordered on purpose.
+The work below turns a bank of questions into a path with a promise at the end of
+it: finish a tier and you are prepared for that level of interview. The two
+decisions behind it are `docs/decisions/0028-tiers-are-interview-levels.md` and
+`docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md`. Read them
+first. The terms are in `docs/glossary.md`, and the content conventions are in
+`docs/tasks/converting-a-topic.md`.
 
-Content conventions live in `docs/tasks/converting-a-topic.md`: what a topic
-ships, how the questions are written, and how a group becomes a branch. Read it
-before writing any.
+**Phases run in order.** Inside a phase, take the tasks top to bottom unless a
+task says what blocks it. One task is one branch and one merge, as always.
+
+The focus is SWE-1 and SWE-2. Senior and Staff exist, they stay thin, and they
+show their real counts rather than pretending.
+
+---
+
+# Phase 1: audio stops being a build step
+
+Today every recording is made ahead of time by a command that runs for tens of
+minutes, and roughly 900 of the 1201 recordings have never been played. Decision
+`0029` reverses that. This phase comes first because every content task after it
+gets cheaper: editing a lesson stops being followed by a build.
+
+## 1. Synthesise a recording the first time it is asked for
+
+The speech engine runs whenever the platform runs on the server, and a request
+for a key with nothing behind it makes the audio instead of refusing. The
+endpoint resolves a key against the content on the server, so a question's script
+still never reaches the browser.
+
+Touches the compose profile, `scripts/deploy.sh`, the speech endpoint, and the
+question play button, which stops telling anyone to run a command.
+
+Done when the cache can be emptied, a lesson section and a question both play,
+and nothing in the interface mentions a build.
+
+## 2. Warm ahead of the listener
+
+Synthesis is about 22 milliseconds per character, so a section costs 25 to 60
+seconds and nobody should ever wait that long. Opening a topic page warms its
+first section. While a section plays, the next one is made. A question's answer
+is made while the question is being answered.
+
+Done when playing a topic end to end never waits, except possibly on the first
+section if play is pressed immediately.
+
+## 3. A topic-scoped build, a prune, and a lighter deploy
+
+Keep bulk generation for one topic, because the e2e suite needs a deterministic
+way to prepare a cache and the mobile client will need a topic downloaded before
+a journey. Add `speech:prune`, which deletes any recording no current script
+hashes to. Stop rsyncing the 400 MB cache in `scripts/deploy.sh`, since the
+server now makes its own.
+
+Done when a deploy no longer carries the cache and the suite still passes.
+
+---
+
+# Phase 2: every question carries a tier
+
+`tier` replaces `difficulty`. This is a wide mechanical change over 466 questions,
+so it runs as expand, migrate, contract: the field arrives beside the old one,
+the bank is tagged in batches that each stay green, and the old field is deleted
+only when nothing is left untagged.
+
+**How to tag.** The four tiers are defined in `docs/glossary.md`, and those
+definitions are the rule. `easy` maps to `swe-1` and `hard` to `senior` or
+`staff` almost mechanically. The work is the 266 medium questions, which have to
+be split by hand between `swe-2` and `senior`. Ask what level of interview asks
+this, not how hard it feels.
+
+## 4. Add `tier` beside `difficulty`
+
+Optional in the schema, read by nothing yet, and the content check reports how
+many questions still lack one so the migration has a number that goes down.
+
+Done when the check prints the count and the build is green with nothing tagged.
+
+## 5. Tag the fundamentals
+
+`types-and-coercion`, `scope-and-hoisting`, `value-and-reference`,
+`destructuring`, `optional-chaining-and-nullish`, `parameters-and-arguments`.
+Blocked by 4.
+
+## 6. Tag functions
+
+`closures`, `higher-order-functions`, `array-methods`,
+`currying-and-partial-application`, `this-binding`, `strict-mode-and-globalthis`.
+Blocked by 4.
+
+## 7. Tag objects and classes
+
+`prototypes`, `property-descriptors`, `class-syntax`, `extends-and-super`,
+`static-and-private`, `composition-over-inheritance`. Blocked by 4.
+
+## 8. Tag collections and memory
+
+`iterables-and-iterators`, `generators`, `map-and-set`, `collection-performance`,
+`json`, `recursion-and-the-call-stack`, `garbage-collection`, `weak-references`.
+Blocked by 4.
+
+## 9. Tag errors and the event loop
+
+`throwing-and-catching`, `error-types`, `custom-errors`, `event-loop`,
+`debounce-and-throttle`, `promises`, `promise-combinators`. Blocked by 4.
+
+## 10. Tag async and modules
+
+`async-error-handling`, `abortcontroller`, `async-iteration`,
+`es-modules-and-commonjs`, `module-resolution-and-side-effects`,
+`what-a-bundler-changes`. Blocked by 4.
+
+## 11. Tag the browser track
+
+`the-dom`, `events-and-delegation`, `fetch-and-the-network`, `storage`. Blocked
+by 4.
+
+## 12. Make `tier` required and delete `difficulty`
+
+The schema demands a tier, `difficulty` goes from questions and from topic meta,
+and the chip on a question shows the tier instead. Topic difficulty is deleted
+rather than replaced, because a topic's tier is derived from its questions.
+
+Blocked by 5 through 11. Done when nothing in `content/` or `src/` mentions
+difficulty and the check passes.
+
+---
+
+# Phase 3: the tier becomes the path
+
+## 13. A tier per track, and enrolment that respects it
+
+The picked tier is stored per user per track, because being SWE-2 in JavaScript
+and SWE-1 in React is the ordinary state of a person. Marking a topic learned
+enrols only the questions at or below the picked tier. The topic list shows only
+the topics that have a question at that tier, so scope follows the questions
+rather than a second list.
+
+Blocked by 12. Done when picking SWE-1 on a track and marking a topic learned
+puts SWE-1 questions on the ladder and nothing else, and the topic list changes
+with the picker.
+
+## 14. Readiness, and the offer to step up
+
+Readiness is the share of the tier's questions whose schedule has reached step 3,
+which is three correct answers spread over at least four days. Show the number,
+show the count it is based on, and when a tier is fully ready, offer the next one
+rather than advancing by itself.
+
+Blocked by 13. Done when the dashboard says how ready you are for the tier you
+picked, and a full tier offers the step up instead of taking it.
+
+---
+
+# Phase 4: SWE-1 and SWE-2 get enough questions to mean something
+
+Four tiers across 43 topics is roughly two questions per tier per topic, which
+carries no promise at all. Bring the tiers that matter to five or six questions
+per topic, in the topics a real interview at these levels opens with. Senior and
+Staff stay as they are.
+
+Each task below is four topics, one branch, authored to
+`docs/tasks/converting-a-topic.md`. All four are blocked by 12 and by nothing
+else, so they can be taken in any order.
+
+## 15. Fill the language fundamentals
+
+`types-and-coercion`, `scope-and-hoisting`, `closures`, `this-binding`.
+
+## 16. Fill values, functions and objects
+
+`value-and-reference`, `array-methods`, `higher-order-functions`, `prototypes`.
+
+## 17. Fill async
+
+`event-loop`, `promises`, `async-error-handling`, `es-modules-and-commonjs`.
+
+## 18. Fill the browser
+
+`the-dom`, `events-and-delegation`, `fetch-and-the-network`, `storage`.
+
+---
+
+# Phase 5: the language gets its missing topics
+
+## 19. Regular expressions, numbers and precision, strings
+
+Three topics with no home in the track today, and all three are asked at SWE-1
+and SWE-2. Regular expressions: groups, greedy against lazy, `lastIndex` on a
+global regex, and when not to use one. Numbers and precision: floating point,
+`Number.EPSILON`, `toFixed` rounding, when `BigInt` is the answer, money.
+Strings: code points against code units, template literals and tagged templates,
+normalisation.
+
+Blocked by 12, so they are written tier-aware from the start. Done when the three
+pass the content check and read as lessons rather than lists of facts.
 
 ---
 
@@ -21,6 +209,19 @@ before writing any.
 
 Real work, deliberately unordered. Do not pick these up as "the next task"
 without discussing it first. Each needs breaking down before it is actionable.
+
+## The mobile version
+
+The same content in an app, because most of the day is spent on a phone and a
+lesson and a question are both things you can do there. It waits until the web
+side is finished and the JavaScript content is final. Nothing in the platform may
+assume a browser before then: the tier lives in the database rather than in
+`localStorage`, and topic audio can already be downloaded a topic at a time.
+
+## Dates and time, and `Proxy` with `Reflect`
+
+The other two subjects the language track has no topic for. Both are senior and
+staff material almost entirely, so they wait until those tiers are the focus.
 
 ## Browser runners
 
@@ -42,7 +243,7 @@ See `docs/decisions/0008-local-cli-verification.md`.
 
 ## Database backup
 
-The curriculum is in git and reproducible. Attempt history, confidence ratings
+The curriculum is in git and reproducible. Attempt history, the interval ladder
 and the streak are not, and live only in a Docker volume on one machine. A
 scheduled `pg_dump` into a directory that is already backed up would cover it.
 
