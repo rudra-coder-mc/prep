@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does hoisting actually do?',
     options: [
       'Before any code in a scope runs, the engine registers every declaration in it. A var starts as undefined, a function declaration is complete, and let and const have no value until their line runs',
@@ -34,6 +35,7 @@ Reordering statements would be observable, and it is not. The registration rathe
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function report() {
   console.log(typeof count)
@@ -69,6 +71,7 @@ The ReferenceError is the temporal dead zone applied to var, which never has one
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log(greet())
 
@@ -108,6 +111,7 @@ Note that the one misreading this pool cannot hold is early printed twice, which
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `var total = 10
 
@@ -137,6 +141,7 @@ The ReferenceError is the right answer to the let version of this question and t
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This throws "ReferenceError: Cannot access \'fallback\' before initialization" whenever the list is empty. Why?',
     code: `function render(items) {
@@ -174,6 +179,7 @@ The closure option is invented. Closures read a variable whenever they run, and 
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'You want a counter whose state cannot be read or reassigned by any code in the surrounding scope, exposing only increment and read. Which of these does it?',
     options: [
@@ -213,6 +219,7 @@ The object version hides nothing. counter is in the surrounding scope and count 
     type: 'scenario',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A colleague says the shared config object cannot change because it is declared with const. Values in it are changing at runtime anyway. What do you tell them, and what would you actually do?',
     answerInFull: `const prevents reassigning the binding, not mutating the value. config = {...} throws; config.retries = 5 does not, and that is what is happening.
@@ -232,6 +239,7 @@ A deep freeze is easy to write recursively but is rarely the right answer at sca
     type: 'interview',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'An interviewer asks for the difference between var, let and const. Which answer is correct?',
     options: [
@@ -263,6 +271,7 @@ The lint rule answer gives away that the temporal dead zone and block scoping ar
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What happens when this runs?',
     code: `console.log(typeof value)
 let value = 1`,
@@ -291,6 +300,7 @@ The SyntaxError is the belief that reading before declaring is something the par
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-1',
     prompt: 'Which of these can be called on the line above where it is written?',
     options: [
       'const f = function () {}',
@@ -315,6 +325,7 @@ The arrow is the same as the anonymous function expression with shorter syntax, 
     type: 'concept',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'A script at the top level declares var a = 1 and let b = 2. What is true of globalThis afterwards?',
     options: [

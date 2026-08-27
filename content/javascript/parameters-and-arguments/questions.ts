@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'A function declares three parameters and is called with four arguments. What happens?',
     options: [
       'A TypeError, since the call does not match the signature',
@@ -36,6 +37,7 @@ This is worth being precise about because it explains a class of bug rather than
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function trace(label) {
   console.log('evaluating ' + label)
@@ -81,6 +83,7 @@ Nothing here prints at definition time. Moving the two functions above or below 
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'This is meant to turn the strings into numbers. It returns [1, NaN, NaN]. Why?',
     code: `const parsed = ['1', '2', '3'].map(parseInt)`,
     options: [
@@ -119,6 +122,7 @@ The third argument is a real thing that is genuinely ignored. Nothing in JavaScr
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'What does this print?',
     code: `const value = 'outer'
 
@@ -155,6 +159,7 @@ The ReferenceError is the right answer to the neighbouring question. A default t
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'You want takes(n, fn): a wrapper passing at most the first n arguments through to fn, so a function can go into map without picking up the index. Which one does that?',
     options: [
@@ -192,6 +197,7 @@ The last one works for up to three arguments and silently drops the fourth. It a
     type: 'scenario',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'A helper declares a default of items = EMPTY, where EMPTY is a const empty array at module level, and pushes into items. It works in tests, then a caller reports seeing data that belongs to a different caller. What is happening?',
     options: [
@@ -225,6 +231,7 @@ The same reasoning applies to a default of options = CONFIG, which hands every c
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'When would you take an options object instead of positional parameters, and what do you give up by doing it?',
     answerInFull: `Take positional parameters when there are two or three, they are all required, and their order is obvious from the name of the function. slice(text, start, end) needs nothing else.
@@ -245,6 +252,7 @@ What it costs: the argument is now one object, so it can be mutated by the calle
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function outer() {
   const inner = () => arguments[0]
@@ -274,6 +282,7 @@ The ReferenceError is what really happens for an arrow written at the top level 
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'What is the value of countArgs.length here?',
     code: `function countArgs(a, b = 2, c) {}`,
     options: ['3', '1', '2', '0'],
@@ -298,6 +307,7 @@ The consequence worth stating is that adding a parameter changes a number other 
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'Which of these calls uses the default in function f(x = 10)?',
     options: ['f(null)', 'f(undefined)', 'f(0)', "f('')"],
     correctOption: 1,
@@ -319,6 +329,7 @@ f(0) and f('') are the falsy trap in its usual form. If a default fired on anyth
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-1',
     prompt: 'Which statement about rest parameters and the arguments object is true?',
     options: [
       'arguments is a real array, and a rest parameter is array-like',
