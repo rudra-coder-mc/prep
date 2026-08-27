@@ -110,6 +110,16 @@ only ever inserted, so the history of a question stays readable.
 Not to be confused with: the review schedule, which holds one row per question
 saying when it is next due, and is overwritten by each new attempt.
 
+## Track
+
+Every topic under one technology, and the unit a tier is picked on. Being SWE-2
+in JavaScript and SWE-1 in React is the ordinary state of a person, so the pick
+belongs to the track rather than to the platform. A track is a directory under
+`content/`, which is why adding one is a content change.
+
+Not to be confused with: a topic, which is one subject inside a track and carries
+no tier of its own.
+
 ## Tier
 
 The level of interview a question belongs to, and the level a learner is
@@ -120,6 +130,9 @@ Every question carries exactly one. A topic carries none: a topic belongs to a
 tier when it has at least one question at that tier, so the topics somebody sees
 follow from the questions rather than from a second list. Tiers are cumulative,
 so preparing for SWE-2 means the SWE-1 and SWE-2 questions together.
+
+The tier is picked per track and remembered, and a track nobody has picked on is
+on SWE-1.
 
 Not to be confused with: the subject, which says what a question is about and is
 independent of level.
@@ -158,6 +171,16 @@ this platform does not cover.
 
 Not to be confused with: Senior, whose questions have a decision at the end of
 them.
+
+## Enrolment
+
+Putting a question on the interval ladder, which is what marking a topic learned
+does. Only the questions the track's tier covers are enrolled, so enrolment is
+where a picked tier stops being a label and starts deciding what somebody is
+asked each morning.
+
+Not to be confused with: the daily queue, which decides which of the enrolled
+questions are due today.
 
 ## Readiness
 

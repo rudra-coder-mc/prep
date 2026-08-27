@@ -1,6 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
+import { closeConnection } from './index'
 import * as schema from './schema'
 
 /**
@@ -9,6 +10,8 @@ import * as schema from './schema'
  */
 export type TestDatabase = {
   db: ReturnType<typeof drizzle<typeof schema>>
+  /** Where the application's own connection has to point to reach this one. */
+  url: string
   drop: () => Promise<void>
 }
 
@@ -35,6 +38,7 @@ export async function createTestDatabase(): Promise<TestDatabase> {
 
   return {
     db,
+    url: target.toString(),
     drop: async () => {
       await client.end()
       const cleanup = postgres(base.toString(), { max: 1 })
@@ -49,4 +53,24 @@ export async function insertTestUser(db: TestDatabase['db'], email = 'test@local
   const id = crypto.randomUUID()
   await db.insert(schema.user).values({ id, name: 'Test', email })
   return id
+}
+
+/**
+ * Points the application's shared connection at a test database, so a test can
+ * call a real server module rather than re-writing the SQL it runs. Returns the
+ * undo, which has to run before the database is dropped.
+ *
+ * The environment variable is restored because vitest reuses a worker between
+ * files, and the next one needs it pointing at the server it creates databases
+ * on.
+ */
+export async function useTestDatabase(ctx: TestDatabase): Promise<() => Promise<void>> {
+  const previous = process.env.DATABASE_URL
+  await closeConnection()
+  process.env.DATABASE_URL = ctx.url
+
+  return async () => {
+    await closeConnection()
+    process.env.DATABASE_URL = previous
+  }
 }

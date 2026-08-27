@@ -10,6 +10,7 @@ import {
   timestamp,
   unique,
 } from 'drizzle-orm/pg-core'
+import { TIERS } from '@/content/schema'
 
 /* -------------------------------------------------------------------------- */
 /* Authentication                                                             */
@@ -79,6 +80,38 @@ export const verification = pgTable('verification', {
 
 export const attemptResult = pgEnum('attempt_result', ['passed', 'weak', 'failed'])
 export const exerciseStatus = pgEnum('exercise_status', ['in_progress', 'completed'])
+
+/**
+ * The four interview levels, taken from the content schema so the database and
+ * the questions can never disagree about what a tier is. Unlike a topic slug
+ * this is a closed set rather than whatever `content/` happens to hold, so the
+ * database is allowed to enforce it.
+ */
+export const tier = pgEnum('tier', TIERS)
+
+/**
+ * The tier a user is preparing for on one track. Being SWE-2 in JavaScript and
+ * SWE-1 in React is the ordinary state of a person, so the pick is per track
+ * rather than per platform. A track with no row here is on the default tier.
+ *
+ * It lives here rather than in the browser because the mobile client has to read
+ * the same pick. See docs/decisions/0031-a-track-remembers-the-tier-you-picked.md.
+ */
+export const trackTier = pgTable(
+  'track_tier',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    technology: text('technology').notNull(),
+    tier: tier('tier').notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => [unique('track_tier_user_technology').on(table.userId, table.technology)],
+)
 
 /** Written when a topic is marked as learned, which is what enrols its questions. */
 export const topicProgress = pgTable(
@@ -184,6 +217,7 @@ export const dailyActivity = pgTable(
 )
 
 export const userRelations = relations(user, ({ many }) => ({
+  trackTier: many(trackTier),
   topicProgress: many(topicProgress),
   attempts: many(attempts),
   reviewSchedule: many(reviewSchedule),

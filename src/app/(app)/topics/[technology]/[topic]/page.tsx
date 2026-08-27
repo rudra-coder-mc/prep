@@ -13,10 +13,12 @@ import { NarrationProvider } from '@/components/speech/narration-player'
 import { TopicReader } from '@/components/speech/topic-reader'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { getTopic } from '@/content'
-import type { Narration } from '@/content/schema'
+import { TIER_LABELS, type Narration } from '@/content/schema'
 import { getTopicProgress } from '@/lib/progress'
 import { scriptKey } from '@/lib/speech'
 import { requireSession } from '@/lib/session'
+import { questionsUpTo } from '@/lib/tiers'
+import { getTrackTier } from '@/lib/track-tier'
 
 type Params = { technology: string; topic: string }
 
@@ -51,10 +53,15 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
   const topic = await getTopic(technology, directory)
   if (!topic) notFound()
 
-  const [Lesson, progress] = await Promise.all([
+  const [Lesson, progress, tier] = await Promise.all([
     loadLesson(technology, directory),
     getTopicProgress(session.user.id, topic.slug),
+    getTrackTier(session.user.id, technology),
   ])
+
+  // The lesson is whole at every level. Only the questions carry a tier, so the
+  // card below promises what the pick actually enrols rather than the whole bank.
+  const enrolling = questionsUpTo(topic.questions, tier).length
 
   return (
     <PageShell width="reading">
@@ -96,8 +103,9 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
           <SectionLabel>Next</SectionLabel>
           <h2 className="mt-2 text-lg font-medium">Ready to be tested on this?</h2>
           <p className="mt-1 max-w-prose text-sm text-muted">
-            Marking it learned puts its {topic.questions.length} questions into your recall queue,
-            starting today.
+            {enrolling > 0
+              ? `Marking it learned puts its ${enrolling} questions at ${TIER_LABELS[tier]} or below into your recall queue, starting today.`
+              : `This topic is asked above ${TIER_LABELS[tier]}, so marking it learned enrols nothing yet.`}
           </p>
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <MarkLearnedButton

@@ -28,18 +28,6 @@ show their real counts rather than pretending.
 
 # Phase 3: the tier becomes the path
 
-## 13. A tier per track, and enrolment that respects it
-
-The picked tier is stored per user per track, because being SWE-2 in JavaScript
-and SWE-1 in React is the ordinary state of a person. Marking a topic learned
-enrols only the questions at or below the picked tier. The topic list shows only
-the topics that have a question at that tier, so scope follows the questions
-rather than a second list.
-
-Nothing blocks it. Done when picking SWE-1 on a track and marking a topic learned
-puts SWE-1 questions on the ladder and nothing else, and the topic list changes
-with the picker.
-
 ## 14. Readiness, and the offer to step up
 
 Readiness is the share of the tier's questions whose schedule has reached step 3,
@@ -47,8 +35,10 @@ which is three correct answers spread over at least four days. Show the number,
 show the count it is based on, and when a tier is fully ready, offer the next one
 rather than advancing by itself.
 
-Blocked by 13. Done when the dashboard says how ready you are for the tier you
-picked, and a full tier offers the step up instead of taking it.
+Nothing blocks it. The pick is stored and enrolment already respects it, so this
+is the number that says how much of what was enrolled has stuck. Done when the
+dashboard says how ready you are for the tier you picked, and a full tier offers
+the step up instead of taking it.
 
 ---
 

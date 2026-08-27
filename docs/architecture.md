@@ -172,11 +172,12 @@ engineering work.
 
 ## Data model
 
-Six tables. Deliberately small.
+Seven tables. Deliberately small.
 
 | Table               | Holds                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------- |
 | `users`             | Identity. Managed by better-auth, which also owns its session tables.                 |
+| `track_tier`        | Per user per track: the tier being prepared for. No row means SWE-1.                  |
 | `topic_progress`    | Per user per topic: status, when learned, when last reviewed.                         |
 | `attempts`          | Full history. Never overwritten, since every attempt is a new row.                    |
 | `review_schedule`   | Per user per question: when it is next due, and where it sits on the interval ladder. |
@@ -187,13 +188,41 @@ Two things are computed rather than stored:
 
 - **Topic status** (`not_started` / `learning` / `weak` / `understood` /
   `mastered`) is derived from recent attempts, not written to a column. A
-  scoring change is then a code change, not a backfill.
+  scoring change is then a code change, not a backfill. It is measured against
+  the questions the track's tier covers, so an attempt above the pick counts
+  toward nothing.
 - **The streak** is derived from `daily_activity`. A stored counter can drift
   out of sync with what actually happened; a derived one cannot.
 
 A "day" is a calendar day in one configured timezone, `APP_TIMEZONE`, rather than
 the device's. Travelling must not shift when a streak rolls over, and two devices
 must agree on what today is.
+
+## The tier, and what it decides
+
+A question carries a tier, one of `swe-1`, `swe-2`, `senior` or `staff`, named
+after the level of interview that asks it. A topic carries none: it belongs to a
+tier when it has a question at that tier, so what somebody sees follows from the
+questions rather than from a second list to keep in step with them.
+
+The tier is picked per track and stored, because being SWE-2 in JavaScript and
+SWE-1 in React is ordinary. Tiers are cumulative, so a pick covers the tier and
+everything below it, and a track nobody has picked on is on SWE-1.
+
+The pick decides two things and nothing else. **Marking a topic learned enrols
+only the questions the pick covers**, so the daily queue never asks a staff
+question of somebody preparing for the screen. **The topic list is the topics the
+pick covers**, with the rest collapsed under the track as asked above it, since a
+lesson is not tiered and hiding one would put part of a track out of reach.
+
+Changing the pick brings every topic already marked learned in that track up to
+it: the newly covered questions arrive at the bottom of the ladder and nothing in
+rotation moves. Going back down enrols nothing and unenrols nothing, because a
+question on the ladder is progress somebody made. `src/lib/tiers.ts` holds what a
+pick covers, `src/lib/track-tier.ts` stores it, and `src/lib/progress.ts` is the
+only place that enrols. See
+`docs/decisions/0028-tiers-are-interview-levels.md` and
+`docs/decisions/0031-a-track-remembers-the-tier-you-picked.md`.
 
 ## Recall scheduling
 
