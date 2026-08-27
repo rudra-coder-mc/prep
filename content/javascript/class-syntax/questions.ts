@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'In a class with a field, a method, a getter and a static property, where does each one end up after new?',
     options: [
@@ -31,6 +32,7 @@ The getter is an accessor property on the prototype exactly like a method. It is
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Point {
   x = 1
@@ -69,6 +71,7 @@ Empty output would mean fields were not own properties, and they are.`,
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `class Widget {
   a = log('field a', this.b)
@@ -126,6 +129,7 @@ Printing static s after before new treats a static field like an instance field.
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt:
       'A helper at the top of a module does new Config() and a class Config is declared further down the same file. The module throws ReferenceError: Cannot access Config before initialization. Why, when the same pattern with function Config() {} works?',
     options: [
@@ -153,6 +157,7 @@ Strict mode does not change hoisting, and a class expression assigned to a const
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'handleClick = () => this.toggle() is written as a class field instead of a method. Which statement about the result is true?',
     options: [
@@ -178,6 +183,7 @@ It is not a style choice. The location changes, and with it memory per instance 
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Temp {
   constructor(c) {
@@ -221,6 +227,7 @@ undefined twice is what you would get if a class could be called like a function
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Every Cart instance seems to share the same items: adding to one cart shows up in every other. The class is written as shown. What is wrong?',
     code: `const defaults = []
@@ -258,6 +265,7 @@ Instance field initialisers run per instance, not once. Static field initialiser
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Write a class Temperature constructed with a celsius value, exposing celsius and fahrenheit as properties that can be read and assigned, where assigning either one updates the other. Which implementation is correct?',
     options: [
@@ -303,6 +311,7 @@ Getters with no setters are read-only views. Assigning to t.fahrenheit then thro
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A team is modelling a User with several methods and a created timestamp. Instances are stored in React state, spread into new objects on every update, and serialised to localStorage. Methods keep "disappearing" after updates and reloads. What is going on, and what is the right shape?',
     options: [
@@ -330,6 +339,7 @@ Spread does not preserve the prototype. Object.assign onto a fresh instance afte
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'staff',
     prompt:
       'Is class just syntactic sugar over constructor functions and prototypes? Make the case precisely.',
     answerInFull: `Mostly yes, and the interview is in the "mostly". Underneath, a class is a constructor function, its methods are properties of that function's prototype object, instances get that object as their prototype, and extends sets up the same chain you could build by hand with Object.create. Everything in the prototypes topic applies unchanged, and you can desugar most classes mechanically.
@@ -348,6 +358,7 @@ The precise case, then: same object model, stricter and more predictable rules, 
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'What does this print?',
     code: `class A {
   m() {}

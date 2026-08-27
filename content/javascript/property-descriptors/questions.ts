@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: "What kind of property does Object.defineProperty(obj, 'id', { value: 1 }) create?",
     options: [
       'An ordinary property, the same as obj.id = 1',
@@ -32,6 +33,7 @@ To define an ordinary property with it you write all three flags out: { value: 1
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Run as a plain script, not a module. What does this print?',
     code: `const o = {}
 Object.defineProperty(o, 'a', { value: 1 })
@@ -58,6 +60,7 @@ The TypeError is the correct answer for strict code, and the prompt says plain s
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const temp = {
   celsius: 20,
@@ -108,6 +111,7 @@ fahrenheit undefined is what a setter with no getter would produce. This object 
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'After copying the temperature object with spread, copy.fahrenheit stays at 212 no matter what copy.celsius is set to. Why, and how do you copy it properly?',
     code: `const copy = { ...temp }
@@ -144,6 +148,7 @@ The accessor here is an own property of the literal, not inherited. And Object.a
     type: 'coding',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'Write lazy(obj, name, compute) that defines obj[name] so compute runs on the first read only, and from then on the property is a plain value that costs nothing to read. Which of these is correct?',
     options: [
@@ -183,6 +188,7 @@ The eager version computes immediately. The whole point was to defer the cost un
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'Objects in a model layer carry a _cache field that keeps appearing in API responses, in Object.keys loops and in spread copies. It has to stay writable. What do you do?',
     options: [
@@ -212,6 +218,7 @@ Freezing makes the field read-only, which the question rules out, and changes no
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'What does Object.freeze actually guarantee, and when would you reach for it rather than seal or preventExtensions, or rather than nothing?',
     answerInFull: `Freeze guarantees that the object's own properties cannot be added, deleted, reassigned or reconfigured. Every own property becomes non-configurable, every data property becomes non-writable, and the object stops accepting new ones. It says nothing about anything the object refers to: a frozen object holding an array holds a perfectly mutable array, so it is one level deep, and it says nothing about where a violation is reported, because a write to a frozen property fails silently in sloppy code and throws only in strict code.
@@ -230,6 +237,7 @@ The last paragraph is what separates a good answer from a complete one: knowing 
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'Which of these includes an enumerable property inherited from the prototype?',
     options: [
       'Object.keys(obj)',
@@ -254,6 +262,7 @@ JSON.stringify follows the Object.keys rule exactly, which is why an inherited p
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `'use strict'
 const o = Object.freeze({ a: 1, nested: { b: 2 } })
@@ -290,6 +299,7 @@ Two TypeErrors is the same mistake: the nested write is not a violation, so ther
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'A property has configurable: false. Which of these is still allowed?',
     options: [
       'Deleting it',
@@ -314,6 +324,7 @@ Making it enumerable is a change to an attribute, and every attribute except wri
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'What happens when this runs, and what is the fix?',
     code: `const user = {
   set name(value) {

@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does a #private field guarantee that an _underscore property does not?',
     options: [
       'It is hidden from Object.keys and JSON.stringify, but still reachable with bracket access for debugging',
@@ -30,6 +31,7 @@ Module scope has nothing to do with it. Two classes in one file each declaring #
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Box {
   #secret = 42
@@ -64,6 +66,7 @@ Nothing here throws. The throwing case is reading this.#secret inside a method w
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `log('module start')
 
@@ -119,6 +122,7 @@ Placing static field after class defined treats statics like instance members th
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'A class with a #count field works on its own. Wrapped in a reactivity library that returns new Proxy(instance, handler), every call to increment() throws "Cannot read private member #count from an object whose class did not declare it". What is going on?',
     options: [
@@ -147,6 +151,7 @@ Private fields are installed on the instance at construction, not on the prototy
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `class Model {
   static create() {
@@ -190,6 +195,7 @@ Model then TypeError gets the second half right and the inheritance half wrong.`
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'class Base has a #balance field. class Child extends Base writes this.#balance in one of its methods. What happens?',
     options: [
@@ -217,6 +223,7 @@ Shadowing only happens if Child declares #balance itself. Using an undeclared na
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt:
       'Write a static Money.isMoney(value) that returns true only for objects constructed by Money, including ones from other realms or with a replaced prototype, and false for anything else without throwing. Which implementation is correct?',
     options: [
@@ -253,6 +260,7 @@ The try/catch version is close but wrong on one input: a real Money constructed 
     type: 'scenario',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'senior',
     prompt:
       'A module exports class Api with only static methods: Api.get, Api.post, and a static baseUrl. Nothing is ever instantiated and this is never used. A reviewer asks why it is a class. What is the right response?',
     options: [
@@ -278,6 +286,7 @@ A singleton instance adds this without adding a reason for it. If the functions 
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'How do you keep state private in JavaScript, what are the options, and when would you choose each?',
     answerInFull: `There are three real mechanisms and one convention.
@@ -300,6 +309,7 @@ Choosing: #private for classes where the state must not leak. A WeakMap when the
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'What does this print?',
     code: `class Gauge {
   #level = 0

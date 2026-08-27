@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt:
       'Which of these is NOT one of the ways a subclass is coupled to its base more tightly than an ordinary caller is?',
     options: [
@@ -31,6 +32,7 @@ The single chain is why multiple inheritance needs mixins.`,
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const A = (Base) =>
   class extends Base {
@@ -72,6 +74,7 @@ root alone is what you would get if mixin methods did not override. They sit on 
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'Version 2 of the base class changed addAll to call add for each item. Put the lines this prints, with version 2, in the order they print.',
     code: `class Collection {
@@ -137,6 +140,7 @@ addAll 0 has the print before the increment. The increment is on the line above 
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'To reuse its methods, someone wrote class Stack extends Array with push, pop and peek. Now a function that accepts any array sorts a Stack it was given, and a serialiser that checks Array.isArray sends a Stack as a plain list. What is the root cause?',
     options: [
@@ -164,6 +168,7 @@ Overriding every unwanted array method to throw is a list that grows with every 
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Write a Notifier with a send(user, message) method that delivers through a channel, such that a unit test can verify what was sent without any network and without a mocking library. Which version does that?',
     options: [
@@ -197,6 +202,7 @@ A static call is a hard-coded global. There is no seam at all.`,
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const Tagged = (Base) =>
   class extends Base {
@@ -241,6 +247,7 @@ Shared parent would need Tagged to cache its result. It does not, so every appli
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A team has class ReportService that extends HttpClient to reuse its get and post, and the report logic lives in methods that call this.get. Tests hit a real server, and a second service has copied the same pattern. What should change, and why?',
     options: [
@@ -268,6 +275,7 @@ A test subclass that overrides get works once and then means every test needs a 
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'Explain "prefer composition over inheritance" precisely, including when you would still use extends.',
     answerInFull: `Start with what the advice is about: coupling, not syntax. A subclass depends on its base in ways an ordinary caller does not. Every public method is overridable, so all of them become the contract, and a base that changes which methods call which others silently changes every subclass that overrode one. That is the fragile base class problem. The constructor's signature is coupled through super(). There is one prototype chain, so one parent. And a subclass field can shadow a base member by accident.
@@ -288,6 +296,7 @@ And the smell that says you got it wrong: a subclass overriding a method only to
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A class holds a Map in a private field and exposes get, set, has, delete, clear, size, keys, values, entries and forEach, each forwarding directly. What does this design tell you?',
     options: [
@@ -313,6 +322,7 @@ A Proxy to forward the rest automates the mistake. It also breaks private fields
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Parser {
   parse(text) {
