@@ -31,6 +31,17 @@ export const MAX_OPEN_QUESTIONS_PER_TOPIC = 1
 
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 
+/**
+ * The level of interview a question belongs to, named after the roles interviews
+ * hire for rather than after how hard a question feels. Defined in
+ * docs/glossary.md, which is the rule for which tier a question is tagged with.
+ *
+ * Optional for now: the field arrives beside `difficulty` and is read by nothing
+ * yet, so the bank can be tagged in batches that each stay green. It becomes
+ * required and `difficulty` is deleted once nothing is left untagged.
+ */
+export const TIERS = ['swe-1', 'swe-2', 'senior', 'staff'] as const
+
 export const topicMetaSchema = z.object({
   slug: z
     .string()
@@ -137,6 +148,12 @@ export const questionSchema = z
     type: z.enum(QUESTION_TYPES).describe('What the question is about.'),
     form: z.enum(ANSWER_FORMS).describe('How it is answered.'),
     difficulty: z.enum(DIFFICULTIES),
+    tier: z
+      .enum(TIERS)
+      .optional()
+      .describe(
+        'Which level of interview asks this. Optional while the bank is migrated from difficulty to tier; read by nothing yet.',
+      ),
     prompt: z.string().min(1),
     code: z
       .string()
@@ -303,6 +320,7 @@ export type Narration = z.infer<typeof narrationSchema>
 export type QuestionType = (typeof QUESTION_TYPES)[number]
 export type AnswerForm = (typeof ANSWER_FORMS)[number]
 export type Difficulty = (typeof DIFFICULTIES)[number]
+export type Tier = (typeof TIERS)[number]
 
 /** A question's identity across the whole platform, stored on attempts. */
 export function questionKey(topicSlug: string, questionId: string): string {

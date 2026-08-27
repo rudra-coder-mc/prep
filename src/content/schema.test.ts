@@ -61,6 +61,45 @@ describe('validation', () => {
     expect(result.success).toBe(true)
   })
 
+  it('leaves a question with no tier untagged rather than giving it one, while the bank is migrated', () => {
+    const parsed = questionSchema.parse({
+      id: 'q1',
+      type: 'scenario',
+      form: 'open',
+      difficulty: 'easy',
+      prompt: 'x',
+      answerInFull: 'y',
+    })
+    expect(parsed.tier).toBeUndefined()
+  })
+
+  it('accepts a question carrying a valid tier', () => {
+    const parsed = questionSchema.parse({
+      id: 'q1',
+      type: 'scenario',
+      form: 'open',
+      difficulty: 'easy',
+      tier: 'swe-2',
+      prompt: 'x',
+      answerInFull: 'y',
+    })
+    expect(parsed.tier).toBe('swe-2')
+  })
+
+  it('rejects a tier that is not one of the interview levels', () => {
+    const result = questionSchema.safeParse({
+      id: 'q1',
+      type: 'scenario',
+      form: 'open',
+      difficulty: 'easy',
+      tier: 'junior',
+      prompt: 'x',
+      answerInFull: 'y',
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['tier'])
+  })
+
   it('defaults the optional list fields so content need not spell them out', () => {
     const parsed = questionSchema.parse({
       id: 'q1',
