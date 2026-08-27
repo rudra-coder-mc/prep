@@ -7,16 +7,20 @@ what is in flight, and what will bite you.
 
 ## Where this stands
 
-`main` holds the browser track, merged from
-`feature/the-browser-not-the-language`. The repository has no git remote, and no
-task tracker either. Both are deliberate; see the hard rule in `CLAUDE.md`, which
+`main` holds the browser track, the finished tier migration, and the first piece
+of platform work that reads a tier. The repository has no git remote, and no task
+tracker either. Both are deliberate; see the hard rule in `CLAUDE.md`, which
 covers every hosted service rather than only the company GitLab.
 
-Verified green there: `npm run verify` exited 0 through lint, format check,
-typecheck, 310 unit tests, 26 integration tests against real Postgres and a real
-speech engine, the production build, and 52 Playwright end-to-end tests. The
-content check reports 43 topics, 466 questions, 86 exercises, 269 narration
-sections and 932 question scripts. Re-run `verify` rather than trusting any
+**`main` is green.** `npm run verify` exited 0 through lint, format check,
+typecheck, 361 unit tests, 39 integration tests against real Postgres and a real
+speech engine, the production build, and all 59 Playwright tests. That run
+included `e2e/spoken-questions.spec.ts:63`, which is flaky rather than broken and
+passed this time; the open item on it below carries the tally and is still the
+most urgent thing in this file, because a spec that fails half the time makes the
+merge rule mean nothing. The content check reports 43 topics, 466 questions, 86
+exercises, 269 narration sections and 932 question scripts, tiered as SWE-1 80,
+SWE-2 254, Senior 73 and Staff 59. Re-run `verify` rather than trusting any
 figure you read anywhere, including here, and read the section on piping it
 before you do.
 
@@ -25,12 +29,33 @@ topic, mark it learned, answer recall questions on a schedule. The shell names n
 technology. Every topic can be listened to, the lesson shows which part of itself
 is being spoken, and every question and its answer can be listened to as well.
 
-**The platform is done and the remaining work is content.** No question takes
-typed input: every one is a choice question, an ordering question or an open
-question, at most one open per topic and only on an `interview` or `scenario`
-subject, and `npm run content:check` fails a build that breaks either rule.
-Nothing in the schema, the session flow or the speech pipeline is waiting on
-anything.
+**The platform was finished, and the tier plan has reopened part of it.** No
+question takes typed input: every one is a choice question, an ordering question
+or an open question, at most one open per topic and only on an `interview` or
+`scenario` subject, and `npm run content:check` fails a build that breaks either
+rule. Nothing in the schema, the session flow or the speech pipeline is waiting
+on anything.
+
+**Every question carries a tier**, one of `swe-1`, `swe-2`, `senior` or `staff`,
+named after the level of interview that asks it. The promise it buys is in
+`docs/decisions/0028-tiers-are-interview-levels.md`: finish a tier and you are
+prepared for that level of interview. The migration ran as expand, migrate,
+contract and is finished: the field arrived beside `difficulty`, the bank was
+tagged in seven batches that each stayed green, and task 12 made `tier` required
+and deleted `difficulty` from questions and from topic meta. `difficulty` still
+exists on exercises and means something different there, which
+`0028` now says explicitly.
+
+**A tier is now the path rather than a label.** Task 13 stored the pick, one row
+per user per track in `track_tier`, and enrolment reads it: marking a topic
+learned schedules only the questions at or below the pick, and the topic list is
+the topics that pick covers. `src/lib/tiers.ts` holds what a pick covers,
+`src/lib/track-tier.ts` stores it, `src/lib/progress.ts` is the only place that
+enrols, and
+`docs/decisions/0031-a-track-remembers-the-tier-you-picked.md` is the argument
+for the default, for what a change of pick does in each direction, and for why a
+topic off the path is still reachable. Readiness, the number that makes the
+promise checkable, is task 14 and is not built.
 
 **The JavaScript track is thirty-nine topics deep**, in teaching order from types
 and coercion to what a bundler changes. `README.md` lists them in that order and
@@ -53,34 +78,88 @@ and nothing checks that the topic on the other end exists.
 
 **Nothing is half done.** The working tree is clean at the head of `main`.
 
-**Twelve merged branches were never deleted**, which the conventions below say
-should happen: `docs/measured-question-audio-cost`, `feature/classes`,
-`feature/collections-and-iteration`, `feature/errors`,
-`feature/javascript-functions-group`, `feature/modules-and-the-runtime`,
-`feature/spoken-questions`, `feature/the-browser-not-the-language`,
-`fix/a-404-that-outlives-the-missing-recording`,
-`fix/recordings-the-container-cannot-see`, `improvement/speech-engine-on-demand`
-and `improvement/unslop-content`. All of them are merged into `main`, so deleting
-them loses nothing. Nobody has done it because permission was never asked for.
+**Merged branches are piling up undeleted**, which the conventions below say
+should not happen. `git branch --merged main` is the list; it runs to fifteen and
+now includes `feature/a-tier-per-track`. All of them are merged, so deleting them
+loses nothing, and nobody has done it because permission was never asked for. The
+tagging branches from Phase 2 were deleted on merge, which is why they are not
+among them.
 
 ## The next action
 
-**There is no next action, and that is the state to understand before choosing
-one.** `TASKS.md` has nothing scheduled in it. Everything left in it is real work
-left unordered on purpose, each item needs breaking down before it is
-actionable, and none of it should be picked up as "the next task" without
-discussing it first: the browser runners, the `prep` CLI and its verdict
-endpoint, a backup for the one database nobody can reproduce, the other nine
-tracks, and the unused `shiki`.
+**Task 14 in `TASKS.md`: readiness, and the offer to step up.** It is the last
+task in Phase 3 and the thing that turns the tier into a promise a person can
+check. Nothing blocks it: the pick is stored, enrolment respects it, and what is
+missing is the number. Readiness is the share of the tier's enrolled questions
+whose schedule has reached step 3, and `docs/decisions/0028-tiers-are-interview-levels.md`
+is why it is measured on the ladder rather than on a single correct answer.
 
-The open items below are a second source of candidates, and two of them are
-close to actionable. The em dash sweep over `content/` is a branch of its own
-with nobody on it. And nobody has yet listened to a question read aloud and
-judged whether it works, which is the cheapest way left to find out whether the
-audio is worth what it cost.
+Two things it has to get right, both already decided and neither implemented.
+Show the count the share is based on, because a tier this bank is thin at will
+otherwise read as a confident percentage of almost nothing. And when a tier is
+fully ready, offer the next one rather than taking it: stepping up enrols a few
+hundred questions, and `pickTrackTier` in `src/lib/progress.ts` is the function
+that would do it.
 
-Any content work is authored to `docs/tasks/converting-a-topic.md`. That brief was written for the twelve
-conversions and outlives them: every group since has been written to it.
+After Phase 3 the work is content again, and it is authored to
+`docs/tasks/converting-a-topic.md`, which now carries the rule for tagging a new
+question with a tier. Phase 4 fills SWE-1 and SWE-2 four topics at a time; it is
+the reason the bank has to grow before readiness means anything, since four tiers
+over 43 topics is roughly two questions per tier per topic.
+
+### What the tier tagging has taught
+
+**Nothing checks that a tier is right.** `content:check` counts how many
+questions are untagged and stops there. There is no test that can fail for a
+question tagged senior that should be staff, so the batches are judgement work
+with the safety net only under the mechanical part. That is the reason the rule
+in `TASKS.md` is written down and kept current rather than being re-derived per
+batch.
+
+**Two boundaries settle almost every hard call**, and they are in `TASKS.md` in
+full. A senior question has a decision at the end of it; a staff question has
+spec internals or a failure mode and nothing to decide. SWE-2 asks what went
+wrong, senior asks what you would do instead, and a trade-off whose answer is a
+single rule is still SWE-2.
+
+**The `difficulty` field is a weak signal and gets weaker as topics get
+advanced.** `easy` mapped to `swe-1` 32 times out of 34 in the first batch and 63
+out of 91 by the sixth, because an easy question in a topic a junior has never
+met is still not a junior question. `hard` never mapped anywhere: 33 of 94 hard
+questions are SWE-2, since a famous gotcha is hard to answer and still the
+ordinary working-developer round. Over the finished bank, `easy` mapped to
+`swe-1` 69 times out of 97 and `hard` split 37 SWE-2, 27 senior and 39 staff.
+
+**Report the counts a topic actually has.** Ten topics finished with one SWE-1
+question and seven with none. The topic list is built from the questions, so a
+topic with no SWE-1 question drops out of the SWE-1 list, which is the right
+outcome and not a gap to fill. That is live now.
+
+**A whole batch can come out with almost no SWE-1 questions, and that is the
+answer rather than a mistake.** The async and modules batch produced two across
+six topics, because cancellation, async iteration, module resolution and bundling
+are not what a first round asks about. Four of those six topics have no SWE-1
+question at all. The consequence is real and belongs to Phase 4 rather than to
+the tagging: task 17 fills async and names only `event-loop`, `promises`,
+`async-error-handling` and `es-modules-and-commonjs`, so `abortcontroller`,
+`async-iteration`, `module-resolution-and-side-effects` and
+`what-a-bundler-changes` stay out of the SWE-1 topic list unless somebody decides
+to author into them. Nobody has decided that.
+
+**A tooling topic tests the two boundaries hardest.** In the bundler and
+resolution topics almost every question is about a mechanism somebody has to
+know, so "is this staff" comes up on all of them. What settled it was asking what
+the question does rather than how obscure the mechanism is: an inlined
+environment variable, a barrel that keeps a package alive and a minified class
+name are all diagnosis, so they are SWE-2 however deep the machinery. What went
+to staff is the machinery asked about directly, such as what a bundle has done to
+your modules, and what went to senior is the design question, such as how to
+shape a package so it can be shaken.
+
+**Derive any count you write into `TASKS.md` from the files.** The guidance
+paragraph there cites examples and totals, and one of them was written from
+memory and named the wrong tier for a question. A short script over
+`content/*/*/questions.ts` is how the numbers in it are produced.
 
 ### What authoring a group has taught
 
@@ -169,6 +248,60 @@ written since keeps the two in the same order, so this is the only one.
 **One topic has no open question at all**, `iterables-and-iterators`. The rule is
 a cap rather than a quota, so it passes the check. Worth knowing before reading
 it as an omission.
+
+**Two topics ask the same open question.** `prototypes` and `class-syntax` both
+end on whether `class` is only syntax over prototypes, with substantially the
+same answer, and both are tagged staff. It may be deliberate, since a learner
+working through one topic should not have to have done the other. If it is not,
+Phase 4 revisits `prototypes` in task 16 and that is where one of them would go.
+Nobody owns the decision.
+
+**One end-to-end spec is flaky, nobody owns it, and it now blocks the merge
+rule.** "A question can be listened to before it is answered",
+`e2e/spoken-questions.spec.ts:63`, has failed six times in twelve full suite
+runs, including a pass in the most recent one.
+It always fails the same way: the listen button never becomes "Stop listening"
+within the five second timeout, so the audio never started. Every failure has
+been on a branch that touched nothing but content data, and the most recent one
+was on unmodified `main` immediately after a green run of the same commit, which
+rules out the content and rules out the last change. Passing in isolation is not
+evidence either; it has done that after every failure.
+
+This is the urgent one, because the convention below says nothing merges into
+`main` with `verify` failing, and at four in ten the rule now means running the
+suite until it passes. That is the same as not having the rule. **The decision
+worth taking first is whether this becomes a task**, and the answer is probably
+yes, because whoever writes the fix also gets to decide what the spec should
+assert rather than being told by a timeout.
+
+Two hypotheses fit, and nobody has separated them. The older one is the route
+interception: `serveAudio` adds a handler for `**/api/speech/warm` after the
+audio handler deliberately, because Playwright consults the last handler added
+first, and the warm call racing the play call would leave the play with nothing
+to start. The newer one, from reading the page snapshot Playwright captured on
+the last failure, is a hydration race: the click lands on a button that has
+rendered but has no React handler attached yet, so nothing happens at all. The
+snapshot shows the question fully rendered with its options and the button still
+reading "Listen to the question", which fits either an unhandled click or a play
+attempt that failed and reset the label.
+
+The cheap way to separate them is to assert on the `asked` array before asserting
+on the button. Under the warm race a request was made, so `asked` has an entry;
+under the hydration race it is empty. `test-results/` holds the trace and the
+error context from the last failure, and it is gitignored, so it survives until
+the next run overwrites it. Raising the timeout would hide either one rather than
+answer it.
+
+Do not diagnose this from a run where anything else was touching Docker or port 3100. Two of the failures in the log that prompted this entry were caused by
+exactly that, and they are not evidence of anything.
+
+**The topic list is about to look shorter on the server, and that is the feature
+working.** No database has a `track_tier` row yet, so every track lands on SWE-1
+after the next deploy, and seven of the 43 topics have no SWE-1 question and move
+into the collapsed group under their track. Topic progress drops with it, because
+a topic's progress is now the share of the in-scope questions that are passing.
+Nothing was unenrolled and no attempt was lost: pick a higher tier in the track
+header and both come back.
 
 **`shiki` is an unused dependency.** It is in `package.json` and nothing imports
 it. Left over from V1, when lessons were going to have syntax highlighted code
@@ -353,11 +486,22 @@ same way it does for `matchMedia`. Anything that remembers a preference in a
 test depends on that shim.
 
 **`server-only` throws inside the test runner, so a module that imports it
-cannot be imported by a test.** That is why `src/lib/speech/` puts the marker on
-`index.ts` alone and leaves the parts unmarked, and why
-`attempts.integration.test.ts` reimplements its SQL rather than calling the
-module it is testing. Adding `import 'server-only'` to `narrate.ts` would take
-the engine's own tests with it.
+cannot be imported by a _unit_ test.** That is why `src/lib/speech/` puts the
+marker on `index.ts` alone and leaves the parts unmarked. Adding
+`import 'server-only'` to `narrate.ts` would take the engine's own tests with it.
+The integration project aliases the marker away, so a server module can be
+imported there.
+
+**An integration test can now call the real module rather than restating its
+SQL.** `src/db/index.ts` binds the shared connection to `DATABASE_URL` on first
+use, which is why `attempts.integration.test.ts` re-writes the SQL it is testing
+instead of importing `recordAttempt`. `useTestDatabase` in `src/db/testing.ts`
+closes that connection, points the variable at the throwaway database and hands
+back the undo, so `progress.integration.test.ts` runs `markTopicLearned` itself.
+Two rules come with it: call it in `beforeAll` before anything touches `db`, and
+run the undo before `drop()`, because the variable is process wide and vitest
+reuses a worker between files. Re-writing SQL in a test is now a choice, and
+`attempts.integration.test.ts` is a candidate for the same treatment.
 
 **Piper answers with `Content-Type: text/html` even when the body is a WAV.**
 Its recordings and its Flask error pages are indistinguishable by header, so the
@@ -576,6 +720,15 @@ the exit code. This has already produced one "green" run that was not.
 and one speech cache, so a parallel `test:e2e` does not go faster, it corrupts
 both runs.
 
+**Running `verify` in the background counts as running it.** Starting it and then
+doing anything else that touches port 3100 or the speech container is the same
+mistake as running two stages at once, and it is easier to make because nothing
+about the second command looks parallel. Worse, the documented remedy for a
+stranded port, `lsof -ti :3100 | xargs kill`, kills the running `verify`'s own
+Playwright server, and the tests it had left then fail in ways that read as
+application bugs. This has already produced a five-failure run that meant
+nothing. Run `verify` in the foreground and wait.
+
 **The development profile only bind mounts `src/`, `content/` and `public/`.**
 Everything else, including `package.json`, `next.config.ts` and the Dockerfile,
 is baked into the image. Change one of those and the stack needs
@@ -609,7 +762,10 @@ commit that completes it.
 
 `npm run verify` must pass before merging into `main`. There is no CI, so the
 pre-commit hook (lint, format check, typecheck, unit tests) and that command are
-the entire safety net.
+the entire safety net. The flaky spec above is the one thing standing in the way
+of taking that literally: what has been done so far is to re-run the suite and
+merge on the green one, having first confirmed the failure is that spec failing
+in its usual way. Anything else failing is a real failure.
 
 Commit messages say what was wrong or missing and what was done about it, in
 plain sentences. No file by file changelogs, no notes about tests passing.
