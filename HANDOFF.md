@@ -7,14 +7,14 @@ what is in flight, and what will bite you.
 
 ## Where this stands
 
-`main` holds the browser track, the finished tier migration, and the first piece
-of platform work that reads a tier. The repository has no git remote, and no task
-tracker either. Both are deliberate; see the hard rule in `CLAUDE.md`, which
+`main` holds the browser track, the finished tier migration, and the whole of
+Phase 3, which is the platform work that turns a tier into a path. The repository
+has no git remote, and no task tracker either. Both are deliberate; see the hard rule in `CLAUDE.md`, which
 covers every hosted service rather than only the company GitLab.
 
 **`main` is green.** `npm run verify` exited 0 through lint, format check,
-typecheck, 361 unit tests, 39 integration tests against real Postgres and a real
-speech engine, the production build, and all 59 Playwright tests. That run
+typecheck, 373 unit tests, 48 integration tests against real Postgres and a real
+speech engine, the production build, and all 61 Playwright tests. That run
 included `e2e/spoken-questions.spec.ts:63`, which is flaky rather than broken and
 passed this time; the open item on it below carries the tally and is still the
 most urgent thing in this file, because a spec that fails half the time makes the
@@ -29,12 +29,12 @@ topic, mark it learned, answer recall questions on a schedule. The shell names n
 technology. Every topic can be listened to, the lesson shows which part of itself
 is being spoken, and every question and its answer can be listened to as well.
 
-**The platform was finished, and the tier plan has reopened part of it.** No
+**The platform is finished again, and everything pending is content.** No
 question takes typed input: every one is a choice question, an ordering question
 or an open question, at most one open per topic and only on an `interview` or
 `scenario` subject, and `npm run content:check` fails a build that breaks either
 rule. Nothing in the schema, the session flow or the speech pipeline is waiting
-on anything.
+on anything, and `TASKS.md` holds only Phase 4 and Phase 5.
 
 **Every question carries a tier**, one of `swe-1`, `swe-2`, `senior` or `staff`,
 named after the level of interview that asks it. The promise it buys is in
@@ -46,16 +46,27 @@ and deleted `difficulty` from questions and from topic meta. `difficulty` still
 exists on exercises and means something different there, which
 `0028` now says explicitly.
 
-**A tier is now the path rather than a label.** Task 13 stored the pick, one row
-per user per track in `track_tier`, and enrolment reads it: marking a topic
-learned schedules only the questions at or below the pick, and the topic list is
-the topics that pick covers. `src/lib/tiers.ts` holds what a pick covers,
+**A tier is now the path rather than a label.** The pick is a row per user per
+track in `track_tier`, and enrolment reads it: marking a topic learned schedules
+only the questions at or below the pick, and the topic list is the topics that
+pick covers. `src/lib/tiers.ts` holds what a pick covers,
 `src/lib/track-tier.ts` stores it, `src/lib/progress.ts` is the only place that
 enrols, and
 `docs/decisions/0031-a-track-remembers-the-tier-you-picked.md` is the argument
 for the default, for what a change of pick does in each direction, and for why a
-topic off the path is still reachable. Readiness, the number that makes the
-promise checkable, is task 14 and is not built.
+topic off the path is still reachable.
+
+**Readiness is the promise made checkable, and it is the dashboard's headline.**
+A question counts once its schedule reaches step 3 of the ladder, and the share
+is taken over every question the tier covers on the track rather than over the
+ones enrolled so far, because an interview does not restrict itself to the topics
+somebody chose to open. A finished tier offers the tier above it, says how many
+questions accepting enrols, and waits. `src/lib/readiness.ts` is the calculation
+and `docs/decisions/0032-readiness-is-measured-over-the-whole-tier.md` is the
+argument. **Expect the number to read as brutal:** 74 SWE-1 questions on the
+JavaScript track have to reach step 3, three correct answers each spread over
+four days, so it starts at zero and stays low for weeks. That is the claim being
+honest, not a bug.
 
 **The JavaScript track is thirty-nine topics deep**, in teaching order from types
 and coercion to what a bundler changes. `README.md` lists them in that order and
@@ -79,33 +90,30 @@ and nothing checks that the topic on the other end exists.
 **Nothing is half done.** The working tree is clean at the head of `main`.
 
 **Merged branches are piling up undeleted**, which the conventions below say
-should not happen. `git branch --merged main` is the list; it runs to fifteen and
-now includes `feature/a-tier-per-track`. All of them are merged, so deleting them
+should not happen. `git branch --merged main` is the list; it runs to sixteen and
+now includes `feature/a-tier-per-track` and `feature/readiness-and-the-step-up`. All of them are merged, so deleting them
 loses nothing, and nobody has done it because permission was never asked for. The
 tagging branches from Phase 2 were deleted on merge, which is why they are not
 among them.
 
 ## The next action
 
-**Task 14 in `TASKS.md`: readiness, and the offer to step up.** It is the last
-task in Phase 3 and the thing that turns the tier into a promise a person can
-check. Nothing blocks it: the pick is stored, enrolment respects it, and what is
-missing is the number. Readiness is the share of the tier's enrolled questions
-whose schedule has reached step 3, and `docs/decisions/0028-tiers-are-interview-levels.md`
-is why it is measured on the ladder rather than on a single correct answer.
+**Phase 4 in `TASKS.md`: fill SWE-1 and SWE-2.** Everything left in the file is
+content. Four tiers over 43 topics is roughly two questions per tier per topic,
+which carries no promise at all, so the tiers being prepared for have to reach
+five or six per topic before readiness means anything. Tasks 15 to 18 are four
+topics each and nothing blocks any of them, so pick by which subject is worth
+knowing soonest rather than by the order they are listed in.
 
-Two things it has to get right, both already decided and neither implemented.
-Show the count the share is based on, because a tier this bank is thin at will
-otherwise read as a confident percentage of almost nothing. And when a tier is
-fully ready, offer the next one rather than taking it: stepping up enrols a few
-hundred questions, and `pickTrackTier` in `src/lib/progress.ts` is the function
-that would do it.
+Author to `docs/tasks/converting-a-topic.md`, which carries the rule for tagging a
+new question with a tier. Read the section below on what the tagging taught
+before starting; it is where the hard calls were settled, and the tagging rule is
+the same rule a new question is written against.
 
-After Phase 3 the work is content again, and it is authored to
-`docs/tasks/converting-a-topic.md`, which now carries the rule for tagging a new
-question with a tier. Phase 4 fills SWE-1 and SWE-2 four topics at a time; it is
-the reason the bank has to grow before readiness means anything, since four tiers
-over 43 topics is roughly two questions per tier per topic.
+Phase 5 adds three topics the language track has no home for, regular
+expressions, numbers and precision, and strings. Those are whole topics rather
+than extra questions, so each one owes a lesson, a narration script and the
+visuals that go with it.
 
 ### What the tier tagging has taught
 
@@ -259,7 +267,15 @@ Nobody owns the decision.
 **One end-to-end spec is flaky, nobody owns it, and it now blocks the merge
 rule.** "A question can be listened to before it is answered",
 `e2e/spoken-questions.spec.ts:63`, has failed six times in twelve full suite
-runs, including a pass in the most recent one.
+runs, and passes on a re-run of the same commit every time.
+
+**It has now taken a second spec with it.** In one run,
+`spoken-questions.spec.ts:75`, "the answer gets its own listen button", failed
+alongside it in exactly the same way, and both passed on the immediate re-run of
+the same build. Those two are the only specs in the file that press a listen
+button behind the `serveAudio` stub, which is weak evidence for the route
+interception hypothesis below and against the hydration one: a hydration race
+would not pick out two specs that share a stub.
 It always fails the same way: the listen button never becomes "Stop listening"
 within the five second timeout, so the audio never started. Every failure has
 been on a branch that touched nothing but content data, and the most recent one
@@ -302,6 +318,19 @@ into the collapsed group under their track. Topic progress drops with it, becaus
 a topic's progress is now the share of the in-scope questions that are passing.
 Nothing was unenrolled and no attempt was lost: pick a higher tier in the track
 header and both come back.
+
+**The dashboard will read 0% ready on both tracks after that deploy**, and it is
+right to. Readiness only counts a question once its schedule reaches step 3, and
+nothing on the server has climbed that far. It is the slowest number the platform
+has on purpose; see
+`docs/decisions/0032-readiness-is-measured-over-the-whole-tier.md`.
+
+**The step-up offer has no end-to-end test and cannot have one.** Reaching it
+means every question a track's tier covers sitting at step 3, which is 74 rows on
+the JavaScript track and nothing a browser session can produce. It is covered by
+`src/lib/dashboard.integration.test.ts`, which places rows on the ladder
+directly, and the end-to-end suite asserts only that nothing is offered while a
+tier is unfinished. If the offer ever renders wrongly, no test will catch it.
 
 **`shiki` is an unused dependency.** It is in `package.json` and nothing imports
 it. Left over from V1, when lessons were going to have syntax highlighted code
