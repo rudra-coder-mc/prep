@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'class B extends A sets up which prototype links?',
     options: [
       'One: B.prototype inherits from A.prototype, so instances of B find methods of A',
@@ -30,6 +31,7 @@ An instance inheriting from the class A directly would put the constructor funct
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Shape {
   constructor(name) {
@@ -69,6 +71,7 @@ TypeError is the error for calling a class without new or calling a non-function
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `class Base {
   tag = log('base field')
@@ -134,6 +137,7 @@ Any order with derived field before base constructor has derived fields running 
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A Component base class calls this.render() in its constructor. A subclass declares a field template = "<p>hi</p>" and overrides render to use this.template. Constructing the subclass throws because template is undefined. What is the right fix?',
     options: [
@@ -159,6 +163,7 @@ super() cannot go at the end. this does not exist before it, so the subclass fie
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt:
       'Inside a method of class B extends A, what does super.describe() resolve to, and what is this inside the call?',
     options: [
@@ -186,6 +191,7 @@ A itself is the class, not its prototype. Statics live there; instance methods d
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `class A {}
 class B extends A {}
@@ -221,6 +227,7 @@ false for everything except Object would need Object.create to produce an unrela
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Write class HttpError extends Error carrying a status, so that String(err) reads "HttpError: Not found", err.stack begins with that same text, and err instanceof HttpError is true. Which is correct?',
     options: [
@@ -252,6 +259,7 @@ Leaving name inherited gives "Error: Not found" for both toString and the stack.
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'What does this print?',
     code: `class Stack extends Array {
   peek() {
@@ -286,6 +294,7 @@ peek returning undefined would need the static from or the subclassing to have p
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A codebase has a Repository base class whose constructor opens a connection and calls this.migrate(). Each subclass overrides migrate and reads a tables field it declares. Every subclass has a comment saying "do not add fields, set them in migrate". What is the root cause, and the fix that removes the comment?',
     options: [
@@ -311,6 +320,7 @@ Fields run before the derived constructor body, not before super(), and that is 
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'staff',
     prompt:
       'Walk through what happens, step by step, when new Derived() runs for a Derived that extends Base, and say where each of the common inheritance bugs comes from.',
     answerInFull: `new Derived() invokes the Derived constructor with this uninitialised. If Derived has no constructor, the default one forwards every argument to super(). The body runs until it reaches super(), and touching this before that point throws a ReferenceError.

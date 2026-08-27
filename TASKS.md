@@ -45,20 +45,19 @@ Two boundaries do most of the work, both drawn from the glossary:
 - **SWE-2 against senior.** SWE-2 asks what went wrong. Senior asks what you
   would do instead. A trade-off whose answer is a single rule is still SWE-2.
 
-`easy` maps to `swe-1` reliably: 32 of the 34 easy questions tagged so far landed
-there. `hard` does not map anywhere mechanically, so read every one of them.
-Ten of the 25 hard questions tagged so far are SWE-2, because a famous gotcha is
-hard to answer and still the ordinary working-developer round. The bulk of the
+`easy` mostly maps to `swe-1`: 41 of the 49 easy questions tagged so far landed
+there. Where it breaks is a topic a junior has never met, since the label then
+describes the question rather than the round. Ask whether somebody two years in
+would have seen the API at all. The easy question on `Object.defineProperty`
+defaults is SWE-2, and the easy one asking why a static-only class should be a
+module is senior. `hard` does not map anywhere mechanically, so read every one of
+them. Thirteen of the 36 hard questions so far are SWE-2, because a famous gotcha
+is hard to answer and still the ordinary working-developer round. The bulk of the
 work is the medium questions, which spread across all four tiers.
 
-A topic can be thin at either end. `strict-mode-and-globalthis` finished with one
-SWE-1 question, because almost nothing in it is asked of somebody with two years
-of experience. Report what the topic has rather than filling a tier to be even.
-
-## 7. Tag objects and classes
-
-`prototypes`, `property-descriptors`, `class-syntax`, `extends-and-super`,
-`static-and-private`, `composition-over-inheritance`.
+A topic can be thin at either end. `strict-mode-and-globalthis`,
+`property-descriptors` and `extends-and-super` each finished with a single SWE-1
+question. Report what the topic has rather than filling a tier to be even.
 
 ## 8. Tag collections and memory
 
@@ -94,9 +93,9 @@ questions into a schema that now demands a tier.
 a `difficulty` of their own, and decision `0028` speaks only about questions and
 topic meta. Either exercises keep the old scale, and this task's wording narrows
 to questions and topic meta, or they need a decision of their own first. Nothing
-in tasks 7 through 11 depends on the answer.
+in tasks 8 through 11 depends on the answer.
 
-Blocked by 7 through 11. Done when nothing in `content/` or `src/` mentions
+Blocked by 8 through 11. Done when nothing in `content/` or `src/` mentions
 difficulty except what the exercise decision above leaves in place, and the
 check passes.
 

@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-1',
     prompt: 'What happens when you read a property an object does not have?',
     options: [
       'It walks the prototype chain and throws a TypeError once it reaches the end without a match',
@@ -34,6 +35,7 @@ The last option describes a language where inheritance exists for methods and no
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const parent = { greeting: 'hello' }
 const child = Object.create(parent)
@@ -67,6 +69,7 @@ Nothing in this reaches parent at any point after the first line, which is the f
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'Is `class` in JavaScript just syntax over prototypes? Be precise.',
     answerInFull: `Mostly, but not entirely. Methods declared in a class body go on the prototype and instances inherit them by lookup, exactly as with constructor functions, and extends sets up the prototype link.
 
@@ -86,6 +89,7 @@ The differences that are not sugar:
     type: 'concept',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'Given const d = new Dog(), which of these is true?',
     options: [
       'd.prototype === Dog.prototype',
@@ -118,6 +122,7 @@ d.__proto__ === Dog swaps the two sides. The instance links to Dog.prototype, no
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       "This is meant to list an object's own keys and includes inherited ones. Which fix is right, and safe on any object?",
     code: `function ownKeys(obj) {
@@ -160,6 +165,7 @@ in is the guard that looks right and does nothing. It answers the same question 
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `class Animal {
   speak() {
@@ -210,6 +216,7 @@ true for hasOwn is the same copying belief measured directly. If the instance ha
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const defaults = { tags: [], name: 'unnamed' }
 const item = Object.create(defaults)
@@ -243,6 +250,7 @@ The rule to say out loud: mutating an inherited object is shared, assigning is n
     type: 'scenario',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'You are building a lookup keyed by strings that come from user input. Which statement about using Object.create(null) for it is right?',
     options: [
@@ -272,6 +280,7 @@ The Map comparison is the one to think about rather than dismiss, because a Map 
     type: 'coding',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'Your myInstanceOf walks the prototype chain of value looking for Constructor.prototype. What else does it need to be correct?',
     options: [
@@ -313,6 +322,7 @@ Comparing names is the workaround people reach for after being bitten by the rea
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'Where does a method declared in a class body actually live?',
     options: [
       'On each instance, copied in by the constructor',
@@ -341,6 +351,7 @@ The private table option is the answer for private methods and fields declared w
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does `a instanceof B` actually test?',
     options: [
       'Whether a was created by calling B',
