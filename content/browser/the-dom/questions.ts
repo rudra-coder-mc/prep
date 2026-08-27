@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'What does it mean that getElementsByClassName returns a live collection, and querySelectorAll does not?',
     options: [
@@ -42,6 +43,7 @@ The change-notification API does exist, and it is MutationObserver, which is a s
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'A comment body arrives from your API and has to go on the page. Why is textContent the right property and innerHTML the wrong one?',
     options: [
@@ -73,6 +75,7 @@ textContent does not escape anything. Escaping implies the string still becomes 
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'A list holds four items with the class row. What does this print?',
     code: `const rows = document.getElementsByClassName('row')
 
@@ -110,6 +113,7 @@ Three fixes, all standard. Loop backwards, so the shifting happens behind you. S
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `// <ul id="list"><li id="a">a</li><li id="b">b</li></ul>
 // <ul id="other"></ul>
@@ -155,6 +159,7 @@ Worth knowing about the clone: it copies attributes and it does not copy event l
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'The markup is indented exactly as shown. What does this print?',
     code: `<ul id="list">
   <li>one</li>
@@ -194,6 +199,7 @@ children is not an alias. If it were, every walk over children would have to ski
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Each row has a delete button with a click listener attached when the row is built. Adding a row makes every existing delete button stop working. Why?',
     code: `function addRow(item) {
@@ -236,6 +242,7 @@ lastElementChild is element-only, which is exactly why it is the right property 
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'This runs in about 40 milliseconds for 20 boxes and about four seconds for 2000. What is wrong with it, and what is the fix?',
     code: `for (const box of boxes) {
@@ -279,6 +286,7 @@ getBoundingClientRect is not cached. It is one of the reads that flushes, so swa
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'You have to replace a list with two thousand freshly built rows. Which version touches the live tree the fewest times?',
     options: [
@@ -318,6 +326,7 @@ Cloning is close to right and replaces the wrong thing. Building off screen is t
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Each row contains a nested table of variants, and both the row and the variants have cells with the class price. row.querySelector(".price") keeps finding a variant price. Which fix is correct?',
     options: [
@@ -351,6 +360,7 @@ first-of-type counts among siblings of the same tag, not among matches of the se
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A "revert" button is meant to put a form back to the values it loaded with. It reads each input with getAttribute("value") and it works. A colleague changes it to read input.value and it now reverts to whatever the user just typed. What is going on?',
     options: [
@@ -386,6 +396,7 @@ Type coercion is a real difference between the two and not this behaviour. input
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'A table renders fifty thousand rows and the page freezes for several seconds on load, then scrolls badly afterwards. Walk me through how you would diagnose and fix it.',
     answerInFull: `The answer has to separate three costs that all look like "the page is slow", because the fix is different for each.

@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'What does localStorage actually store, and what does getItem return for a missing key?',
     options: [
@@ -46,6 +47,7 @@ And nothing is deferred to unload. Writes are synchronous and hit the disk, whic
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Why is "we keep application state in localStorage" a problem worth raising in a code review?',
     options: [
@@ -81,6 +83,7 @@ Writes are not batched or deferred. If they were, this API would be considerably
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'db is an already-open IndexedDB handle wrapped in promises. Put the lines this prints in the order it prints them.',
     code: `console.log('start')
@@ -121,6 +124,7 @@ Two lines that never print are worth naming. There is no storage event, because 
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `localStorage.setItem('count', 5)
 localStorage.setItem('user', { name: 'Ada' })
@@ -170,6 +174,7 @@ undefined for the missing key is the natural guess from working with plain objec
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Two tabs on the same origin both run this code. The user clicks the toggle in tab 1. What is logged, and where?',
     code: `window.addEventListener('storage', (event) => {
@@ -213,6 +218,7 @@ And a listener cannot pre-empt the handler that is running. The write is synchro
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'The user is logged in and authenticated requests work. This check always sends them to the login page. The session cookie is visible in the browser devtools cookie panel. Why?',
     code: `function isLoggedIn() {
@@ -253,6 +259,7 @@ Path is a real reason a cookie might not be readable, and it would also stop the
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A few users see a completely blank page. Their console has a SyntaxError from JSON.parse, thrown while this module is still evaluating. The code has not changed in months, it works for everyone else, and clearing site data fixes it permanently for whoever does it. What happened?',
     code: `const stored = localStorage.getItem('settings')
@@ -305,6 +312,7 @@ And each setItem is atomic, so concurrent tabs do not interleave characters. Wha
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A page saves the draft the user is typing to localStorage on every change. On some devices the save silently stops working and the draft is lost. Which save is right?',
     options: [
@@ -343,6 +351,7 @@ Deferring the write changes nothing about the failure. setItem is synchronous wh
     type: 'coding',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'Saving a note writes the note and its attachment to IndexedDB, then records an audit row once the server has accepted it. Which shape works?',
     options: [
@@ -383,6 +392,7 @@ Keeping a transaction alive by issuing requests from inside callbacks is a real 
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A notes feature keeps drafts locally: long text, an image attachment, the date it was last edited, and a set of tags. It is in localStorage today, the app takes a second to become interactive on a slow phone, and saves have started failing for the heaviest users. Where does it go?',
     options: [
@@ -420,6 +430,7 @@ sessionStorage really does have its own quota, and it is the same API with the s
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       '"Where do you store a session token?" Give the answer, then give the follow-up an interviewer is waiting for.',
     answerInFull: `Not in localStorage. An HttpOnly, Secure, SameSite cookie, with CSRF protection alongside it. Then the reasoning, which is the part being marked.
