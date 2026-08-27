@@ -45,9 +45,10 @@ export type SessionQuestion = {
   /** How it is answered. Decides which form the session renders. */
   form: AnswerForm
   /**
-   * Where the recording of the prompt and, for a choice question, its
-   * options lives. Built by `npm run narration:build`, so this is a key and not
-   * a script: there is no synthesis to fall back to.
+   * Where the recording of the prompt and, for a choice question, its options
+   * lives. A key rather than a script, because the server resolves it against
+   * `content/` and makes the recording the first time it is asked for. The
+   * answer's key travels the same way, with the reveal.
    */
   questionAudioKey?: string
 }

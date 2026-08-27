@@ -21,12 +21,15 @@ import { requireSession } from '@/lib/session'
 type Params = { technology: string; topic: string }
 
 /**
- * Addresses each section's audio here, on the server, so the player asks for a
- * recording that `npm run narration:build` has already made rather than having
- * to hash the same words again in the browser.
+ * Addresses each section's audio here, on the server, and sends the address
+ * rather than the words. The endpoint resolves a key back to its script, so the
+ * player needs nothing else to ask for a recording or to have one made.
  */
 function spokenSections(narration: Narration | null): SpokenSection[] {
-  return (narration ?? []).map((section) => ({ ...section, key: scriptKey(section.script) }))
+  return (narration ?? []).map(({ script, ...section }) => ({
+    ...section,
+    key: scriptKey(script),
+  }))
 }
 
 /** Lessons live beside their topic in content/, so they are loaded by path. */

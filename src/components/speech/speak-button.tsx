@@ -3,18 +3,18 @@
 import { useEffect, useRef, useState } from 'react'
 import { SpeakerIcon, SpeakerOffIcon } from '@/components/ui/icons'
 import { cx } from '@/lib/cx'
+import { fetchNarrationAudio, NarrationUnavailableError } from './narration-audio'
 import { useNarrationSpeed } from './playback-speed'
 
 /**
  * "Read this to me" on one piece of text: a question, or the answer once it has
  * been given.
  *
- * It only ever plays a recording that already exists. Every question in
- * `content/` is built into audio by `npm run narration:build`, and the speech
- * engine is not running the rest of the time, so there is no synthesis to fall
- * back to. A key with nothing behind it means the text has changed since the
- * last build, and saying that is more useful than a spinner that never resolves.
- * See docs/decisions/0021-questions-are-spoken-from-built-audio.md.
+ * It asks for the recording by key and never sends the words, which is what
+ * keeps a question's answer off the page until it has been given. The recording
+ * is made the first time somebody asks for it, so a question added a minute ago
+ * can be listened to. See
+ * docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md.
  *
  * The page can hold several of these. Two of them playing at once would be two
  * voices over each other, so starting one stops whichever was speaking.
@@ -22,6 +22,16 @@ import { useNarrationSpeed } from './playback-speed'
 
 /** The button currently speaking, so the next one to start can stop it. */
 let speaking: { stop: () => void } | null = null
+
+/**
+ * How long a wait can go unexplained. Synthesis runs at about 22 milliseconds
+ * per character, so a prompt nobody has asked for before takes several seconds,
+ * and a pulsing icon for that long reads as a broken button. A recording that
+ * already exists arrives well inside this, so the ordinary press says nothing.
+ */
+const SAY_WHY_AFTER = 1000
+
+const MAKING_IT = 'Recording this for the first time.'
 
 type State = 'idle' | 'loading' | 'playing'
 
@@ -39,6 +49,7 @@ export function SpeakButton({
   const audio = useRef<HTMLAudioElement>(null)
   const url = useRef<string | null>(null)
   const [state, setState] = useState<State>('idle')
+  const [slow, setSlow] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [speed] = useNarrationSpeed()
 
@@ -63,7 +74,17 @@ export function SpeakButton({
     if (audio.current) audio.current.playbackRate = speed
   }, [speed, state])
 
+  useEffect(() => {
+    if (state !== 'loading') return
+
+    const timer = setTimeout(() => setSlow(true), SAY_WHY_AFTER)
+    return () => clearTimeout(timer)
+  }, [state])
+
+  const status = error ?? (slow && state === 'loading' ? MAKING_IT : null)
+
   async function toggle() {
+    if (!audioKey) return
     if (state === 'playing') {
       stop.current()
       speaking = null
@@ -75,6 +96,7 @@ export function SpeakButton({
     speaking = { stop: stop.current }
 
     setError(null)
+    setSlow(false)
     setState('loading')
 
     try {
@@ -82,27 +104,21 @@ export function SpeakButton({
       if (!element) return
 
       if (!url.current) {
-        // Plain fetch. A recording answers with a year of immutable caching of
-        // its own, so forcing the cache buys nothing on the path that works and
-        // makes a 404 from before the recording existed permanent.
-        const response = await fetch(`/api/speech/${audioKey}`)
-        if (!response.ok) {
-          setState('idle')
-          speaking = null
-          setError(reasonFor(response.status))
-          return
-        }
-        url.current = URL.createObjectURL(await response.blob())
+        url.current = URL.createObjectURL(await fetchNarrationAudio(audioKey))
         element.src = url.current
       }
 
       element.playbackRate = speed
       await element.play()
       setState('playing')
-    } catch {
+    } catch (failure) {
       speaking = null
       setState('idle')
-      setError('That recording will not play here.')
+      setError(
+        failure instanceof NarrationUnavailableError
+          ? failure.message
+          : 'That recording will not play here.',
+      )
     }
   }
 
@@ -124,9 +140,9 @@ export function SpeakButton({
         {state === 'playing' ? <SpeakerOffIcon /> : <SpeakerIcon />}
       </button>
 
-      {error ? (
+      {status ? (
         <span role="status" className="text-xs text-muted">
-          {error}
+          {status}
         </span>
       ) : null}
 
@@ -135,9 +151,4 @@ export function SpeakButton({
       <audio ref={audio} onEnded={() => setState('idle')} className="hidden" />
     </span>
   )
-}
-
-function reasonFor(status: number): string {
-  if (status === 401) return 'Sign in again to listen.'
-  return 'Not recorded yet. Run npm run narration:build.'
 }

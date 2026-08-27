@@ -21,12 +21,37 @@ export type Narration = {
 }
 
 /**
+ * Keys currently being synthesised, so a second request for one joins the work
+ * rather than starting it again.
+ *
+ * Audio is now made when it is asked for rather than ahead of a build, and the
+ * listener is warmed ahead of, so the same recording really is asked for twice
+ * at once: the player fetching the next section while the reader skips to it.
+ * The engine is one container and a section costs it the better part of a
+ * minute, so the duplicate is worth the map.
+ */
+const inFlight = new Map<string, Promise<Audio>>()
+
+async function synthesiseOnce(key: string, script: string): Promise<Audio> {
+  const existing = inFlight.get(key)
+  if (existing) return existing
+
+  const work = synthesise(normaliseScript(script))
+    .then(async (audio) => {
+      await writeCachedAudio(key, audio)
+      return audio
+    })
+    // Cleared however it ends, so a failure leaves nothing behind to join and
+    // the next request is a real retry.
+    .finally(() => inFlight.delete(key))
+
+  inFlight.set(key, work)
+  return work
+}
+
+/**
  * The whole narration engine: a script in, playable audio out, synthesised at
  * most once.
- *
- * Two identical requests arriving together will both miss and both synthesise,
- * and the second one to finish wins. Wasteful rather than wrong, and with one
- * listener it is not worth an in-flight registry to prevent.
  */
 export async function narrate(script: string): Promise<Narration> {
   const problem = checkScript(script)
@@ -45,8 +70,5 @@ export async function narrate(script: string): Promise<Narration> {
   const cached = await readCachedAudio(key)
   if (cached) return { audio: cached, key, source: 'cache' }
 
-  const audio = await synthesise(normaliseScript(script))
-  await writeCachedAudio(key, audio)
-
-  return { audio, key, source: 'engine' }
+  return { audio: await synthesiseOnce(key, script), key, source: 'engine' }
 }

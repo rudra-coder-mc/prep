@@ -14,65 +14,35 @@ afterEach(() => {
 const KEY = 'f'.repeat(64)
 
 describe('fetchNarrationAudio', () => {
-  it('plays the recording that was built for the section, without synthesising', async () => {
+  it('asks for the section by key and nothing else', async () => {
     const fetchMock = respond('RIFF....WAVE', { headers: { 'Content-Type': 'audio/wav' } })
 
-    const audio = await fetchNarrationAudio('Say this section.', { key: KEY })
+    const audio = await fetchNarrationAudio(KEY)
 
     expect(await audio.text()).toBe('RIFF....WAVE')
+    // One request whether it was recorded already or made on the spot, and no
+    // script in it: the server resolves the key against its own content.
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url] = fetchMock.mock.calls[0] as unknown as [string]
     expect(url).toBe(`/api/speech/${KEY}`)
   })
 
-  it('synthesises a script whose recording has not been built', async () => {
-    const fetchMock = vi.fn(async (url: string) =>
-      url === '/api/speech'
-        ? new Response('RIFF....WAVE', { headers: { 'Content-Type': 'audio/wav' } })
-        : new Response(JSON.stringify({ error: 'That narration has not been built yet' }), {
-            status: 404,
-          }),
-    )
-    vi.stubGlobal('fetch', fetchMock)
-
-    const audio = await fetchNarrationAudio('A script edited since the last build.', { key: KEY })
-
-    // The 404 is not what the listener hears about: it is answered by building
-    // the recording, which is the whole point of the fallback.
-    expect(await audio.text()).toBe('RIFF....WAVE')
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([`/api/speech/${KEY}`, '/api/speech'])
-  })
-
-  it('posts the script and returns the audio', async () => {
-    const fetchMock = respond('RIFF....WAVE', { headers: { 'Content-Type': 'audio/wav' } })
-
-    const audio = await fetchNarrationAudio('Say this section.')
-
-    expect(await audio.text()).toBe('RIFF....WAVE')
-    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-    expect(url).toBe('/api/speech')
-    expect(init.method).toBe('POST')
-    expect(JSON.parse(init.body as string)).toEqual({ text: 'Say this section.' })
-  })
-
   it('reports the reason the endpoint gave', async () => {
-    respond(JSON.stringify({ error: 'A narration script cannot be empty' }), { status: 400 })
+    respond(JSON.stringify({ error: 'No narration has that name' }), { status: 404 })
 
-    await expect(fetchNarrationAudio(' ')).rejects.toThrow('A narration script cannot be empty')
+    await expect(fetchNarrationAudio(KEY)).rejects.toThrow('No narration has that name')
   })
 
   it('says what to do about an expired session rather than repeating the status', async () => {
     respond(JSON.stringify({ error: 'Sign in first' }), { status: 401 })
 
-    await expect(fetchNarrationAudio('anything')).rejects.toThrow(/[Ss]ign in again/)
+    await expect(fetchNarrationAudio(KEY)).rejects.toThrow(/[Ss]ign in again/)
   })
 
   it('falls back to a plain message when the failure is not JSON', async () => {
     respond('<!doctype html><title>502</title>', { status: 502 })
 
-    await expect(fetchNarrationAudio('anything')).rejects.toThrow(
-      'The voice is not available right now.',
-    )
+    await expect(fetchNarrationAudio(KEY)).rejects.toThrow('The voice is not available right now.')
   })
 
   it('turns a network failure into something the player can show', async () => {
@@ -83,7 +53,7 @@ describe('fetchNarrationAudio', () => {
       }),
     )
 
-    await expect(fetchNarrationAudio('anything')).rejects.toBeInstanceOf(NarrationUnavailableError)
+    await expect(fetchNarrationAudio(KEY)).rejects.toBeInstanceOf(NarrationUnavailableError)
   })
 
   it('lets an abort through as an abort, since that is the player moving on', async () => {
@@ -94,8 +64,6 @@ describe('fetchNarrationAudio', () => {
       }),
     )
 
-    await expect(fetchNarrationAudio('anything')).rejects.not.toBeInstanceOf(
-      NarrationUnavailableError,
-    )
+    await expect(fetchNarrationAudio(KEY)).rejects.not.toBeInstanceOf(NarrationUnavailableError)
   })
 })

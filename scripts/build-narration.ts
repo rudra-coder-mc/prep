@@ -16,9 +16,10 @@ import { answerScript, questionScript } from '@/lib/speech/spoken-question'
  * recording is skipped, so running this after adding one topic only builds that
  * topic.
  *
- * It is not part of `npm run build`. Synthesis needs the speech engine running,
- * and the image is built without it - see
- * docs/decisions/0017-narration-is-built-once.md.
+ * Nothing depends on this any more. A recording is made the first time it is
+ * asked for, so this is bulk preparation: filling a cache before a journey, or
+ * before an e2e run that wants one. See
+ * docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md.
  *
  * The parts of the engine are imported directly rather than through
  * `@/lib/speech`, whose `server-only` marker throws outside a server module.

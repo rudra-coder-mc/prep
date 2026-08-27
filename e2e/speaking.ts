@@ -44,9 +44,9 @@ export async function speak(page: Page, text: string): Promise<SpokenResponse> {
 }
 
 /**
- * What asking for a recording that was built ahead of time looks like from
- * inside the page. This is the request the player makes first, and the one it
- * makes for every section once `npm run narration:build` has run.
+ * What asking for a recording by its key looks like from inside the page. This
+ * is the only request the player makes: the server serves the file if it has
+ * one and makes it if it does not.
  */
 export async function playBuilt(page: Page, key: string): Promise<SpokenResponse> {
   return page.evaluate(async (address) => {

@@ -147,7 +147,8 @@ test('a section that has been built is played rather than synthesised again', as
   await page.getByRole('group', { name: READER }).getByLabel('Play narration').click()
   await waitUntilPlaying(page)
 
-  // A recording that exists is a file to fetch, not work to do again.
+  // A recording that exists is a file to fetch, not work to do again, and the
+  // player asks for it by key alone.
   expect(asked[0]).toMatch(/^GET \/api\/speech\/[0-9a-f]{64}$/)
-  expect(asked).not.toContain('POST /api/speech')
+  expect(asked.every((call) => call.startsWith('GET '))).toBe(true)
 })

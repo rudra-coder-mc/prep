@@ -84,17 +84,17 @@ describe('POST /api/speech', () => {
     await expect(response.json()).resolves.toEqual({ error: 'A narration script cannot be empty' })
   })
 
-  it('turns the engine being down into a 502 naming the command that fixes it', async () => {
+  it('turns the engine being down into a 502 rather than an audio element of nothing', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     narrateMock.mockRejectedValue(new SpeechServiceError('unreachable'))
 
     const response = await POST(post({ text: 'Say this.' }))
 
-    // The engine is off by default, so a reader who hits this is looking at a
-    // section nobody has recorded rather than at a broken service.
+    // The engine runs with the app now, so there is nothing for the reader to
+    // start and nothing worth telling them to run.
     expect(response.status).toBe(502)
     await expect(response.json()).resolves.toEqual({
-      error: 'This section has no recording yet. Run npm run narration:build to make one.',
+      error: 'The voice is not available right now.',
     })
   })
 

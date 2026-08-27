@@ -110,11 +110,10 @@ rather than a feeling.
 
 ## Before opening the merge
 
-Run `npm run content:check`, then `npm run narration:build` to record the audio
-for the questions you changed. The build skips anything already recorded, so it
-only does this topic.
+Run `npm run content:check`, then `npm run verify`.
 
-Then `npm run verify`.
+Nothing has to be recorded. A question edited here is new words, so it is a new
+key, and the first person to press play on it gets it made.
 
 ## Done when
 

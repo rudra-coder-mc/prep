@@ -80,6 +80,18 @@ describe('narrate', () => {
     expect(engine).not.toHaveBeenCalled()
   })
 
+  it('synthesises once when the same script is asked for twice at once', async () => {
+    const [first, second] = await Promise.all([
+      narrate('Two listeners, one recording.'),
+      narrate('Two listeners, one recording.'),
+    ])
+
+    expect(engine).toHaveBeenCalledOnce()
+    expect(first.audio).toEqual(WAV)
+    expect(second.audio).toEqual(WAV)
+    expect(await readdir(directory)).toHaveLength(1)
+  })
+
   it('caches nothing when the engine fails, so a retry is a real retry', async () => {
     vi.stubGlobal(
       'fetch',

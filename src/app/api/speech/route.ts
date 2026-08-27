@@ -2,14 +2,19 @@ import { auth } from '@/lib/auth'
 import { InvalidScriptError, narrate, SpeechServiceError } from '@/lib/speech'
 
 /**
- * Turns a narration script into audio.
+ * Turns a script that `content/` does not own into audio.
  *
  * `POST { "text": "..." }` answers with a WAV body, `X-Speech-Cache` saying
  * whether it had been synthesised before, and `X-Speech-Key` naming the cache
- * entry so a slow response can be traced to a file.
+ * entry so a slow response can be traced to a file. The script arrives in the
+ * body rather than the query string because a section of narration is longer
+ * than a URL should be.
  *
- * The script arrives in the body rather than the query string because a section
- * of narration is longer than a URL should be.
+ * Nothing in the interface asks for audio this way. A page sends a key and
+ * `GET /api/speech/<key>` resolves it against the content on this side, which is
+ * what keeps a question's answer out of the browser. This is the engine's own
+ * door: it is how the speech specs put arbitrary words through it without
+ * borrowing a lesson's.
  */
 export async function POST(request: Request): Promise<Response> {
   const session = await auth.api.getSession({ headers: request.headers })
@@ -41,15 +46,11 @@ export async function POST(request: Request): Promise<Response> {
   } catch (error) {
     if (error instanceof InvalidScriptError) return problem(400, error.message)
     if (error instanceof SpeechServiceError) {
-      // The engine is a separate container, and it is off unless somebody is
-      // recording, so this is a gateway failure rather than a bug in this
-      // request. Almost always it means the script was edited after the last
-      // build, so the message names the command rather than the container.
+      // The engine is a separate container running alongside the app, so it not
+      // answering is a broken stack rather than a bug in this request, and
+      // there is nothing the reader could run to fix it.
       console.error(error)
-      return problem(
-        502,
-        'This section has no recording yet. Run npm run narration:build to make one.',
-      )
+      return problem(502, 'The voice is not available right now.')
     }
     throw error
   }

@@ -95,7 +95,7 @@ export function NarrationProvider({
       const section = sections[target]
       if (!section) return Promise.reject(new Error(`There is no narration section ${target}`))
 
-      const request = fetchNarrationAudio(section.script, { key: section.key })
+      const request = fetchNarrationAudio(section.key)
         .then((blob) => URL.createObjectURL(blob))
         .catch((failure: unknown) => {
           // Dropped so pressing play again is a real retry rather than a replay
