@@ -7,346 +7,117 @@ what is in flight, and what will bite you.
 
 ## Where this stands
 
-`main` holds every merge listed below. The repository has no git remote, and no
-task tracker either. Both are deliberate; see the hard rule in `CLAUDE.md`,
-which now covers every hosted service rather than only the company GitLab.
+`main` holds the browser track, merged from
+`feature/the-browser-not-the-language`. The repository has no git remote, and no
+task tracker either. Both are deliberate; see the hard rule in `CLAUDE.md`, which
+covers every hosted service rather than only the company GitLab.
 
-Verified green at its head: `npm run verify` exited 0 through lint, format
-check, typecheck, 307 unit tests, 26 integration tests against real Postgres and
-a real speech engine, the production build, and 52 Playwright end-to-end tests.
-The content check reports 12 topics, 131 questions, 24 exercises, 77 narration
-sections and 262 question scripts. Re-run `verify` rather than trusting any
+Verified green there: `npm run verify` exited 0 through lint, format check,
+typecheck, 310 unit tests, 26 integration tests against real Postgres and a real
+speech engine, the production build, and 52 Playwright end-to-end tests. The
+content check reports 43 topics, 466 questions, 86 exercises, 269 narration
+sections and 932 question scripts. Re-run `verify` rather than trusting any
 figure you read anywhere, including here, and read the section on piping it
 before you do.
 
 The platform is an interview preparation tool built around one loop: read a
 topic, mark it learned, answer recall questions on a schedule. The shell names no
-technology and the JavaScript track is twelve topics deep. Every topic can be
-listened to, the lesson shows which part of itself is being spoken, and every
-question and its answer can be listened to as well.
+technology. Every topic can be listened to, the lesson shows which part of itself
+is being spoken, and every question and its answer can be listened to as well.
 
-**No question takes typed input any more.** That is the largest change in the
-repository's history and the content side of it is now complete: all twelve
-topics are on the three forms. What remains is the rule that keeps them there,
-which is the next action. Each of the following landed on its own branch,
-merged with `--no-ff`, most recent first.
+**The platform is done and the remaining work is content.** No question takes
+typed input: every one is a choice question, an ordering question or an open
+question, at most one open per topic and only on an `interview` or `scenario`
+subject, and `npm run content:check` fails a build that breaks either rule.
+Nothing in the schema, the session flow or the speech pipeline is waiting on
+anything.
 
-**The value and reference topic is on the three forms**, the twelfth and last
-conversion. Eight of its ten questions are choice questions and
-`object-equality-interview` stays open, since a JSON comparison, a hand-written
-field check and an imported deep equality are three routes to a good answer;
-the scenario had one answer, the array's identity never changed, so it became a
-choice question. The ordering question, `copy-depth-order`, replaced
-`spread-versus-alias-output`, whose single printed line it absorbs: a spread and
-a `structuredClone` of the same object, four labelled logs, and a pool holding
-what each would print under the wrong depth, `name Bob` for spread as an alias,
-`tags 1` and `shared false` for spread as deep, `clone 3` for `structuredClone`
-as shallow. `deep-freeze` is four implementations, and each wrong one was run to
-find its failure: the missing null guard throws from `WeakSet.add`, the
-`Object.isFrozen` guard stops at anything frozen one level by someone else, and
-`Object.keys` leaves symbol-keyed and non-enumerable children writable. Nothing
-outside `content/` changed.
+**The JavaScript track is thirty-nine topics deep**, in teaching order from types
+and coercion to what a bundler changes. `README.md` lists them in that order and
+the `order` field in each `meta.ts` is the order itself. Topics arrive in groups
+of three or four, one group to a branch, and the groups that have landed since
+the conversions are functions, objects, collections and iteration, classes, async
+in practice, modules and the runtime, errors, and memory and performance. Read
+`git log` for what each one contained rather than a summary here.
 
-**The types and coercion topic is on the three forms**, the eleventh
-conversion. Nine of its eleven questions are choice questions and
-`string-ids-from-api` stays open, since normalising at the boundary, choosing a
-representation and rejecting bad ids are three routes to a good answer; the
-interview question has one crisp exception in it, `value == null`, so it became
-a choice question. The ordering question converted straight from an existing
-one, the fourth time that has happened: `plus-and-minus-output` already printed
-four lines and is now `plus-and-minus-order`. Its four distractors are each the
-value a line would print under the neighbouring operator, `3` and `31` for +
-and - swapped, `NaN` for `[] + {}` done as numbers, and `1,2,3` for arrays that
-concatenate. `null-comparisons-output` printed three lines but only ever says
-`true` or `false`, so it is a choice question whose wrong options are the three
-consistent worlds where `==` and `>=` agree. Every code sample, and every wrong
-option's claimed result, was run before its answer was written.
-
-**The this binding topic is on the three forms**, the tenth conversion. Nine
-of its eleven questions are choice questions and `class-field-vs-method` stays
-open, because the cost of arrow-function class fields is a set of trade-offs
-rather than one answer; the interview question is three definitions with one
-right pairing, so it became a choice question. Two of the three old multiple
-choice questions were replaced rather than renamed: `detached-method-mcq` was
-`lost-this-output` with the same code, and `bind-vs-call-mcq` became a copy of
-the interview question the moment that one had options. What took their places
-are the topic's two missing questions: the ordering question,
-`binding-precedence-order`, and `new-beats-bind-choice`, the one exception to
-bind being permanent. The ordering question is authored, not converted. Nothing
-in the topic printed several lines, so it is three calls that settle `this`
-three different ways, and the pool holds the receiver each call would have used
-under the wrong rule: `caller` if call beat bind, `owner` if call could reach an
-arrow, `holder` if a method remembered its object.
-
-**The scope and hoisting topic is on the three forms**, the ninth conversion.
-Ten of its eleven questions are choice questions and `const-is-not-frozen`
-stays open, since freeze, deep freeze and not sharing the object at all are
-three routes to a good answer; the interview question is a list with one right
-ordering, so it became a choice question, as it did in recursion. The ordering
-question, `function-then-var-order`, had to be authored, because the topic's
-only multi-line output printed two lines and the check wants three. It is a
-function declaration and a `var` sharing a name: the distractors are the
-`TypeError` you get if you believe the `var` resets the name to `undefined` at
-registration, and the `number` you get if you believe a `var` hoists with its
-value. The misreading it cannot hold, `early` printed twice, is named in the
-explanation instead, the same way `countdown-order` handles the mirrored ups.
-
-**The recursion topic is on the three forms**, the eighth conversion. Nine of
-its eleven questions are choice questions and `deep-json-walker` stays open: the
-interview question had a crisp criterion in it and became a choice question,
-while the scenario genuinely has several routes to a good answer. The ordering
-question is `countdown-order`, the third straight conversion of an existing
-multi-line output, and the easiest yet, because the old answer already was the
-correct sequence. Its distractors are `down 0` and `up 0`, the frame everybody
-adds: countdown(0) is a real call, and the base case returns before either log
-runs. The misreading the question actually exists to catch, the up lines
-mirroring the downs, cannot be a distractor because it is made of the real
-lines, so the explanation names it instead.
-
-**The prototypes topic is on the three forms**, the seventh conversion, and the
-first where an existing question converted straight into the ordering question
-the way the brief describes. `shadowing-output` already printed three lines; the
-work was the distractors, and the two worth having were the line a write that
-walked the chain would print and the `undefined` everyone expects after a
-`delete`.
-
-Replaced `object-create-null-mcq`, which asked the same thing as the
-`Object.create(null)` scenario four questions above it. What took its place is
-the topic's missing question: `item.tags.push()` reaching the prototype while
-`item.name =` does not, which is the read and write asymmetry at the point where
-it costs somebody a bug rather than a quiz mark.
-
-**The promises topic is on the three forms**, the sixth conversion. Nine of its
-eleven questions are choice questions and `all-vs-allsettled` stays open, since
-comparing four combinators is four answers rather than one. Its ordering
-question replaced `all-rejection-output`, whose ground the open question and
-`promise-all-rejection-choice` already cover twice over, and whose own ordering
-turned on how many microtask turns `allSettled` takes internally. That is
-trivia rather than understanding. What replaced it is an executor that resolves
-and then rejects: the pool holds the rejection that was ignored, so the question
-asks what settling once actually means.
-
-**The parameters and arguments topic is on the three forms**, the fifth
-conversion. Nine of its eleven questions are choice questions and
-`positional-or-options` stays open. Its ordering question is written from
-nothing, like the last one: a `trace` helper called from an argument and from a
-default, so the pool holds the default that never ran because an argument was
-supplied. It is the second topic in a row where the printed output was single
-values and the order had to be manufactured from evaluation order instead.
-
-Dropped `default-and-null`. Both of its facts, that only `undefined` triggers a
-default and that `null` is kept, are already the answer to
-`default-trigger-choice` two questions later.
-
-**The higher order functions topic is on the three forms**, the fourth
-conversion, and the first where the ordering question had to be written from
-nothing. The topic had no output that printed several lines worth ordering, and
-the async `forEach` question, which is about ordering, has no plausible line it
-never prints, so there were no distractors to be had. What worked was a
-`forEach` whose callback returns on one element and throws on the next: the pool
-holds the element that was skipped, the element that threw before logging, and
-the line after the loop that the throw jumped over. Three lines print and three
-do not. Expect to author rather than convert on any topic whose printed output
-is a single value.
-
-**The event loop topic is on the three forms**, the third conversion. Nine of its
-eleven questions are choice questions, `settimeout-delay` stays open because
-whether a timer fires on time has several routes to a good answer, and
-`ordering-basic` was already an ordering question and was left exactly as it was.
-That last part was the whole risk: `e2e/ordering.spec.ts` drives this topic and
-leans on that question being the first one, on its authored pool order, on its
-`correctOrder`, and on a sentence from its answer. Converting around it cost
-nothing. Moving it would have cost five specs.
-
-**The currying topic is on the three forms**, the second conversion. Eight of its
-eleven questions are choice questions, `bind-output` became the topic's ordering
-question, and `when-to-curry` stays open. Nothing outside `content/` had to
-change, because the specs that drive a session name the closures topic and the
-integration tests read their ids off it, so a second conversion cost the
-authoring and nothing else. Whether that holds for the next topic depends on
-which topic the tests are pointed at, not on the topic being converted.
-
-**The closures topic is on the three forms** (`20e8fc1`), the first of the twelve
-conversions and the shape the other eleven follow. Nine of its eleven questions
-are choice questions, one is an ordering question, and the interview question
-stays open. Two things it broke are worth knowing before the next topic: the
-end-to-end helper only looked for a question's controls rather than for controls
-that still respond, so a topic with choice questions back to back made it click
-a disabled button on the question animating out, and three integration tests
-named closures questions by id and went red when the ids moved. Both are fixed in
-the same merge and both will recur in the same shape.
-
-**A question climbs the ladder instead of sitting on one rung** (`a35b11f`).
-Nothing asks for a confidence rating, so the old rule of "rung equals rating
-minus one" could never move a question: every correct choice answer landed on
-three days forever. A correct answer on a graded form now moves a question up one
-rung from where it sits, out to a fortnight, and any wrong answer drops it to the
-bottom. An open question is placed by its self grade rather than moved. Topic
-status stopped averaging confidence, which had become a measure of which answer
-forms a topic contains rather than how well it is known. See
-`docs/decisions/0025-confidence-is-derived-and-the-ladder-climbs.md`.
-
-**Output questions are answered by putting lines in order** (`fc4d311`). A third
-answer form. The question shows a pool of lines, some of which the program never
-prints, and you tap them in the order they print. The pool is authored rather
-than shuffled so the recording can read it aloud, the browser sends back
-positions rather than text so a repeated line still grades, and the comparison is
-on what the lines say. Exactly one question uses it so far. See
-`docs/decisions/0024-ordering-questions-carry-distractors.md`.
-
-**Every question is answered by choosing or by marking yourself** (`c0a0a02`).
-The textarea, the exact output comparison and the confidence picker are gone. A
-question now carries a `type` saying what it is about and a `form` saying how it
-is answered, and every question carries `answerInFull`, which is what you would
-say if an interviewer asked. `npm run db:reset` arrived with it and the database
-was wiped, because an attempt against the old shape said nothing about the new
-one. See `docs/decisions/0023-every-question-is-answered-never-typed.md`.
-
-**A missing recording is no longer remembered after it is built** (`ea0d6bb`).
-The listen button on a question kept reporting that nothing had been recorded
-after every recording existed. The endpoint was serving the audio correctly and
-the browser never asked: it had stored the 404 from before the recordings were
-reachable and was replaying it. Two things allowed that. The refusal carried no
-`Cache-Control`, which makes a 404 heuristically cacheable, and the button asked
-with `cache: 'force-cache'`, which returns a stored response without
-revalidating. The refusal now says `no-store` and the request is a plain fetch.
-
-**The container serves the recordings the build actually made** (`31bbf57`). The
-app read a named Docker volume while `npm run narration:build` writes to
-`.speech-cache` on the host, so the two never met. Nothing looked wrong while a
-missing recording could be synthesised on first play, because the container
-quietly filled its own copy. Taking the engine out of the running stack removed
-that fallback and left 415 MB on the host and 20 MB in the volume. The app now
-bind mounts that same directory. See
-`docs/decisions/0022-one-place-for-recordings.md`.
-
-**Questions and answers are spoken from built audio** (`1d72336`). Every question
-carries a speaker button on its prompt, and a second one on the answer once it
-has been given; a choice question reads its options in order, and an ordering
-question reads its pool, so both can be answered by ear. The scripts are generated from the words the question already
-has rather than hand-written, which is the opposite of how a lesson is narrated,
-because a prompt is a sentence somebody asks out loud. Code is not read: a blank
-line separated paragraph holding an indented line is dropped and the voice says
-the code is on screen. `npm run content:check` now also refuses a question whose
-spoken form is longer than the engine takes in one request. See
-`docs/decisions/0021-questions-are-spoken-from-built-audio.md`.
-
-**The speech engine runs on demand** (`e17623f`). Piper is behind a compose
-profile, so `docker compose up` starts the app and the database and nothing else.
-`npm run narration:build`, the integration wrapper and the e2e runner each start
-it by name and stop it again on the way out. It is stopped with `SIGINT` rather
-than `SIGTERM`, because the server runs as PID 1 and PID 1 only receives signals
-it has a handler for; Python has one for `SIGINT` and not for `SIGTERM`, so every
-stop used to wait out the full grace period and end in a kill. See
-`docs/decisions/0020-the-speech-engine-runs-on-demand.md`.
-
-**The functions group** (`1cdb8ea`). Four topics: parameters and arguments,
-higher order functions, currying and partial application, and recursion with the
-call stack. They are interleaved rather than appended, because they belong at
-four different points in the teaching order, and the five topics below them were
-renumbered. A group is now a unit of authoring rather than a contiguous block of
-the syllabus, and the groups in `TASKS.md` lost their numbers as a result. See
-`docs/decisions/0019-a-group-is-a-branch-not-a-block-of-the-track.md`.
-
-**The AI tells came out of the written content** (`655512e`). Punctuation,
-repeated crutch phrasings and a handful of jargon words across the lessons,
-narration scripts, questions, docs and README. Meaning unchanged everywhere. The
-decision records also settled on one title format, `# NNNN. Title`.
-
-**The lesson follows the voice** (`064b862`). Every narration section carries a
-`heading` naming the lesson heading it covers, so while a topic is being listened
-to the page lights up that section, dims the rest, and scrolls to each one as the
-narration reaches it. Once the player card has scrolled away the same controls
-come back as a bar at the bottom of the screen. None of it happens for somebody
-who has not pressed play. See
-`docs/decisions/0018-the-lesson-follows-the-voice.md`.
-
-**Narration audio is built once, ahead of time** (`17e9b38`), on top of **the
-narration engine** (`0afd58d`) and **the topic narration player** (`2725b7a`).
-Audio is addressed by the content of the script, so editing a script is a new
-recording rather than a stale one, and the topic page computes each section's key
-on the server so playing a lesson is a file read. See decisions 0015, 0016
-and 0017.
-
-**The JavaScript fundamentals topics** (`d036604`), **the animated lesson
-visuals** (`e342b3c`) and **the topic concept map** (`b4121a8`). See decisions
-0012, 0013 and 0014.
-
-To run it: `npm run dev:docker` for the hot reload profile, or
-`docker compose up --build` for the built image. Either serves
-http://localhost:3000. Sign in with `dev@prep.test` / `dev`.
+**There is a second track now.** The browser is four topics of its own,
+`content/browser/`: the DOM, events and delegation, `fetch` and the network, and
+storage. They are not the language, they belong equally to a future React track,
+and `docs/decisions/0027-the-browser-is-its-own-track.md` is the argument. It
+cost nothing in `src/`: the label is the title cased directory name, the topic
+list grew a second section by itself, and the dashboard counted two tracks
+without being told. A topic's prerequisites now point across a track boundary,
+and nothing checks that the topic on the other end exists.
 
 ## In flight
 
-**Nothing is half done.** The working tree is clean at the head of `main`. This
-file has been tracked since `2d071fe`, having been deliberately untracked until
-then, so rewriting it is a commit now rather than a local edit. Eight branches
-were cut
-and merged during the rework and each was deleted on the way through, so the
-list below is unchanged from the last handoff rather than growing.
+**Nothing is half done.** The working tree is clean at the head of `main`.
 
-**Seven merged branches were never deleted**, which the conventions below say
-should happen: `improvement/unslop-content`,
-`feature/javascript-functions-group`, `improvement/speech-engine-on-demand`,
-`feature/spoken-questions`, `docs/measured-question-audio-cost`,
-`fix/recordings-the-container-cannot-see` and
-`fix/a-404-that-outlives-the-missing-recording`. All of them are merged into
-`main`, so deleting them loses nothing. Nobody has done it because permission was
-never asked for.
+**Twelve merged branches were never deleted**, which the conventions below say
+should happen: `docs/measured-question-audio-cost`, `feature/classes`,
+`feature/collections-and-iteration`, `feature/errors`,
+`feature/javascript-functions-group`, `feature/modules-and-the-runtime`,
+`feature/spoken-questions`, `feature/the-browser-not-the-language`,
+`fix/a-404-that-outlives-the-missing-recording`,
+`fix/recordings-the-container-cannot-see`, `improvement/speech-engine-on-demand`
+and `improvement/unslop-content`. All of them are merged into `main`, so deleting
+them loses nothing. Nobody has done it because permission was never asked for.
 
 ## The next action
 
-**Enforce one open question per topic.** Branch `improvement/open-question-cap`,
-described in full in `TASKS.md`. The content check currently accepts any number
-of open questions in a topic, because it had to while topics were still being
-converted. All twelve are converted now, so the check can fail a topic with two
-open questions, and fail an open question whose subject is anything but
-`interview` or `scenario`. The authoring convention in `TASKS.md` is rewritten
-to the three forms as part of the same task. Run the check across all twelve
-topics before writing the rule: every topic should already satisfy it, and any
-that does not is a content fix on the same branch.
+**There is no next action, and that is the state to understand before choosing
+one.** `TASKS.md` has nothing scheduled in it. Everything left in it is real work
+left unordered on purpose, each item needs breaking down before it is
+actionable, and none of it should be picked up as "the next task" without
+discussing it first: the browser runners, the `prep` CLI and its verdict
+endpoint, a backup for the one database nobody can reproduce, the other nine
+tracks, and the unused `shiki`.
 
-After that, the content groups in `TASKS.md` open up. Every one of them is
-authored to `docs/tasks/converting-a-topic.md`, which is why that brief outlives
-the conversions it was written for.
+The open items below are a second source of candidates, and two of them are
+close to actionable. The em dash sweep over `content/` is a branch of its own
+with nobody on it. And nobody has yet listened to a question read aloud and
+judged whether it works, which is the cheapest way left to find out whether the
+audio is worth what it cost.
 
-### What the twelve conversions have taught
+Any content work is authored to `docs/tasks/converting-a-topic.md`. That brief was written for the twelve
+conversions and outlives them: every group since has been written to it.
+
+### What authoring a group has taught
 
 Read `shadowing-output` in `content/javascript/prototypes/questions.ts`,
 `bind-output` in currying, `countdown-order` in recursion and
-`plus-and-minus-order` in types and coercion. They are the four
-cases where an existing question converted straight into the ordering question
-the way the brief describes, and all four did it because the original already
-printed several lines.
+`plus-and-minus-order` in types and coercion. They are the four cases where an
+existing question converted straight into an ordering question, and all four did
+it because the original already printed several lines.
 
-- **The ordering question is more often authored than converted.** Seven of the
-  twelve topics had no output printing several lines, or had one whose plausible
-  misreadings all used the same words. A pool needs lines the program never
-  prints, so look for a skipped element, an ignored `reject`, a default that never
-  ran, a line a `throw` jumped over. If nothing in the topic can fail to print,
-  write a new program. The event loop is the one topic that already had its
-  ordering question before any of this started.
+- **The ordering question is more often authored than converted.** A pool needs
+  lines the program never prints, so look for a skipped element, an ignored
+  `reject`, a default that never ran, a line a `throw` jumped over. If nothing in
+  the topic can fail to print, write a new program.
 - **Refuse an ordering question whose answer is internal scheduling.** The
   promises topic had one whose order turned on how many microtask turns
-  `allSettled` takes. That measures trivia. It was replaced rather than converted.
-- **Replacing a near-duplicate is normal.** It has happened four times now, and
-  each commit says which question went and where its content already lived. Two
-  questions asking the same thing is worse than ten questions in a topic.
-- **Run every code sample before writing its answer.** `node -e` twice caught
-  something the answer would otherwise have asserted wrongly: `console.log` prints
-  a bare string with no quotes when the string is a top-level argument, and an
-  explanation claimed a misreading would produce a two line output when the real
-  count is three. An answer in full is the thing a reader trusts most, so it is
-  the worst place to be approximately right.
+  `allSettled` takes. That measures trivia. It was replaced rather than
+  converted.
+- **Replacing a near-duplicate is normal.** Two questions asking the same thing
+  is worse than ten questions in a topic. Say in the commit which one went and
+  where its content already lives.
+- **Run every code sample before writing its answer.** `node -e` has twice caught
+  something an answer would otherwise have asserted wrongly. An answer in full is
+  the thing a reader trusts most, so it is the worst place to be approximately
+  right.
+- **A group is a branch, not a block of the track.** Its topics take whatever
+  positions in the teaching order they belong in, which usually means splitting
+  the group across the track and renumbering everything below it. The memory
+  group put its four topics in three different places and renumbered fourteen.
+  See `docs/decisions/0019-a-group-is-a-branch-not-a-block-of-the-track.md`.
+- **Build the audio last.** A recording is keyed by the hash of its spoken text,
+  so a question edited after `npm run narration:build` was started is simply not
+  recorded, and catching up costs another pass over the whole bank. Finish the
+  content, run `content:check`, then build the audio, then `verify`.
 
 Do not start by reading the schema. The schema is finished and the work is
 authoring: three wrong options that are wrong for interesting reasons is the part
-that teaches something, and it is now required on nearly every question in the
-bank.
-
-A note on numbering. `TASKS.md` is renumbered as each task completes, so any task
-number quoted in an older report or commit no longer points where it did. Read
-the current file, not a remembered index.
+that teaches something, and it is required on nearly every question in the bank.
 
 ## Open items
 
@@ -356,17 +127,22 @@ beside it are written separately and by hand. Change a lesson and the other two
 have to be revisited, or the page contradicts itself, which is worse than not
 having them. Both duplications were accepted deliberately, in
 `docs/decisions/0014-concept-map-recap.md` and
-`docs/decisions/0016-narration-is-written-not-read.md`. The mitigation is now
+`docs/decisions/0016-narration-is-written-not-read.md`. The mitigation is
 mechanical for one of the three: every narration section names the lesson heading
 it covers, and `npm run content:check` fails the build if that heading does not
 exist, so a rename cannot pass silently. Nothing checks that the two say the same
 thing, only that they point at each other.
 
-**Every new topic owes a narration script as well as a lesson.** Twelve topics
-is seventy seven sections already, and the eight content groups still to come
-each add three or four topics. It is written into the conventions under task 1 in
-`TASKS.md`, and it is the cost most likely to be underestimated. Question audio
-is generated, so it does not add to this; narration is hand-written and does.
+**Every new topic owes a narration script as well as a lesson.** Thirty-nine
+topics is two hundred and forty-one sections, all hand-written, and it is the
+cost most likely to be underestimated when planning a group. Question audio is
+generated, so it does not add to this; narration is written and does.
+
+**Em dashes have crept back into the content.** Two hundred and ninety-one of
+them across thirty-one files, in the groups written after
+`improvement/unslop-content` cleaned the original twelve topics, and the newest
+group added two more in option text. The house style forbids them. Nobody owns
+the sweep, and doing it as one pass over `content/` is a branch of its own.
 
 **Nobody has listened to a question read aloud and judged whether it works.**
 The pipeline is verified end to end, the recordings are valid WAV and the right
@@ -384,61 +160,26 @@ the stored narration speed. If a page ever needs three or more of these, or a
 sequence, move it onto `NarrationProvider` rather than growing the lock.
 
 **One topic highlights backwards.** In `closures`, the narration talks about what
-a closure costs before it gives the interview answer, but `lesson.mdx` puts
-Traps after The interview angle, so that section scrolls the reader up the page
-rather than down. The anchor is correct; the two documents genuinely disagree
-about order. Reordering either is content work and nobody owns it yet.
+a closure costs before it gives the interview answer, but `lesson.mdx` puts Traps
+after The interview angle, so that section scrolls the reader up the page rather
+than down. The anchor is correct; the two documents genuinely disagree about
+order. Reordering either is content work and nobody owns it yet. Every topic
+written since keeps the two in the same order, so this is the only one.
+
+**One topic has no open question at all**, `iterables-and-iterators`. The rule is
+a cap rather than a quota, so it passes the check. Worth knowing before reading
+it as an omission.
 
 **`shiki` is an unused dependency.** It is in `package.json` and nothing imports
 it. Left over from V1, when lessons were going to have syntax highlighted code
 blocks. Nobody owns it; it is recorded at the bottom of `TASKS.md`.
 
-**Seven questions are open because nothing has converted them yet.**
-They are not open because they earned it. The rule is at most one open question
-per topic, on an `interview` or `scenario` subject only, and the content check
-cannot enforce it while one topic would fail. That check is the last task in
-`TASKS.md` and it is blocked on the one conversion left. Until then the app is
-more self graded than it was before the rework, which is the opposite of the
-point and is entirely expected.
-
-**Three questions show a one-line explanation as their answer in full.**
-The ones that were already multiple choice never had a written answer, so their
-short `explanation` was moved into `answerInFull` rather than a new answer being
-invented for them. Honest, since it is the only prose they carry, and thin. The
-topic conversions fix it.
-
-**Three question ids still end in `-mcq`**, a word nothing in the codebase
-is called any more. Renaming them to end in `-choice` is part of converting each
-topic and is written into the brief, so do it there rather than in a sweep.
-
-**Two dashboard labels changed meaning.** Topic status now reads results and how
-much of a topic is passing rather than an average confidence. Three questions
-passed out of eight reads "learning" rather than "understood", and one Weak self
-grade among the last three keeps a topic at "learning". Both are more honest than
-what they replaced, but if a status looks pessimistic against a memory of the old
+**Two dashboard labels changed meaning.** Topic status reads results and how much
+of a topic is passing rather than an average confidence. Three questions passed
+out of eight reads "learning" rather than "understood", and one Weak self grade
+among the last three keeps a topic at "learning". Both are more honest than what
+they replaced, but if a status looks pessimistic against a memory of the old
 dashboard, this is why.
-
-**Only ten ordering questions exist.** `ordering-basic` in the event loop
-topic, whose distractor is a `.catch` on an already-resolved promise that never
-fires, `loop-timer-order` in closures, whose distractor is the line the same loop
-prints once it is written with `var`, `bind-output` in currying, whose
-distractors are the arity and the name a bound function would report if `bind`
-only fixed `this`, and `foreach-return-and-throw` in higher order functions,
-whose distractors are the two elements a `forEach` callback never logs and the
-line a throw jumps over, and `default-evaluation-order` in parameters and
-arguments, whose distractors are a default that never ran and the body it would
-have produced, and `settles-once-order` in promises, whose distractors are the
-two lines a rejection would have printed if the promise had not already settled,
-and `shadowing-output` in prototypes, whose distractors are a write that walked
-the chain and the `undefined` a `delete` looks like it should leave, and
-`countdown-order` in recursion, whose distractors are the two lines the base
-case frame never prints, and `function-then-var-order` in scope and hoisting,
-whose distractors are the error and the value a `var` would produce if
-registration did more than register, and `binding-precedence-order` in this
-binding, whose distractors are the three receivers a call site would see if call
-beat bind, if call could reach an arrow, or if a method remembered its object.
-Every other topic that has something happening in an
-order still owes one, which is part of its conversion.
 
 **`APP_TIMEZONE` defaults to UTC.** Until it is set in `.env`, the daily streak
 rolls over at UTC midnight rather than local midnight. Deliberate default, one
@@ -592,9 +333,11 @@ re-rendering a whole lesson every time the voice moves on is far worse. A
 refactor that "does this properly in React" is the thing this deliberately
 avoids. The dimming itself is one rule in `globals.css`.
 
-**`.speech-cache` is gitignored, holds 415 MB and takes about fifty minutes to
-rebuild.** One file per script, addressed by content: 77 narration sections and
-262 question recordings. The app bind mounts this directory, so it is not a
+**`.speech-cache` is gitignored, holds 2.7 GB and takes most of a working day to
+rebuild.** One file per script, addressed by content: 241 narration sections and
+844 question recordings, plus the orphans left behind by every edited script. The
+last group added 114 recordings in about forty-five minutes, which is the rate to
+plan against. The app bind mounts this directory, so it is not a
 convenience copy, it is where playback reads from. Deleting it means nothing
 plays until `npm run narration:build` has finished, and there is no synthesis
 fallback any more, so every listen button says to run the build until it does.

@@ -1,0 +1,353 @@
+## Why this matters
+
+Storage is where the tree goes when the tab closes, and it is the last topic in
+this track because it only makes sense once you know what a page is: something
+thrown away on every navigation.
+
+It is also the topic with the highest ratio of confident wrong answers, because
+three of the four options look interchangeable and are not. One is synchronous
+and blocks the main thread. One is sent to your server on every single request.
+One is the only one that can hold anything other than a string. And the question
+an interviewer actually wants to ask, which is where a session token belongs, has
+no comfortable answer at all.
+
+## The four places
+
+- **`localStorage`.** Synchronous, strings only, 5 to 10 MB, one copy per origin,
+  kept until something deletes it. Never sent anywhere.
+- **`sessionStorage`.** The same API and the same limits, scoped to one tab and
+  discarded when it closes.
+- **Cookies.** Synchronous, strings only, about 4 KB each with a browser cap on
+  how many per domain, and an expiry. Attached to every request your browser
+  makes to that origin.
+- **IndexedDB.** Asynchronous, transactional, hundreds of megabytes, and the only
+  one that stores things other than strings. Never sent anywhere.
+
+Everything here is per origin, and an origin is scheme, host and port. A page on
+`http://example.com` and a page on `https://example.com` cannot see each other's
+storage, which is occasionally a very confusing afternoon.
+
+The Cache API is a fifth place worth knowing exists. It stores whole `Response`
+objects, it is asynchronous, and it is what a service worker uses to serve a page
+offline. It is not a general key-value store and does not compete with these four.
+
+<MemoryModel
+  title="What each tab can see"
+  steps={[
+    {
+      note: 'Two tabs on the same origin. localStorage is one shared thing. Each tab has its own sessionStorage, and neither can see the other one.',
+      stack: [
+        { name: 'tab 1', ref: 'session-1' },
+        { name: 'tab 2', ref: 'session-2' },
+      ],
+      heap: [
+        { id: 'local', label: 'localStorage (the origin)', fields: { theme: '"dark"' } },
+        { id: 'session-1', label: 'sessionStorage, tab 1', fields: { draft: '"hello"' } },
+        { id: 'session-2', label: 'sessionStorage, tab 2', fields: {} },
+      ],
+    },
+    {
+      note: 'Tab 1 writes a new theme. localStorage is shared, so tab 2 now reads the new value the next time it looks.',
+      stack: [
+        { name: 'tab 1', ref: 'session-1' },
+        { name: 'tab 2', ref: 'session-2' },
+      ],
+      heap: [
+        { id: 'local', label: 'localStorage (the origin)', fields: { theme: '"light"' } },
+        { id: 'session-1', label: 'sessionStorage, tab 1', fields: { draft: '"hello"' } },
+        { id: 'session-2', label: 'sessionStorage, tab 2', fields: {} },
+      ],
+      highlight: ['local'],
+    },
+    {
+      note: 'And tab 2 gets a storage event telling it what changed. Tab 1 does not: the event fires in every other tab on the origin, never in the one that made the change.',
+      stack: [
+        { name: 'tab 1', ref: 'session-1' },
+        { name: 'tab 2', ref: 'session-2' },
+      ],
+      heap: [
+        { id: 'local', label: 'localStorage (the origin)', fields: { theme: '"light"' } },
+        {
+          id: 'session-1',
+          label: 'sessionStorage, tab 1',
+          fields: { 'storage event': 'not fired' },
+        },
+        {
+          id: 'session-2',
+          label: 'sessionStorage, tab 2',
+          fields: { 'storage event': 'theme, dark to light' },
+        },
+      ],
+      highlight: ['session-2'],
+    },
+  ]}
+/>
+
+## Web storage, and what a string costs
+
+`localStorage` and `sessionStorage` are the same API with different lifetimes.
+`localStorage` survives until something deletes it. `sessionStorage` lives as
+long as the tab, survives a reload, and is copied into a tab opened from a link.
+
+```js
+localStorage.setItem('count', 1)
+localStorage.getItem('count') // '1', a string
+localStorage.getItem('missing') // null, never undefined
+localStorage.removeItem('count')
+localStorage.clear()
+```
+
+**Every value is a string.** Not "is converted for you", literally stored as one,
+so a number comes back as a number-shaped string and an object comes back as
+`'[object Object]'` unless you serialised it. The round trip is yours to write,
+and both halves can fail:
+
+```js
+localStorage.setItem('settings', JSON.stringify(settings))
+
+const raw = localStorage.getItem('settings')
+const settings = raw ? JSON.parse(raw) : defaults // parse throws on anything corrupt
+```
+
+That guard is not defensive programming. A half-written value from a previous
+version of your code, or a key someone edited in devtools, is a `SyntaxError`
+thrown at module load, and the page shows nothing at all. Wrap reads in a
+function that catches, returns the default, and removes the bad key.
+
+**It is synchronous, which is the real cost.** Every read and write blocks the
+main thread, including the disk access, and it is a shared resource across tabs
+so it can block on another tab's write. That is fine for a theme and a feature
+flag. It is not fine in a loop, in a scroll handler, or for anything large:
+reading a megabyte of JSON out of `localStorage` on startup parses that megabyte
+before your first paint. The measurement people quote is that this is the reason
+storing application state there stops scaling, and the fix is IndexedDB.
+
+**The quota is small and running out throws.** Between 5 and 10 MB per origin,
+and exceeding it raises a `QuotaExceededError` from `setItem`. Private browsing
+modes have historically had a quota of zero, or none at all, so a write can fail
+in a way you will never see in development.
+
+**The `storage` event fires in other tabs, not in the one that wrote.** This
+catches everyone once. It is also genuinely useful: it is the simplest way to log
+a user out of every tab at once, and to keep a theme toggle in step.
+
+```js
+window.addEventListener('storage', (event) => {
+  if (event.key === 'auth' && event.newValue === null) redirectToLogin()
+})
+```
+
+`BroadcastChannel` is the better tool when cross-tab messaging is the actual
+goal, since it does not require writing to storage to say something.
+
+## Cookies are not storage
+
+A cookie is a mechanism for telling a server something, and it happens to persist
+on the way past. That framing is the whole topic.
+
+**Every cookie for the origin is attached to every request to it.** Images,
+scripts, API calls, all of them. Four kilobytes of cookies on a page with fifty
+requests is two hundred kilobytes of upload for data your JavaScript could have
+kept for free. This is why "just put it in a cookie" is the wrong instinct for
+anything that is not for the server.
+
+The JavaScript API is a historical accident and worth seeing once:
+
+```js
+document.cookie = 'theme=dark; Max-Age=31536000; Path=/; SameSite=Lax; Secure'
+document.cookie // 'theme=dark; consent=1; session=abc' - everything, concatenated
+```
+
+Assigning sets exactly one cookie. Reading gives you all of them in one string,
+with no way to see any attribute. `cookieStore`, the modern asynchronous
+replacement, is the thing to use where it is available.
+
+The attributes are where the interview questions are.
+
+- **`HttpOnly`** makes the cookie invisible to JavaScript. `document.cookie`
+  cannot see it and cannot overwrite it. Only the server can set this, and it is
+  the single most important flag for anything that authenticates.
+- **`Secure`** sends it only over HTTPS.
+- **`SameSite`** decides whether it goes with cross-site requests. `Lax` is the
+  modern default and sends it on top-level navigation but not on a cross-site
+  `fetch` or form post. `Strict` never sends it cross-site. `None` always does and
+  requires `Secure`.
+- **`Max-Age` or `Expires`** make it persistent. Without either, it is a session
+  cookie and dies with the browser.
+- **`Path` and `Domain`** narrow or widen where it is sent. `Domain` can only
+  widen to a parent domain, never to another site.
+
+`SameSite=Lax` is most of the answer to cross-site request forgery, and "most" is
+carrying weight: it does not cover a cross-site `POST` from a subdomain you do not
+control, and it is a default rather than a guarantee, so a server that cares still
+wants a token.
+
+## IndexedDB, and when you need it
+
+The real database. Asynchronous, transactional, hundreds of megabytes, indexed
+lookups, and the only one of the four that stores things other than strings.
+
+**It uses the structured clone algorithm, not JSON.** That is a bigger difference
+than it sounds:
+
+```js
+const value = { at: new Date(), seen: new Set([1, 2]), blob: file }
+// JSON.stringify: the date becomes a string, the Set becomes {}, the file is lost.
+// IndexedDB: all three come back as what they were.
+```
+
+Structured clone keeps `Date`, `Map`, `Set`, `RegExp`, `ArrayBuffer`, `Blob` and
+`File`, and it handles cycles. It refuses functions, symbols, DOM nodes and class
+identity, so an instance comes back as a plain object with the same properties.
+
+The raw API is event-based, verbose and older than promises, and nobody writes it
+by hand:
+
+```js
+const request = indexedDB.open('app', 1)
+request.onupgradeneeded = () => request.result.createObjectStore('notes', { keyPath: 'id' })
+request.onsuccess = () => {
+  /* and now the transaction dance begins */
+}
+```
+
+Use a wrapper. `idb` is four kilobytes and turns the whole thing into promises.
+Saying that in an interview is a better answer than reciting the event names,
+provided you can also say what a version, an object store, a key path and an
+index are, and that writes happen in transactions that auto-commit when the
+microtask queue drains, which is why an `await` on something unrelated inside a
+transaction ends it.
+
+Reach for it when the data is large, structured, queried rather than read whole,
+or not a string. Reach for `localStorage` when it is a preference. Between those,
+most applications want IndexedDB and use `localStorage` because it is one line.
+
+## Where a token should live
+
+The question is asked in most front end interviews and the expected answer is
+"not `localStorage`", but the reasoning matters more than the answer.
+
+**`localStorage` is readable by any JavaScript on the page.** That includes every
+dependency, every script a dependency loads, and anything an attacker injects. A
+single cross-site scripting hole reads the token and sends it somewhere, and the
+token keeps working from the attacker's machine.
+
+**An `HttpOnly` cookie is not readable by JavaScript at all.** An attacker with a
+script on your page can still make requests as the user, because the browser
+attaches the cookie for them, but they cannot take the token away with them. The
+damage is confined to the session and to the time your page is open. That is a
+real and meaningful difference, and it is the reason the cookie is the better
+default.
+
+The cost is that a cookie sent automatically is sent on requests the user did not
+initiate, which is cross-site request forgery. `SameSite=Lax` handles most of it
+and a CSRF token handles the rest.
+
+The honest summary, which is what a good interviewer is listening for: cross-site
+scripting defeats both. With script running on your page, an attacker can act as
+the user whatever you did with the token. `HttpOnly` limits the blast radius, it
+does not remove it, and the real defences are a content security policy, output
+encoding, and not shipping the hole in the first place.
+
+The pattern most teams land on is a short-lived access token in memory only, in a
+JavaScript variable that dies with the page, and a long-lived refresh token in an
+`HttpOnly`, `Secure`, `SameSite` cookie scoped to the refresh endpoint alone.
+Nothing durable is ever readable by script, and a page reload costs one refresh
+call.
+
+## The interview angle
+
+> **"`localStorage` or `sessionStorage`?"**
+> Same API, different lifetime and scope. `sessionStorage` is per tab and dies
+> with it, `localStorage` is per origin and persists. Then say the thing neither
+> name tells you: both are synchronous and both hold only strings.
+
+> **"Why not keep application state in `localStorage`?"**
+> Synchronous, so every access blocks the main thread including the disk. Strings
+> only, so everything is a serialise and a parse. Five megabytes. And no
+> transactions, so two tabs writing at once is a lost update. IndexedDB is the
+> answer to all four.
+
+> **"Where do you store a JWT?"**
+> Not `localStorage`, because any script on the page can read it. An `HttpOnly`
+> cookie, with `Secure` and `SameSite`, plus CSRF protection. Then be honest that
+> cross-site scripting defeats both and that this limits the damage rather than
+> preventing it.
+
+> **"What does `SameSite` do?"**
+> Decides whether the cookie is attached to cross-site requests. `Lax`, the
+> default, allows top-level navigation and not a cross-site `fetch` or form post,
+> which is most of a CSRF defence.
+
+Expect a follow-up asking why IndexedDB stores a `Date` and JSON does not, and
+answer it with structured clone.
+
+## Traps
+
+- **Everything in web storage is a string.** `getItem` returns `null` for a
+  missing key, never `undefined`, and `'null'` is a different thing again.
+- **`JSON.parse` on a stored value throws.** One corrupt key can blank the whole
+  page at load.
+- **It is synchronous.** A large read blocks the first paint.
+- **The `storage` event does not fire in the tab that wrote.** Update your own UI
+  yourself.
+- **`setItem` throws when the quota is gone**, and private modes have had a quota
+  of zero.
+- **Cookies go up on every request**, including every image and every API call.
+- **A cookie set from JavaScript can never be `HttpOnly`.** If script can set it,
+  script can read it.
+- **A transaction ends when the microtask queue drains.** An `await` on anything
+  unrelated inside an IndexedDB transaction closes it.
+
+## In one picture
+
+<ConceptMap
+  center={'Storage'}
+  branches={[
+    {
+      label: 'Web storage',
+      summary: 'One line, and three costs.',
+      nodes: [
+        'synchronous, so it blocks the main thread',
+        'strings only, so every value is a round trip through JSON',
+        'five megabytes, and setItem throws when it runs out',
+      ],
+    },
+    {
+      label: 'Scope',
+      summary: 'Origin is scheme, host and port.',
+      nodes: [
+        'localStorage is shared by every tab on the origin',
+        'sessionStorage is one tab and survives a reload',
+        'the storage event fires in the other tabs, never in this one',
+      ],
+    },
+    {
+      label: 'Cookies',
+      summary: 'A message to the server that happens to persist.',
+      nodes: [
+        'attached to every request, so four kilobytes is expensive',
+        'HttpOnly hides it from script, and only a server can set that',
+        'SameSite Lax is most of a CSRF defence',
+      ],
+    },
+    {
+      label: 'IndexedDB',
+      summary: 'The one that is actually a database.',
+      nodes: [
+        'asynchronous, transactional, indexed, large',
+        'structured clone, so Date, Map, Set and Blob survive',
+        'use a wrapper, and know what a version and a key path are',
+      ],
+    },
+    {
+      label: 'Tokens',
+      summary: 'Limit the damage rather than pretending to prevent it.',
+      nodes: [
+        'localStorage is readable by every script on the page',
+        'HttpOnly cookie plus SameSite plus a CSRF token',
+        'access token in memory, refresh token in the cookie',
+      ],
+    },
+  ]}
+/>

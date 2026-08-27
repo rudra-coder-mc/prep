@@ -20,14 +20,21 @@ throwing and catching, error objects and the built-in types, custom error types,
 the event loop and microtasks, debounce and throttle, promises with async/await,
 promise combinators, async error handling, `AbortController`, async iteration,
 ES modules against CommonJS, module resolution and side effects, and what a
-bundler changes. Each has an
-animated lesson, ten or eleven questions in the forms interviews actually use,
-and two practical exercises. The remaining groups needed for full interview
-coverage are listed in `TASKS.md`.
+bundler changes.
+
+The browser track covers four more: the DOM, events and delegation, `fetch` and
+the network, and storage. They are a separate track because none of them is the
+language. `document`, `addEventListener`, `fetch` and `localStorage` come from
+the browser rather than from any JavaScript engine, and they belong equally to a
+future React track. Preparing for a front end interview means both tracks. See
+`docs/decisions/0027-the-browser-is-its-own-track.md`.
+
+Every topic in both has an animated lesson, ten or eleven questions in the forms
+interviews actually use, and two practical exercises.
 
 The architecture supports adding TypeScript, React, Next.js, Node, Express,
 NestJS, MongoDB and PostgreSQL later without schema changes. Adding a topic is
-adding a directory under `content/`.
+adding a directory under `content/`, and adding a track is the same thing.
 
 ## Running it
 

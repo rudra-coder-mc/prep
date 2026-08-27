@@ -1,0 +1,361 @@
+## Why this matters
+
+Delegation is the most reliably asked front end question that is not about a
+framework, and it is asked because the answer shows whether you know the event
+model or only the method name. Everyone can attach a click handler. The follow-up
+questions are about the path the event took to get there.
+
+It is also the topic that explains a whole class of bugs that look unrelated: the
+button that stops working after a re-render, the modal that closes when you click
+inside it, the form that submits when you meant to validate, the scroll that
+stutters. All four are the same three ideas.
+
+## Three phases, one path
+
+An event does not fire on an element. It travels a path, and the path is
+computed once, before anything runs.
+
+The browser takes the target and walks up to the root, collecting every ancestor.
+Then the event goes down that list from `window` to the target, which is the
+**capture phase**, arrives at the target, and comes back up, which is the
+**bubble phase**. Every listener on the path gets its turn, in that order.
+
+```js
+element.addEventListener('click', handler) // bubble, the default
+element.addEventListener('click', handler, true) // capture
+element.addEventListener('click', handler, { capture: true }) // the same, said clearly
+```
+
+<CodeWalkthrough
+  title="One click, six listeners"
+  code={`// <body><div id="card"><button id="buy">Buy</button></div></body>
+
+document.body.addEventListener('click', () => console.log('body capture'), true)
+card.addEventListener('click', () => console.log('card capture'), true)
+buy.addEventListener('click', () => console.log('buy'))
+card.addEventListener('click', () => console.log('card bubble'))
+document.body.addEventListener('click', () => console.log('body bubble'))`}
+steps={[
+{
+lines: [1],
+note: 'The user clicks the button. Before any listener runs, the browser builds the path: window, document, html, body, card, buy.',
+variables: { phase: 'about to capture', target: 'buy' },
+},
+{
+lines: [3],
+note: 'Capture runs from the outside in, so the body listener registered with true goes first, even though the click was nowhere near the body.',
+variables: { phase: 'capture', currentTarget: 'body' },
+output: ['body capture'],
+},
+{
+lines: [4],
+note: 'Then the card, still on the way down.',
+variables: { phase: 'capture', currentTarget: 'card' },
+output: ['body capture', 'card capture'],
+},
+{
+lines: [5],
+note: 'The target phase. Listeners on the target itself run in the order they were added, and the capture flag no longer decides anything here.',
+variables: { phase: 'target', currentTarget: 'buy' },
+output: ['body capture', 'card capture', 'buy'],
+},
+{
+lines: [6, 7],
+note: 'Then bubbling, from the inside out, which is the reverse of the capture order. This is the phase delegation uses.',
+variables: { phase: 'bubble', currentTarget: 'body' },
+output: ['body capture', 'card capture', 'buy', 'card bubble', 'body bubble'],
+},
+]}
+/>
+
+Two properties tell you where you are, and mixing them up is the commonest
+delegation bug.
+
+- **`event.target`** is what the event happened to. It never changes as the event
+  travels.
+- **`event.currentTarget`** is the element whose listener is running right now.
+  It changes at every step, and it is what `this` is bound to in a listener
+  written as a normal function.
+
+`currentTarget` is only meaningful while the listener runs. Read it later, from a
+`setTimeout` or an `await`, and it is `null`.
+
+**Not everything bubbles.** `focus` and `blur` do not, which is why `focusin` and
+`focusout` exist and do. `mouseenter` and `mouseleave` do not, which is why
+`mouseover` and `mouseout` exist and do. When delegation mysteriously does not
+work, check `event.bubbles` before you check anything else.
+
+## Delegation
+
+One listener on an ancestor, instead of one listener per element.
+
+```js
+list.addEventListener('click', (event) => {
+  const button = event.target.closest('.delete')
+  if (!button || !list.contains(button)) return
+  remove(button.closest('.row').dataset.id)
+})
+```
+
+`closest` walks up from the target through its ancestors and returns the first
+match, which is what turns "you clicked the icon inside the span inside the
+button" into "you clicked the button". The `contains` check matters when the
+container is `document`, because `closest` can walk out past it.
+
+<MemoryModel
+  title="Where the listeners live"
+  steps={[
+    {
+      note: 'One listener per row. A thousand rows is a thousand registrations, a thousand closures, and a thousand things to remember to remove.',
+      stack: [{ name: 'list', ref: 'list-a' }],
+      heap: [
+        { id: 'list-a', label: 'ul', fields: { listeners: 'none' } },
+        { id: 'row-1', label: 'row 1', fields: { listeners: 'click' } },
+        { id: 'row-2', label: 'row 2', fields: { listeners: 'click' } },
+        { id: 'row-n', label: 'row 1000', fields: { listeners: 'click' } },
+      ],
+      highlight: ['row-1', 'row-2', 'row-n'],
+    },
+    {
+      note: 'Delegated. One listener on the list, and the rows carry nothing. The click still starts at the row and reaches the list by bubbling.',
+      stack: [{ name: 'list', ref: 'list-b' }],
+      heap: [
+        { id: 'list-b', label: 'ul', fields: { listeners: 'click' } },
+        { id: 'row-1', label: 'row 1', fields: { listeners: 'none' } },
+        { id: 'row-2', label: 'row 2', fields: { listeners: 'none' } },
+        { id: 'row-n', label: 'row 1000', fields: { listeners: 'none' } },
+      ],
+      highlight: ['list-b'],
+    },
+    {
+      note: 'Now replace every row. In the per-row version every listener went with the nodes it was on and has to be reattached. In the delegated version nothing happened, because the listener was never on a row.',
+      stack: [{ name: 'list', ref: 'list-b' }],
+      heap: [
+        { id: 'list-b', label: 'ul', fields: { listeners: 'click' } },
+        { id: 'row-new', label: 'row 1, rebuilt', fields: { listeners: 'none, and works' } },
+      ],
+      highlight: ['row-new'],
+    },
+  ]}
+/>
+
+Three reasons it is worth doing, and they are not equally important.
+
+**It survives the tree changing.** This is the real reason. Rows that did not
+exist when the listener was attached are handled anyway, because the listener is
+not on them. Any code that rebuilds its markup gets this for free and otherwise
+has to reattach by hand and will eventually forget.
+
+**It is one registration instead of many.** Real, and secondary. A thousand
+listeners is measurable at the margin, and it is rarely the thing making a page
+slow.
+
+**There is one place to look.** A single handler that reads the target is easier
+to reason about than a thousand closures, each capturing whatever was in scope
+when its row was built.
+
+The cost is that the handler now has to work out what was clicked, and getting
+that wrong is quiet. Match on something structural such as a class or a
+`data-action` attribute, never on tag name or text, and always use `closest`
+rather than comparing `event.target` to an element, because the target is
+whatever the user's pointer actually landed on.
+
+## Stopping and preventing
+
+Two unrelated things with similar names, and an interviewer will ask you to
+separate them.
+
+**`preventDefault` cancels the browser's built-in reaction.** The form does not
+submit, the link does not navigate, the checkbox does not tick. The event carries
+on along its path exactly as before, and every remaining listener still runs.
+
+**`stopPropagation` ends the journey.** No listener further along the path runs.
+The default action still happens, because the default is not a listener.
+
+**`stopImmediatePropagation`** does that and also skips the other listeners on
+the current element, which are otherwise all run in registration order.
+
+The rule of thumb worth stating: `preventDefault` is almost always what you
+wanted, and `stopPropagation` is almost always a bug waiting to be filed. It
+breaks things it cannot see. A click that stops propagating never reaches the
+document, so the dropdown that closes on an outside click stays open, the
+analytics listener records nothing, and nobody connects the two.
+
+The honest exception is a nested interactive region: a delete button inside a
+row that is itself clickable. Even there, the better shape is often to let it
+propagate and have the row handler check whether the target was inside the
+button.
+
+There is one more source of confusion, which is `return false`. In an inline
+`onclick` attribute, and in jQuery, returning false means `preventDefault` and
+`stopPropagation` together. In a listener added with `addEventListener`, it means
+nothing at all.
+
+**Passive listeners are the other half of this.** Scroll and touch listeners
+block scrolling until they finish, because the browser cannot know whether you
+are about to call `preventDefault`. Marking a listener passive promises that you
+will not, and lets the browser scroll immediately:
+
+```js
+window.addEventListener('scroll', onScroll, { passive: true })
+```
+
+Browsers already treat `touchstart`, `touchmove` and `wheel` listeners on the
+document as passive by default, which is why the `preventDefault` in one of them
+does nothing and logs a warning.
+
+## The listener you forgot to remove
+
+`removeEventListener` needs the same type, the same options, and the same
+function reference. Not an equal function, the same one.
+
+```js
+element.addEventListener('click', () => save()) // nothing can ever remove this
+```
+
+A listener holds its handler, the handler closes over its scope, and the element
+holds the listener. So a listener on something long lived, `window`, `document`
+or a store, keeps the entire component that registered it alive for as long as
+the page is open. That is the shape of most front end memory leaks.
+
+Three ways not to have the problem:
+
+```js
+element.addEventListener('click', onClick)
+element.removeEventListener('click', onClick) // the same reference, so it works
+
+element.addEventListener('click', onClick, { once: true }) // removed after it fires
+
+const controller = new AbortController()
+window.addEventListener('resize', onResize, { signal: controller.signal })
+document.addEventListener('keydown', onKey, { signal: controller.signal })
+controller.abort() // both gone, in one call
+```
+
+The `signal` option is the one to reach for, and it is the same `AbortController`
+that cancels a `fetch`. A component holds one controller, registers everything
+with its signal, and calls `abort` when it tears down. There is no list of
+removals to keep in step with the list of additions.
+
+Delegation helps here too, for the same reason it survives re-renders: a listener
+on a container that outlives the rows is one registration whose lifetime you can
+actually reason about.
+
+## Custom events
+
+Your own events, dispatched through the same tree and caught by the same
+listeners.
+
+```js
+element.dispatchEvent(new CustomEvent('cart:add', { detail: { id, quantity }, bubbles: true }))
+```
+
+Two details do all the damage. **A custom event does not bubble unless you say
+`bubbles: true`**, and the default is the opposite of what people expect from
+built-in events. And **the payload goes in `detail`**, because anything else you
+put on the object is not part of the event interface.
+
+`dispatchEvent` is synchronous. It runs every listener and returns when they are
+done, so it behaves like a function call, not like a queued task. Its return
+value is `false` when a listener called `preventDefault`, which is only
+meaningful if you constructed the event with `cancelable: true`.
+
+This is a decent decoupling tool for parts of a page that should not know about
+each other, and it is not a general event bus. The listener has to be on an
+ancestor of the dispatching element, which means the tree decides who can hear
+you.
+
+## The interview angle
+
+> **"What is event delegation and why would you use it?"**
+> One listener on a container instead of one per child, working because events
+> bubble. The reason is that it keeps working when the children are replaced,
+> which is what happens on every render. Fewer listeners is a side benefit, not
+> the point.
+
+> **"What is the difference between `target` and `currentTarget`?"**
+> `target` is what the event happened to and never changes. `currentTarget` is
+> whose listener is running, changes at every step of the path, and is what `this`
+> is in a normal function listener.
+
+> **"`preventDefault` or `stopPropagation`?"**
+> Different jobs. One cancels the browser's reaction and lets the event carry on.
+> The other ends the path and leaves the reaction alone. Then say that
+> `stopPropagation` breaks listeners you cannot see, and that you avoid it.
+
+> **"How do you clean up listeners?"**
+> Keep the reference, or use `once`, or pass an `AbortSignal` and abort it. Then
+> say why it matters: a listener on `window` keeps everything it closed over alive.
+
+Expect a follow-up on capture, and answer it with when you would use it: catching
+an event before something further in can stop it.
+
+## Traps
+
+- **`stopPropagation` breaks code that is not in front of you.** Outside-click
+  handlers and analytics both live further up the path.
+- **`return false` does nothing in an `addEventListener` handler.** It is an
+  inline-attribute and jQuery convention.
+- **`focus`, `blur`, `mouseenter` and `mouseleave` do not bubble.** Delegation
+  needs `focusin`, `focusout`, `mouseover` and `mouseout`.
+- **A custom event does not bubble by default.** Built-in ones mostly do, which is
+  what makes this surprising.
+- **`removeEventListener` needs the same function reference.** An inline arrow can
+  never be removed.
+- **`currentTarget` is `null` after the listener returns.** Capture what you need
+  before an `await`.
+- **A `preventDefault` in a passive listener is ignored.** Scroll and touch
+  listeners on the document are passive whether you asked or not.
+
+## In one picture
+
+<ConceptMap
+  center={'Events'}
+  branches={[
+    {
+      label: 'The path',
+      summary: 'Computed once, walked twice.',
+      nodes: [
+        'capture from window down to the target',
+        'the target, in registration order',
+        'bubble back up, which is what delegation uses',
+      ],
+    },
+    {
+      label: 'Where am I',
+      summary: 'Two properties, one bug.',
+      nodes: [
+        'target is what it happened to, and never changes',
+        'currentTarget is whose listener is running',
+        'this is currentTarget, unless the handler is an arrow',
+      ],
+    },
+    {
+      label: 'Delegation',
+      summary: 'One listener on something that outlives the rows.',
+      nodes: [
+        'closest gets from the clicked icon to the row',
+        'match on a class or a data attribute, never on tag or text',
+        'survives the children being replaced, which is the real reason',
+      ],
+    },
+    {
+      label: 'Stopping',
+      summary: 'Two names, two unrelated jobs.',
+      nodes: [
+        'preventDefault cancels the browser reaction',
+        'stopPropagation ends the path and breaks what it cannot see',
+        'passive promises you will not prevent, so scrolling need not wait',
+      ],
+    },
+    {
+      label: 'Cleanup',
+      summary: 'A listener is a reference from something long lived.',
+      nodes: [
+        'remove needs the same function, not an equal one',
+        'once for a listener that fires and goes',
+        'one AbortController signal for everything a component registers',
+      ],
+    },
+  ]}
+/>

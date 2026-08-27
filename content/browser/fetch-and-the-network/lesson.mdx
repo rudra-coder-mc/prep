@@ -1,0 +1,401 @@
+## Why this matters
+
+`fetch` looks like the easiest thing in this track and produces the most
+production bugs, because two of its defaults are the opposite of what everyone
+assumes. A failing request does not reject. A response body can only be read
+once. Code written on the assumption that either is untrue works perfectly until
+the server has a bad day.
+
+The interview version of this topic is rarely "how do you make a request". It is
+"what happens when it fails", and that is a question about error handling, about
+cancellation, and about who enforces the cross-origin rules.
+
+## The two promises
+
+One request, two separate waits.
+
+```js
+const response = await fetch('/api/items') // resolves when the headers arrive
+const items = await response.json() // resolves when the body has been read
+```
+
+The first promise settles as soon as the browser has the status line and the
+headers. The body may not have started arriving. That is not an
+implementation detail: it is what lets you look at the status, or at a content
+type, and decide whether to bother reading the rest.
+
+The second promise is the body. `json`, `text`, `blob`, `arrayBuffer` and
+`formData` all read the stream to the end and give you the whole thing, and each
+one is asynchronous because reading is.
+
+<PromiseTimeline
+  title="One request, two settlements"
+  steps={[
+    {
+      note: 'fetch is called. Both promises exist as far as your code is concerned, and neither has an answer. The request is on the network.',
+      promises: [
+        { id: 'res', label: 'fetch(url)', state: 'pending' },
+        { id: 'body', label: 'response.json()', state: 'pending' },
+      ],
+    },
+    {
+      note: 'The headers arrive. The first promise fulfils with a Response, carrying status, headers and ok. Nothing of the body has been read yet.',
+      promises: [
+        { id: 'res', label: 'fetch(url)', state: 'fulfilled', value: 'Response 200' },
+        { id: 'body', label: 'response.json()', state: 'pending' },
+      ],
+      output: ['status 200, ok true'],
+    },
+    {
+      note: 'Reading the body drains the stream, which takes as long as it takes. The second promise fulfils with the parsed value.',
+      promises: [
+        { id: 'res', label: 'fetch(url)', state: 'fulfilled', value: 'Response 200' },
+        { id: 'body', label: 'response.json()', state: 'fulfilled', value: '[ ...42 items ]' },
+      ],
+      output: ['status 200, ok true', '42 items'],
+    },
+    {
+      note: 'Now the case that catches people. The server answers 500. The first promise still fulfils, because a response arrived and fetch only rejects when there is no response at all.',
+      promises: [
+        { id: 'res', label: 'fetch(url)', state: 'fulfilled', value: 'Response 500' },
+        { id: 'body', label: 'response.json()', state: 'pending' },
+      ],
+      output: ['status 500, ok false'],
+    },
+    {
+      note: 'And the body of that 500 is usually an HTML error page, so parsing it as JSON rejects. The failure surfaces one promise later than the thing that actually went wrong.',
+      promises: [
+        { id: 'res', label: 'fetch(url)', state: 'fulfilled', value: 'Response 500' },
+        { id: 'body', label: 'response.json()', state: 'rejected', value: 'SyntaxError' },
+      ],
+      output: ['status 500, ok false', 'SyntaxError: Unexpected token <'],
+    },
+  ]}
+/>
+
+## When `fetch` does not throw
+
+**`fetch` rejects when there was no response.** A DNS failure, a refused
+connection, a dropped network, a request blocked by CORS or by an extension, or
+an abort. That is the whole list.
+
+**It fulfils for every response the server actually sent**, including 404, 500
+and 503. Those are answers. The request succeeded; you did not like the reply.
+
+So every `fetch` needs a status check, and forgetting it is the single most
+common bug in this topic:
+
+```js
+const response = await fetch(url)
+if (!response.ok) throw new HttpError(response.status, await response.text())
+return response.json()
+```
+
+`response.ok` is true for any status from 200 to 299. Write that check once, in a
+wrapper, rather than in every call site, because the version that gets forgotten
+is always the one written by hand.
+
+The reason for the design is worth being able to give: a promise rejection means
+the operation could not be performed, and asking a server a question it answered
+with "no" is an operation that was performed. It also keeps the layers honest,
+because HTTP semantics belong to your application, not to the transport. Plenty
+of APIs return a 404 to mean an empty result, and a transport that turned that
+into an exception would be making a decision it cannot make correctly.
+
+The practical consequence in a `try` block is nasty, and worth seeing written
+out:
+
+```js
+try {
+  const data = await fetch(url).then((r) => r.json())
+} catch (error) {
+  // Reached for a network failure, and also for a 500 whose body is an HTML
+  // error page, but as a SyntaxError about an unexpected token rather than as
+  // anything mentioning the status.
+}
+```
+
+The status is right there in the response, and the error you catch never
+mentions it. That is a debugging session nobody enjoys.
+
+## Reading the body once
+
+A `Response` body is a stream, and a stream can be consumed once.
+
+```js
+const response = await fetch(url)
+const text = await response.text()
+const data = await response.json() // TypeError: body stream already read
+```
+
+There is a flag for it, `response.bodyUsed`, and a way around it,
+`response.clone()`, which must be called before anything has read the body. The
+clone gives you a second reader over the same data, at the cost of buffering it.
+
+The place this actually bites is error handling, because the useful thing to do
+with a failure is read the body for a message, and the useful thing to do with a
+success is parse it:
+
+```js
+const response = await fetch(url)
+if (!response.ok) {
+  const detail = await response.text() // reads it, once
+  throw new HttpError(response.status, detail)
+}
+return response.json() // a different response object never got read
+```
+
+That works because only one branch reads. What does not work is logging the body
+in an interceptor and then parsing it in the caller, which is exactly the shape a
+logging layer takes. Clone in the interceptor, or read once and pass the value
+on.
+
+Two more properties of a body worth knowing. It is a `ReadableStream`, so you can
+process a large response as it arrives rather than buffering it, which is how
+progress indicators and streaming responses work. And `response.headers` is a
+`Headers` object, not a plain object, so it has `get` and is case-insensitive,
+and spreading it gives you nothing.
+
+## Cancelling, and timing out
+
+`fetch` has no timeout. A request will wait as long as the browser is willing
+to, which is minutes. Both cancellation and timeouts come from the same place:
+
+```js
+const controller = new AbortController()
+const response = await fetch(url, { signal: controller.signal })
+controller.abort() // rejects the fetch with an AbortError
+```
+
+An aborted `fetch` rejects with a `DOMException` whose `name` is `AbortError`, so
+the check is on the name rather than on the type. Distinguishing it matters,
+because a cancelled request is not a failure and should not show the user an
+error.
+
+```js
+try {
+  await load(url, controller.signal)
+} catch (error) {
+  if (error.name === 'AbortError') return // we cancelled it, on purpose
+  showError(error)
+}
+```
+
+For a plain timeout there is a built-in signal, and for a timeout you can also
+cancel by hand there is a combinator:
+
+```js
+fetch(url, { signal: AbortSignal.timeout(5000) })
+fetch(url, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]) })
+```
+
+The other job cancellation does is fixing a race, and this is the one to be able
+to describe. A search box fires a request per keystroke. The responses come back
+in whatever order the network decides, so a slow response to "ca" can arrive
+after the fast response to "cat" and overwrite it. The user sees results for
+something they typed two seconds ago and there is nothing wrong with any
+individual request.
+
+<CodeWalkthrough
+  title="A stale response, and two ways to stop it"
+  code={`let controller
+
+async function search(query) {
+controller?.abort()
+controller = new AbortController()
+
+const response = await fetch('/search?q=' + query, { signal: controller.signal })
+render(await response.json())
+}`}
+steps={[
+{
+lines: [4, 5],
+note: 'The user types "ca". There is no previous controller, so nothing is aborted, and a fresh one is made for this request.',
+variables: { 'in flight': '"ca"' },
+},
+{
+lines: [7],
+note: 'The request goes out and the function suspends at the await. The keystroke handler returns, and the browser is free to handle the next one.',
+variables: { 'in flight': '"ca"' },
+},
+{
+lines: [4],
+note: 'The user types "t". search runs again, and the first thing it does is abort the controller belonging to the "ca" request.',
+variables: { 'in flight': '"ca", aborting' },
+},
+{
+lines: [5, 7],
+note: 'A new controller, a new request. The old fetch has already rejected with an AbortError, so its await never resumes and its render never runs.',
+variables: { 'in flight': '"cat"' },
+},
+{
+lines: [8],
+note: 'Only the surviving request reaches render. Order is now decided by which request is current, not by which response happens to arrive first.',
+variables: { 'in flight': 'none' },
+output: ['render(results for "cat")'],
+},
+]}
+/>
+
+The alternative fix is a sequence number: increment a counter per request, and
+discard a response whose number is not the latest. It works, and it leaves the
+request running, so it wastes the network and the server. Aborting is better
+because it tells the other end to stop.
+
+## Sending things
+
+The parts of a request that get asked about.
+
+```js
+await fetch('/api/items', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(item),
+})
+```
+
+`body` takes a string, `FormData`, `URLSearchParams`, a `Blob` or a stream. For
+JSON you serialise it yourself and set the content type yourself.
+
+For `FormData` you do neither. **Do not set `Content-Type` with `FormData`.** The
+browser has to generate a multipart boundary and put it in the header, and a
+header you set by hand replaces the one it would have generated, so the server
+gets a boundary-less content type and cannot parse the body. This is a
+one-line bug that produces an unhelpful error on the server, and it is a
+favourite interview question because it catches people who have only ever copied
+the JSON version.
+
+Cookies do not travel by default across origins. `credentials: 'same-origin'` is
+the default, `'include'` sends them cross-origin, and `'include'` requires the
+server to allow it explicitly.
+
+And `keepalive: true` lets a small request outlive the page, which is how you
+send analytics from an unload handler without the browser killing it.
+
+## Cross-origin, in the only order that makes sense
+
+The rule underneath everything: a page may send a request anywhere, and it may
+only **read** the response from its own origin unless the other origin allows it.
+An origin is scheme, host and port, all three.
+
+That ordering is the part to get right in an interview, because it explains
+everything else. **CORS is a relaxation of a restriction, not a security
+feature.** The restriction is the same-origin policy, which exists because your
+browser attaches the user's cookies to requests. Without it, any page could read
+your email by asking for it with your session.
+
+**The browser enforces it, not the server.** The request usually reaches the
+server and is usually handled. What the browser refuses to do is hand the
+response to your JavaScript. This is why a CORS error tells you almost nothing:
+the response is opaque by design, so the details you would want are the details
+being withheld. And it is why the fix is always on the server, and why a proxy
+works: a request from your own server has no browser in it.
+
+**Some requests are preflighted.** A request that a plain HTML form could have
+made is sent straight out: `GET`, `HEAD` or `POST`, with a short list of allowed
+headers and a content type of `text/plain`, `application/x-www-form-urlencoded`
+or `multipart/form-data`. Anything else, which includes every `PUT` and `DELETE`,
+every custom header such as `Authorization`, and `Content-Type: application/json`,
+makes the browser send an `OPTIONS` request first to ask permission. That is why
+adding one header to a working request suddenly produces a CORS error: you moved
+it from the simple category into the preflighted one.
+
+**Credentials tighten the rules.** With `credentials: 'include'` the server may
+not answer with a wildcard. It has to name your origin exactly and send
+`Access-Control-Allow-Credentials: true`. A wildcard plus credentials is rejected,
+which is deliberate, because it would let any site read authenticated responses.
+
+## The interview angle
+
+> **"Does `fetch` throw on a 404?"**
+> No. It fulfils for anything the server answered, and rejects only when there was
+> no response: network failure, CORS block, or abort. So every call needs a
+> `response.ok` check, and I put it in a wrapper.
+
+> **"How do you add a timeout?"**
+> `fetch` has none. `AbortSignal.timeout`, or an `AbortController` you abort
+> yourself, and `AbortSignal.any` when you need both a timeout and manual
+> cancellation.
+
+> **"A search box shows results for the wrong query. Why?"**
+> Responses arrive out of order and a late one overwrites a newer one. Abort the
+> previous request on each keystroke, which also stops the server working on
+> something nobody wants. A sequence number is the fallback when you cannot abort.
+
+> **"What is CORS?"**
+> A way for a server to relax the same-origin policy. The browser enforces it, the
+> request usually still happens, and the error is deliberately uninformative. Then
+> mention preflight, because that is the follow-up.
+
+Expect a question about why you cannot read a body twice, and answer it with the
+word stream.
+
+## Traps
+
+- **A 500 fulfils.** Without a `response.ok` check the error you eventually see is
+  a `SyntaxError` from parsing an HTML error page.
+- **The body reads once.** `clone` before reading, and only before.
+- **There is no default timeout.** A request can hang for minutes.
+- **An abort rejects.** Check `error.name === 'AbortError'` and do not show it to
+  the user.
+- **Never set `Content-Type` for `FormData`.** The browser needs to write the
+  multipart boundary into it.
+- **Cookies are not sent cross-origin by default**, and `include` needs the server
+  to name your origin rather than use a wildcard.
+- **Adding a header can cause a preflight.** A request that worked can start
+  failing because it left the simple category.
+- **`await` in a loop over requests is a waterfall.** `Promise.all` when they do
+  not depend on each other.
+
+## In one picture
+
+<ConceptMap
+  center={'fetch'}
+  branches={[
+    {
+      label: 'Two promises',
+      summary: 'Headers first, body second.',
+      nodes: [
+        'fetch settles when the headers arrive',
+        'json, text and blob each read the stream to the end',
+        'the body can be read once, or cloned first',
+      ],
+    },
+    {
+      label: 'Failure',
+      summary: 'It rejects only when there was no response.',
+      nodes: [
+        'network failure, CORS block, abort',
+        'a 404 and a 500 both fulfil, so check response.ok',
+        'the symptom of a missing check is a SyntaxError',
+      ],
+    },
+    {
+      label: 'Cancelling',
+      summary: 'One controller for timeouts and for races.',
+      nodes: [
+        'no default timeout, so AbortSignal.timeout',
+        'an abort rejects with a name of AbortError',
+        'abort the previous request to fix an out-of-order race',
+      ],
+    },
+    {
+      label: 'Sending',
+      summary: 'What goes in the request.',
+      nodes: [
+        'stringify JSON and set its content type yourself',
+        'never set a content type for FormData',
+        'credentials include for cross-origin cookies',
+      ],
+    },
+    {
+      label: 'Cross-origin',
+      summary: 'A relaxation of the same-origin policy.',
+      nodes: [
+        'the browser enforces it, the request still happens',
+        'preflight for anything a form could not have sent',
+        'credentials forbid a wildcard origin',
+      ],
+    },
+  ]}
+/>
