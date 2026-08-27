@@ -45,28 +45,24 @@ Two boundaries do most of the work, both drawn from the glossary:
 - **SWE-2 against senior.** SWE-2 asks what went wrong. Senior asks what you
   would do instead. A trade-off whose answer is a single rule is still SWE-2.
 
-`easy` mostly maps to `swe-1`: 61 of the 82 easy questions tagged so far landed
+`easy` mostly maps to `swe-1`: 63 of the 91 easy questions tagged so far landed
 there. Where it breaks is a topic a junior has never met, since the label then
 describes the question rather than the round. Ask whether somebody two years in
 would have seen the API at all. The easy question on `Object.defineProperty`
 defaults is SWE-2, and the easy one asking why a static-only class should be a
 module is senior. `hard` does not map anywhere mechanically, so read every one of
-them. Twenty-six of the 76 hard questions so far are SWE-2, because a famous
+them. Thirty-three of the 94 hard questions so far are SWE-2, because a famous
 gotcha is hard to answer and still the ordinary working-developer round. The bulk
 of the work is the medium questions, which spread across all four tiers.
 
-A topic can be thin at either end, or empty at one. Eight topics finished with a
-single SWE-1 question, and `weak-references`, `error-types` and `custom-errors`
-finished with none, because nothing in them is asked of somebody two years in.
-Report what the topic has rather than filling a tier to be even: a topic with no
-SWE-1 question drops out of the SWE-1 topic list in task 13, which is the correct
-outcome and not a gap.
-
-## 10. Tag async and modules
-
-`async-error-handling`, `abortcontroller`, `async-iteration`,
-`es-modules-and-commonjs`, `module-resolution-and-side-effects`,
-`what-a-bundler-changes`.
+A topic can be thin at either end, or empty at one. Ten topics finished with a
+single SWE-1 question and seven with none at all, because nothing in them is
+asked of somebody two years in. A whole batch can come out that way: the async
+and modules batch produced two SWE-1 questions across six topics, since
+cancellation, async iteration, resolution and bundling are not what a first round
+asks about. Report what the topic has rather than filling a tier to be even. A
+topic with no SWE-1 question drops out of the SWE-1 topic list in task 13, which
+is the correct outcome and not a gap.
 
 ## 11. Tag the browser track
 

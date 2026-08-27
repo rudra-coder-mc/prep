@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'What does a bare specifier such as import x from "lodash" mean to the runtime?',
     options: [
       'A built-in module, since anything without ./ is reserved for the platform',
@@ -40,6 +41,7 @@ Node built-ins are spelled node:fs now precisely so they cannot be confused with
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt:
       'A file moved from CommonJS to an ES module now fails with ERR_MODULE_NOT_FOUND, though the file it names is right there. What changed?',
     code: `import { formatDate } from './utils'`,
@@ -72,6 +74,7 @@ Extensions decide the module system for a file, and .js is a module perfectly we
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What decides whether two imports get the same module instance?',
     options: [
       'The specifier string, so two different spellings of the same path are two modules',
@@ -103,6 +106,7 @@ Package level sharing does not exist. Each file in a package is its own module w
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'Running app.mjs, put the lines it prints in the order it prints them.',
     code: `// tracker.mjs
 globalThis.runs = (globalThis.runs ?? 0) + 1
@@ -152,6 +156,7 @@ Putting "app" anywhere but last means reading the file top to bottom. Its body r
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'You are writing a module whose job is a side effect: it registers a set of custom elements. How should it be written so that being loaded twice does no damage?',
     options: [
@@ -187,6 +192,7 @@ The init function shifts responsibility rather than removing the problem: two co
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt:
       'A polyfill imported for its side effect works in development and is missing from the production bundle. Nothing else changed. What is the most likely cause?',
     options: [
@@ -220,6 +226,7 @@ Dynamic imports change when a module evaluates, not whether it survives the buil
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'After a dependency upgrade, import helper from "pkg/lib/helper.js" fails to resolve, though the file is still in node_modules. What did the package do?',
     options: [
@@ -256,6 +263,7 @@ A bundled package would fail with the file genuinely missing, which is a differe
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'A validation library throws "expected a Schema" on an object that is very obviously a Schema, built by the same library. Everything works locally and fails in the deployed app. What is happening?',
     options: [
@@ -289,6 +297,7 @@ Private fields survive minification, and a brand check with a private field is o
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'setup.js logs "setup" at its top level. This module is imported and the button is never clicked. What is printed?',
     code: `console.log('module body')
@@ -328,6 +337,7 @@ The module body runs when the module is imported, which has already happened; on
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'An ES module needs to read a data file that ships beside it. Which way of finding the path is correct?',
     options: [
@@ -361,6 +371,7 @@ require.resolve through createRequire does work, and it is the tool for finding 
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'Take me through what happens between writing an import and the module running, and where that process goes wrong in real projects.',
     answerInFull: `- Resolution. The specifier form decides the algorithm: relative resolves against the importing module URL with no extension guessing, absolute is taken as written, bare walks node_modules in Node or needs an import map in a browser. If a package is found, its package.json decides the file — exports first, mapping subpaths and conditions such as import, require, node and browser, and restricting anything it does not name; main and module for older packages.
