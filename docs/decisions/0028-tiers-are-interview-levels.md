@@ -65,6 +65,13 @@ angle included. Reading something above your level costs nothing, because nobody
 is marking you. Being asked something you cannot answer is what damages
 confidence, and questions are what carry the tier.
 
+**Exercises are not tiered, and they keep `difficulty`.** An exercise is
+practice you sit down and write, so what varies between two of them is how long
+it takes and how much of the topic it uses. That is not a level of interview,
+and giving it one would claim a promise the exercise does not make. The two
+scales now name different things on different objects, which is why keeping both
+words does not repeat the mistake this decision was written to fix.
+
 **The tier is picked per track, not once for the platform.** Being SWE-2 in
 JavaScript and SWE-1 in React is the ordinary state of a person, and enrolment is
 a per-track decision already.
@@ -107,6 +114,14 @@ topic and splits the one document that currently reads as a single thought.
 The 266 medium questions have to be split by hand between `swe-2` and `senior`.
 `easy` and `hard` map across mechanically. This is the real price of the feature
 and it is content work, not code.
+
+That estimate was half right, and the half it got wrong is worth recording. The
+bank finished at 80 SWE-1, 254 SWE-2, 73 senior and 59 staff. `easy` did map
+mostly to `swe-1`, 69 times out of 97. `hard` mapped nowhere: it split 37 SWE-2,
+27 senior and 39 staff, because a famous gotcha is hard to answer and still the
+ordinary working-developer round. Every one of the 103 had to be read. The rule
+that settled the hard calls is now in `docs/tasks/converting-a-topic.md`, which
+is where a new question is authored against it.
 
 Four tiers over 43 topics is roughly two questions per tier per topic, which
 cannot carry the promise. The bank has to grow, and it grows at `swe-1` and

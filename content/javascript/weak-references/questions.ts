@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'no-iteration-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'staff',
     prompt: 'Why does a WeakMap have no size, no iteration and no clear?',
     options: [
@@ -36,7 +35,6 @@ Keeping keys alive during a walk is a genuine implementation wrinkle, and it is 
     id: 'object-keys-only-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Why can a string not be a WeakMap key?',
     options: [
@@ -73,7 +71,6 @@ Nothing is reserved for later. Symbols as keys is the change that did happen, an
     id: 'weakmap-lookup-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const meta = new WeakMap()
@@ -111,7 +108,6 @@ has is not doing anything clever about reachability. It answers about the entry,
     id: 'cycle-detection-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const seen = new WeakSet()
@@ -162,7 +158,6 @@ visit root.child.parent is what prints if the guard is missing entirely, and it 
     id: 'strong-key-elsewhere-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'This was written specifically to avoid a leak, and memory still grows without bound. Why?',
@@ -210,7 +205,6 @@ Order of operations changes nothing. A key is weak because of how the WeakMap ho
     id: 'finalizer-never-runs-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'This cleanup callback never fires, no matter how much memory pressure there is. Why?',
     code: `const open = new Map()
@@ -252,7 +246,6 @@ Callbacks already run outside any job of yours, and the timing is unspecified. N
     id: 'deref-liveness-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What can you rely on after ref.deref() returns an object rather than undefined?',
     options: [
@@ -286,7 +279,6 @@ Saying nothing is guaranteed over-corrects, and would make the API useless.`,
     id: 'private-data-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'You are writing a library that decorates objects created by somebody else, and you need to attach state to each one without touching it. What do you reach for?',
@@ -329,7 +321,6 @@ A private field is not available for an object you did not construct. Adding one
     id: 'weakref-cache-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'A service caches parsed documents by a string id. The parsed documents are large, and most of them are also held by whatever is currently rendering them. A colleague proposes a Map of id to WeakRef, with a FinalizationRegistry to delete dead entries. Is that the right design?',
@@ -373,7 +364,6 @@ A WeakMap cannot be keyed by a string at all, so the last option does not compil
     id: 'weak-value-chain-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'A WeakMap holds two entries: key a maps to object b, and object b is the key of the second entry, whose value is a large state object. Only a is referenced from outside. What is alive?',
@@ -405,7 +395,6 @@ There is no entry order in a WeakMap to be specified or unspecified, which is th
     id: 'weak-choice-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'When would you reach for a WeakMap, and when for a WeakRef? What would make you use neither?',

@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'Fixing some arguments now and the rest later, and why the two names are not the same technique.',
   order: 100,
-  difficulty: 'medium',
   tags: ['functions', 'currying', 'closures', 'bind'],
   prerequisites: ['javascript/higher-order-functions', 'javascript/parameters-and-arguments'],
 }

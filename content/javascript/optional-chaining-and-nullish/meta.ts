@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'Reading into something that might not be there, choosing a fallback without clobbering 0 and the empty string, and where ?. stops.',
   order: 50,
-  difficulty: 'easy',
   tags: ['syntax', 'null', 'defaults'],
   prerequisites: ['javascript/types-and-coercion'],
 }

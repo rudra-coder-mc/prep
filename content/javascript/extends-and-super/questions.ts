@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'two-chains-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt: 'class B extends A sets up which prototype links?',
     options: [
@@ -30,7 +29,6 @@ An instance inheriting from the class A directly would put the constructor funct
     id: 'this-before-super-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Shape {
@@ -70,7 +68,6 @@ TypeError is the error for calling a class without new or calling a non-function
     id: 'construction-order-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `class Base {
@@ -136,7 +133,6 @@ Any order with derived field before base constructor has derived fields running 
     id: 'base-calls-override-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A Component base class calls this.render() in its constructor. A subclass declares a field template = "<p>hi</p>" and overrides render to use this.template. Constructing the subclass throws because template is undefined. What is the right fix?',
@@ -162,7 +158,6 @@ super() cannot go at the end. this does not exist before it, so the subclass fie
     id: 'super-method-resolution-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'staff',
     prompt:
       'Inside a method of class B extends A, what does super.describe() resolve to, and what is this inside the call?',
@@ -190,7 +185,6 @@ A itself is the class, not its prototype. Statics live there; instance methods d
     id: 'instanceof-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `class A {}
@@ -226,7 +220,6 @@ false for everything except Object would need Object.create to produce an unrela
     id: 'custom-error-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Write class HttpError extends Error carrying a status, so that String(err) reads "HttpError: Not found", err.stack begins with that same text, and err instanceof HttpError is true. Which is correct?',
@@ -258,7 +251,6 @@ Leaving name inherited gives "Error: Not found" for both toString and the stack.
     id: 'array-subclass-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `class Stack extends Array {
@@ -293,7 +285,6 @@ peek returning undefined would need the static from or the subclassing to have p
     id: 'shared-behaviour-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A codebase has a Repository base class whose constructor opens a connection and calls this.migrate(). Each subclass overrides migrate and reads a tables field it declares. Every subclass has a comment saying "do not add fields, set them in migrate". What is the root cause, and the fix that removes the comment?',
@@ -319,7 +310,6 @@ Fields run before the derived constructor body, not before super(), and that is 
     id: 'inheritance-cost-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'staff',
     prompt:
       'Walk through what happens, step by step, when new Derived() runs for a Derived that extends Base, and say where each of the common inheritance bugs comes from.',

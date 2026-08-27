@@ -8,13 +8,12 @@ const validMeta = {
   title: 'Closures',
   summary: 'x',
   order: 1,
-  difficulty: 'medium',
 }
 const validQuestion = {
   id: 'q1',
   type: 'interview',
   form: 'open',
-  difficulty: 'easy',
+  tier: 'swe-1',
   prompt: 'p',
   answerInFull: 'a',
   explanation: 'e',

@@ -21,6 +21,37 @@ Roughly eight or nine choice questions, one ordering, one open.
 
 Every question carries `answerInFull` whatever its form.
 
+## Tagging a question with a tier
+
+Every question carries a `tier`, and the schema refuses one that does not. The
+four tiers are defined in `docs/glossary.md` and the argument for them is
+decision `0028`. Ask what level of interview asks the question, not how hard it
+feels.
+
+Two boundaries settle almost every hard call:
+
+- **Senior against staff.** A senior question has a decision at the end of it.
+  A staff question has spec internals or a failure mode at the end of it, and
+  nothing to decide.
+- **SWE-2 against senior.** SWE-2 asks what went wrong. Senior asks what you
+  would do instead. A trade-off whose answer is a single rule is still SWE-2.
+
+For SWE-1, ask whether somebody two years in has met the API at all. A question
+that is easy to answer in a topic a junior has never opened is not a junior
+question.
+
+When a question asks for both a diagnosis and a fix, tier it on what separates
+its options. If the wrong options are wrong on a fact, it is SWE-2 however deep
+the machinery behind that fact. If they are wrong on a judgement, it is senior.
+
+Report the tiers a topic actually has. A topic with no SWE-1 question is a
+normal outcome, and task 13 drops it from the SWE-1 topic list rather than
+treating it as a gap. `npm run content:check` prints the count at each tier, so
+a thin tier is visible without counting by hand.
+
+Exercises are not tiered. They keep a `difficulty` of their own, because how
+long a piece of practice takes is not a level of interview.
+
 ## What the topic ships around them
 
 A lesson with at least one visual, two exercises, and a `narration.ts` beside

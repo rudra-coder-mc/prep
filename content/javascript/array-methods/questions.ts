@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'which-methods-mutate',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'Which of these lists contains only methods that change the array they are called on?',
     options: [
@@ -32,7 +31,6 @@ flat returns a new array. pop and push do mutate, which is what makes the last o
     id: 'sort-default-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `console.log([10, 9, 1, 100].sort())`,
@@ -55,7 +53,6 @@ Unchanged is what you would see if sort returned a copy and the original was pri
     id: 'chain-output-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const result = [3, 1, 2]
@@ -100,7 +97,6 @@ A fused pipeline, where each element flows through all three callbacks before th
     id: 'sort-in-place-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A React list component does const sorted = props.items.sort(byName) and renders sorted. After it mounts, a sibling component that renders the same items from the parent shows them in sorted order too, although it never sorts. Why, and what is the fix?',
@@ -132,7 +128,6 @@ Passing the same reference to two children is normal and correct; it is how Reac
     id: 'group-by-reduce',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       "Write groupBy(items, key) that returns an object mapping each distinct value of item[key] to the array of items with that value, so groupBy([{ t: 'a' }, { t: 'b' }, { t: 'a' }], 't') gives { a: [...2 items], b: [...1 item] }. Which of these is correct?",
@@ -171,7 +166,6 @@ The spread version spreads groups[item[key]] when that group does not yet exist,
     id: 'foreach-async-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A script does ids.forEach(async (id) => { await save(id) }) and then logs "done". "done" appears before any save has finished, and the saves all run at once and overload the API. What is happening, and how would you make them run one after another?',
@@ -208,7 +202,6 @@ await ids.forEach(...) awaits undefined, which resolves immediately. There is no
     id: 'pick-the-method-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'An interviewer hands you a list of requirements one at a time and asks which array method you would reach for and why: check whether any order is overdue, get the first overdue order, get the ids of all overdue orders, total the value of all orders, and remove one order from the list held in state. Walk through your choices.',
@@ -231,7 +224,6 @@ The thread through all five: pick the method whose name is the answer, and the r
     id: 'includes-vs-indexof-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `const list = [NaN, 0]
@@ -255,7 +247,6 @@ false for includes(NaN) is the === result, and includes does not use ===.`,
     id: 'array-holes-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `const a = Array(3).map(() => 1)
@@ -293,7 +284,6 @@ Three undefineds for c is what spreading gives before the map. The map then runs
     id: 'comparator-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       "names.sort((a, b) => a > b) works in one browser and leaves another browser's result unsorted. Why?",
@@ -325,7 +315,6 @@ No engine swaps the parameters. The order is what the spec says.`,
     id: 'map-parseint-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `console.log(['1', '2', '3'].map(parseInt))`,

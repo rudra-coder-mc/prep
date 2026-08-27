@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'The path an event takes through the tree, why one listener on a container beats a thousand on rows, and the difference between stopping propagation and preventing the default.',
   order: 20,
-  difficulty: 'medium',
   tags: ['events', 'dom', 'delegation'],
   prerequisites: ['browser/the-dom', 'javascript/event-loop', 'javascript/this-binding'],
 }

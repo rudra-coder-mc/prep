@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'which-one-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt:
       'A scroll position indicator updates from a scroll handler, and a search box fires a request from an input handler. Which rate limiter belongs on each?',
@@ -35,7 +34,6 @@ Throttling the search box is not catastrophic and it is wasteful: it fires a req
     id: 'debounce-order-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function debounce(fn, wait) {
@@ -80,7 +78,6 @@ save undefined is there for the misreading where the timer callback loses the ar
     id: 'debounced-return-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print, and why?',
     code: `const price = debounce((qty) => qty * 10, 100)
@@ -131,7 +128,6 @@ Nothing prints twice. The timer callback computes 30 and discards it, since no c
     id: 'created-per-call-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Every keystroke still fires a request. Why is this not debounced?',
     code: `input.addEventListener('input', (event) => {
@@ -169,7 +165,6 @@ Reading the value early is correct and deliberate. The event object is pooled or
     id: 'lost-this-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'This debounce works for plain functions and throws "Cannot read properties of undefined" when used on a method. What is wrong with it?',
@@ -229,7 +224,6 @@ Passing the object in would work and would mean writing a different utility for 
     id: 'throttle-implementation-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'You need a throttle that fires immediately on the first call and never drops the final event of a burst. Which implementation does both?',
@@ -284,7 +278,6 @@ A debounce is a different behaviour, not a variation on this one: nothing runs a
     id: 'cancel-on-teardown-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'An editor autosaves with a debounced function on a 2 second wait. Closing the editor while a save is pending occasionally writes over a document the user has since opened elsewhere. What do you add?',
@@ -330,7 +323,6 @@ Awaiting does not work, because the debounced function returns undefined. Even a
     id: 'stale-response-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'A search box debounces at 300ms and still shows results for an older query. The user types "rea", pauses, then types "ct" and pauses again. What is happening, and what fixes it?',
@@ -381,7 +373,6 @@ Input events carry the current value. The query is not one behind.`,
     id: 'timer-promises-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does setTimeout(fn, 100) actually guarantee?',
     options: [
@@ -416,7 +407,6 @@ Nothing about the delay excludes blocked time. It is wall clock, measured from w
     id: 'leading-edge-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does the leading edge option on a debounce change?',
     options: [
@@ -453,7 +443,6 @@ Arguments follow the call that actually runs. With a leading edge that is the fi
     id: 'write-debounce-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'Implement debounce, and tell me what a production version has to handle that a ten-line one does not.',

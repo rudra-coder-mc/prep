@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'for await...of, Symbol.asyncIterator, async generators as producers, the pull model behind them, cleanup on early exit, and what stays sequential.',
   order: 360,
-  difficulty: 'hard',
   tags: ['async', 'generators', 'iteration'],
   prerequisites: [
     'javascript/generators',

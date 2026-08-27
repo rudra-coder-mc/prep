@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-extends-couples-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt:
       'Which of these is NOT one of the ways a subclass is coupled to its base more tightly than an ordinary caller is?',
@@ -31,7 +30,6 @@ The single chain is why multiple inheritance needs mixins.`,
     id: 'mixin-chain-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const A = (Base) =>
@@ -73,7 +71,6 @@ root alone is what you would get if mixin methods did not override. They sit on 
     id: 'fragile-base-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'Version 2 of the base class changed addAll to call add for each item. Put the lines this prints, with version 2, in the order they print.',
@@ -139,7 +136,6 @@ addAll 0 has the print before the increment. The increment is on the line above 
     id: 'is-a-misuse-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'To reuse its methods, someone wrote class Stack extends Array with push, pop and peek. Now a function that accepts any array sorts a Stack it was given, and a serialiser that checks Array.isArray sends a Stack as a plain list. What is the root cause?',
@@ -167,7 +163,6 @@ Overriding every unwanted array method to throw is a list that grows with every 
     id: 'injected-dependency-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Write a Notifier with a send(user, message) method that delivers through a channel, such that a unit test can verify what was sent without any network and without a mocking library. Which version does that?',
@@ -201,7 +196,6 @@ A static call is a hard-coded global. There is no seam at all.`,
     id: 'mixin-instanceof-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const Tagged = (Base) =>
@@ -246,7 +240,6 @@ Shared parent would need Tagged to cache its result. It does not, so every appli
     id: 'extend-or-compose-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A team has class ReportService that extends HttpClient to reuse its get and post, and the report logic lives in methods that call this.get. Tests hit a real server, and a second service has copied the same pattern. What should change, and why?',
@@ -274,7 +267,6 @@ A test subclass that overrides get works once and then means every test needs a 
     id: 'composition-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'Explain "prefer composition over inheritance" precisely, including when you would still use extends.',
@@ -295,7 +287,6 @@ And the smell that says you got it wrong: a subclass overriding a method only to
     id: 'forwarding-everything-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A class holds a Map in a private field and exposes get, set, has, delete, clear, size, keys, values, entries and forEach, each forwarding directly. What does this design tell you?',
@@ -321,7 +312,6 @@ A Proxy to forward the rest automates the mistake. It also breaks private fields
     id: 'override-and-discard-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Parser {

@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'error-shape-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'staff',
     prompt: 'Where do name, message and stack live on a newly constructed Error?',
     options: [
@@ -39,7 +38,6 @@ A stack computed on read would be more useful and is not what happens. By the ti
     id: 'which-type-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const attempts = [
@@ -86,7 +84,6 @@ Swapping the first two is the common mistake. A name that does not resolve is a 
     id: 'tdz-referenceerror-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'This throws "ReferenceError: Cannot access \'limit\' before initialization", but limit is declared right there. What is the engine telling you?',
@@ -128,7 +125,6 @@ Nothing is evaluated bottom to top. The lines run in order, and the read simply 
     id: 'error-cause-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does the second argument to the Error constructor do?',
     options: [
@@ -165,7 +161,6 @@ It is a language feature from ES2022, not a Node one, and it is in every current
     id: 'message-matching-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'This worked for two years and started returning nothing after a Node upgrade, on missing files and on permission failures alike. What is wrong with the guard?',
@@ -206,7 +201,6 @@ There is nothing to await on the error. It is a fully built object by the time t
     id: 'stack-overflow-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function depth(n) {
@@ -250,7 +244,6 @@ Believing it is uncatchable is the most interesting wrong answer, because it is 
     id: 'aggregate-error-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A download races three mirrors with Promise.any. All three fail, and you want the log to say why each one did. Which catch block gets you that?',
@@ -289,7 +282,6 @@ allSettled is a real alternative if you want every outcome regardless, but reach
     id: 'instanceof-across-realms-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'A validation library runs user rules inside a Node vm context. A rule fails with what is clearly a TypeError, and error instanceof TypeError is false in the host code. What is going on, and what do you check instead?',
@@ -322,7 +314,6 @@ Abandoning instanceof over-corrects. It is the right check within one realm, whi
     id: 'syntax-error-timing-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt: 'Which SyntaxErrors can a try/catch written in the same file catch?',
     options: [
@@ -359,7 +350,6 @@ eval is not special here. new Function and JSON.parse parse at run time in exact
     id: 'wrapping-with-cause-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A repository catches a database driver error and wants callers to see a failure in its own vocabulary, without the driver detail becoming unreachable. Which line does that?',
@@ -393,7 +383,6 @@ Throwing a fresh error with no cause is the common shape and the lossy one. Trus
     id: 'reading-an-error-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'An error arrives in a catch block. Walk me through what you look at, and how you decide what to do with it.',

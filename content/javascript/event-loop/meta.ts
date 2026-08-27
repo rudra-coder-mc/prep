@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'Why a promise callback always beats a zero-millisecond timer, and what "non-blocking" actually means.',
   order: 300,
-  difficulty: 'hard',
   tags: ['event-loop', 'async', 'promise'],
   prerequisites: ['javascript/closures'],
 }

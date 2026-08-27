@@ -61,9 +61,6 @@ export default async function TopicPage({ params }: { params: Promise<Params> })
       <Rise>
         <header>
           <div className="flex flex-wrap items-center gap-2 text-xs text-faint">
-            <span className="rounded-full border border-border px-2 py-0.5 capitalize">
-              {topic.difficulty}
-            </span>
             <span>{topic.questions.length} questions</span>
             <span aria-hidden>·</span>
             <span>{topic.exercises.length} exercises</span>

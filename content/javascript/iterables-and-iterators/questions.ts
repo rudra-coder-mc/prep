@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'iterable-vs-iterator',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What is the difference between an iterable and an iterator?',
     options: [
@@ -32,7 +31,6 @@ Async iteration is a parallel protocol with Symbol.asyncIterator, not the other 
     id: 'spread-object-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const point = { x: 1, y: 2 }
@@ -62,7 +60,6 @@ Object spread never throws for a missing iterator, because it never looks for on
     id: 'for-of-by-hand-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const countdown = {
@@ -118,7 +115,6 @@ Printing "body 0" would need the body to run for the step that reported done. Th
     id: 'once-only-iterable-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'The Range below spreads correctly the first time and gives [] the second time. Why, and what is the fix?',
@@ -170,7 +166,6 @@ Symbol.iterator is called every time a consumer starts, never cached. Returning 
     id: 'make-iterable-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Make a LinkedList with a head of { value, next } nodes iterable, without a generator, so that [...list] gives the values from head to tail. Which implementation is correct?',
@@ -213,7 +208,6 @@ Returning an array from Symbol.iterator returns an iterable, not an iterator. Th
     id: 'pagination-iterable-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'You wrap a paginated API in an iterable so that for...of walks every record across pages. Each page fetch opens a connection that must be released, and callers often break out of the loop after finding what they want. What does the iterator need beyond next(), and when will it run?',
@@ -246,7 +240,6 @@ Garbage collection is not deterministic and does not close connections. A connec
     id: 'explain-protocol-interview',
     type: 'interview',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'An interviewer asks why the language bothered with an iteration protocol rather than giving every collection a toArray() method. Which answer shows the deepest understanding?',
@@ -279,7 +272,6 @@ Generators came along with the protocol and are a convenient way to implement it
     id: 'one-shot-iterator-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const set = new Set(['a', 'b'])
@@ -306,7 +298,6 @@ The built-in iterators are iterable, so nothing throws. That is precisely what m
     id: 'for-in-on-array-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'Why is for...in the wrong loop for an array?',
     options: [
@@ -333,7 +324,6 @@ break works in for...in as in any loop.`,
     id: 'string-iteration-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `const s = 'a😀'

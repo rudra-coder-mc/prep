@@ -29,18 +29,29 @@ export const OPEN_QUESTION_TYPES = ['interview', 'scenario'] as const
 /** A topic with more open questions than this is self graded again. */
 export const MAX_OPEN_QUESTIONS_PER_TOPIC = 1
 
+/**
+ * How hard an exercise is. Exercises only: a question carries a tier instead.
+ * The two scales measure different things, so an exercise was left on this one
+ * rather than being given a level of interview it does not have. See
+ * docs/decisions/0028-tiers-are-interview-levels.md.
+ */
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 
 /**
  * The level of interview a question belongs to, named after the roles interviews
  * hire for rather than after how hard a question feels. Defined in
- * docs/glossary.md, which is the rule for which tier a question is tagged with.
- *
- * Optional for now: the field arrives beside `difficulty` and is read by nothing
- * yet, so the bank can be tagged in batches that each stay green. It becomes
- * required and `difficulty` is deleted once nothing is left untagged.
+ * docs/glossary.md, which is the rule for which tier a question is tagged with,
+ * and in docs/tasks/converting-a-topic.md, which is how a new one is written.
  */
 export const TIERS = ['swe-1', 'swe-2', 'senior', 'staff'] as const
+
+/** What a tier is called on screen. The slug is storage, this is the reader's. */
+export const TIER_LABELS: Record<Tier, string> = {
+  'swe-1': 'SWE-1',
+  'swe-2': 'SWE-2',
+  senior: 'Senior',
+  staff: 'Staff',
+}
 
 export const topicMetaSchema = z.object({
   slug: z
@@ -50,7 +61,6 @@ export const topicMetaSchema = z.object({
   title: z.string().min(1),
   summary: z.string().min(1).describe('One line shown in topic lists.'),
   order: z.number().int().nonnegative(),
-  difficulty: z.enum(DIFFICULTIES),
   tags: z.array(z.string()).default([]),
   prerequisites: z.array(z.string()).default([]),
 })
@@ -147,13 +157,7 @@ export const questionSchema = z
     id: z.string().regex(/^[a-z0-9-]+$/, 'must be lowercase words separated by hyphens'),
     type: z.enum(QUESTION_TYPES).describe('What the question is about.'),
     form: z.enum(ANSWER_FORMS).describe('How it is answered.'),
-    difficulty: z.enum(DIFFICULTIES),
-    tier: z
-      .enum(TIERS)
-      .optional()
-      .describe(
-        'Which level of interview asks this. Optional while the bank is migrated from difficulty to tier; read by nothing yet.',
-      ),
+    tier: z.enum(TIERS).describe('Which level of interview asks this.'),
     prompt: z.string().min(1),
     code: z
       .string()

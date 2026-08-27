@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-nullish-means',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'Which values does ?? treat as missing?',
     options: [
@@ -32,7 +31,6 @@ The empty string is the trap in the other direction. A name that is empty is a n
     id: 'short-circuit-order',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const user = { name: 'Ada', profile: null, tags: [] }
@@ -78,7 +76,6 @@ call null is the same misreading as city null, applied to the call form. Skipped
     id: 'nullish-against-or-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const count = 0
@@ -110,7 +107,6 @@ The last option has the operators swapped. || is the one that replaces falsy val
     id: 'zero-retries-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt:
       'A caller sets retries: 0 to disable retrying, and the client still retries three times. What is the bug, and what is the fix?',
@@ -142,7 +138,6 @@ Optional chaining changes nothing about the fallback. config?.retries || 3 still
     id: 'get-by-path',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Write get(object, path, fallback) where path is a dotted string like "a.b.c", the fallback is used only when the value at the path is null or undefined, and a missing intermediate object never throws. Which of these is correct?',
@@ -175,7 +170,6 @@ The === undefined version is almost right and draws the line in the wrong place.
     id: 'optional-chaining-everywhere',
     type: 'scenario',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'In review you find order?.items?.[0]?.price?.toFixed(2) in a component, where every order has an items array and every item has a numeric price. What do you say, and what should it be?',
@@ -198,7 +192,6 @@ A good follow-up is whether a placeholder belongs in the component or in the dat
     id: 'which-default-operator-interview',
     type: 'interview',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Which is the right operator for a default, || or ???',
     options: [
@@ -227,7 +220,6 @@ Objects against primitives is not the line. An object is never falsy, so for an 
     id: 'mixing-needs-parentheses',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What happens with const x = a ?? b || c?',
     options: [
@@ -252,7 +244,6 @@ Both precedence answers are guesses at a rule that does not exist. No precedence
     id: 'logical-assignment-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const settings = { theme: null, volume: 0, debug: false }
@@ -286,7 +277,6 @@ debug becoming 'yes' is &&= read backwards. It assigns when the left is already 
     id: 'chain-stops-where',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'When a is null, what does a?.b.c.d evaluate to?',
     options: [
@@ -313,7 +303,6 @@ The TypeError is the belief that only one step is skipped and the chain resumes.
     id: 'optional-call-choice',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'Which of these lines throws?',
     code: `const api = { fetch: null }

@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'not-ok-not-rejected-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'When does the promise returned by fetch reject?',
     options: [
@@ -42,7 +41,6 @@ A body that will not parse does reject, from the json call rather than from the 
     id: 'body-read-once-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Why does calling response.json() after response.text() throw?',
     options: [
@@ -79,7 +77,6 @@ Content type is not locked either. You can read any body as text, including an i
     id: 'two-promises-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'The server answers this request with a 404 whose body is the JSON array []. Put the lines this prints in the order it prints them.',
@@ -124,7 +121,6 @@ The realistic version is worse. Most servers answer a 500 with an HTML error pag
     id: 'clone-before-read-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'The request succeeds and returns valid JSON. What does this print?',
     code: `const response = await fetch(url)
@@ -172,7 +168,6 @@ There is no content type check on any of the read methods. You can read an image
     id: 'abort-error-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'The request would take two seconds. What does this print?',
     code: `const controller = new AbortController()
@@ -221,7 +216,6 @@ The await does resume, by throwing. A signal that never settled anything would b
     id: 'try-catch-status-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'When the API is healthy this works. When it returns a 500 with an HTML error page, users see "Unexpected token < in JSON at position 0" and the logs never mention the status. Why?',
@@ -272,7 +266,6 @@ A DOMException would still have a message. The error here is a SyntaxError, and 
     id: 'waterfall-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Loading a dashboard of eight independent panels takes about four seconds, and each individual request takes about 500 milliseconds. What is wrong, and what is the smallest correct fix?',
@@ -321,7 +314,6 @@ Scheduling overhead is microseconds. Four seconds for eight iterations is half a
     id: 'formdata-content-type-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'An upload of a file and two text fields has to go to an endpoint that expects multipart form data. Which request is correct?',
@@ -358,7 +350,6 @@ URLSearchParams encodes as application/x-www-form-urlencoded, which is a differe
     id: 'search-race-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'A search box fires a request per keystroke and occasionally shows results for a query the user typed several keystrokes ago. Which fix addresses the cause, and why is it better than the alternative?',
@@ -404,7 +395,6 @@ Sorting by query length assumes the user only ever adds characters. Delete one a
     id: 'cors-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'A GET request to a partner API works. Adding an Authorization header makes it fail with a CORS error, and the browser shows a failed OPTIONS request that was never in your code. The partner insists nothing changed on their side. What do you tell them?',
@@ -444,7 +434,6 @@ fetch genuinely does send a request the code did not ask for. That is what a pre
     id: 'resilient-fetch-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'Design the function every request in your app goes through. What does it handle, and what does it deliberately leave to the caller?',

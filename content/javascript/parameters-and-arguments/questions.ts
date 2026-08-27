@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'parameter-against-argument',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'A function declares three parameters and is called with four arguments. What happens?',
     options: [
@@ -36,7 +35,6 @@ This is worth being precise about because it explains a class of bug rather than
     id: 'default-evaluation-order',
     type: 'output',
     form: 'ordering',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function trace(label) {
@@ -82,7 +80,6 @@ Nothing here prints at definition time. Moving the two functions above or below 
     id: 'map-parse-int',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'This is meant to turn the strings into numbers. It returns [1, NaN, NaN]. Why?',
     code: `const parsed = ['1', '2', '3'].map(parseInt)`,
@@ -121,7 +118,6 @@ The third argument is a real thing that is genuinely ignored. Nothing in JavaScr
     id: 'parameter-scope',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `const value = 'outer'
@@ -158,7 +154,6 @@ The ReferenceError is the right answer to the neighbouring question. A default t
     id: 'arity-limiter',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'You want takes(n, fn): a wrapper passing at most the first n arguments through to fn, so a function can go into map without picking up the index. Which one does that?',
@@ -196,7 +191,6 @@ The last one works for up to three arguments and silently drops the fourth. It a
     id: 'shared-default-object',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'A helper declares a default of items = EMPTY, where EMPTY is a const empty array at module level, and pushes into items. It works in tests, then a caller reports seeing data that belongs to a different caller. What is happening?',
@@ -230,7 +224,6 @@ The same reasoning applies to a default of options = CONFIG, which hands every c
     id: 'positional-or-options',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'When would you take an options object instead of positional parameters, and what do you give up by doing it?',
@@ -251,7 +244,6 @@ What it costs: the argument is now one object, so it can be mutated by the calle
     id: 'arrow-arguments',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function outer() {
@@ -281,7 +273,6 @@ The ReferenceError is what really happens for an arrow written at the top level 
     id: 'function-length-choice',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'staff',
     prompt: 'What is the value of countArgs.length here?',
     code: `function countArgs(a, b = 2, c) {}`,
@@ -306,7 +297,6 @@ The consequence worth stating is that adding a parameter changes a number other 
     id: 'default-trigger-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'Which of these calls uses the default in function f(x = 10)?',
     options: ['f(null)', 'f(undefined)', 'f(0)', "f('')"],
@@ -328,7 +318,6 @@ f(0) and f('') are the falsy trap in its usual form. If a default fired on anyth
     id: 'rest-against-arguments-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-1',
     prompt: 'Which statement about rest parameters and the arguments object is true?',
     options: [

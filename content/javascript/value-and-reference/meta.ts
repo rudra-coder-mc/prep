@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'What a variable actually holds, why two identical objects are not equal, and how deep a copy goes.',
   order: 30,
-  difficulty: 'medium',
   tags: ['objects', 'memory', 'immutability'],
   prerequisites: ['javascript/types-and-coercion'],
 }

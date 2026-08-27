@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'Fan-out, fallbacks, timeouts and retries built from all, allSettled, race and any, and what happens to the promises left behind.',
   order: 330,
-  difficulty: 'medium',
   tags: ['promise', 'async'],
   prerequisites: ['javascript/promises'],
 }

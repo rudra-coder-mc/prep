@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'How values reach a function: defaults, rest, spread, and why the counts never have to match.',
   order: 60,
-  difficulty: 'easy',
   tags: ['functions', 'parameters', 'defaults', 'rest'],
   prerequisites: ['javascript/scope-and-hoisting', 'javascript/value-and-reference'],
 }

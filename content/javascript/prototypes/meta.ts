@@ -5,7 +5,6 @@ export const meta: TopicMeta = {
   title: 'Prototypes and the prototype chain',
   summary: 'How property lookup actually works, and what a class is underneath.',
   order: 130,
-  difficulty: 'medium',
   tags: ['objects', 'prototype', 'classes'],
   prerequisites: [],
 }

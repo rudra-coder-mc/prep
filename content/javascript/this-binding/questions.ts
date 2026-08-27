@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-decides-this',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-1',
     prompt: 'What determines the value of `this` in a regular function?',
     options: [
@@ -37,7 +36,6 @@ The last option has the shorthand right and its limit wrong. Left of the dot dec
     id: 'lost-this-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this do, run as a module?',
     code: `const counter = {
@@ -76,7 +74,6 @@ undefined is the reader who has this as undefined and stops there, without notic
     id: 'arrow-vs-regular',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'What does this print, run as a module?',
     code: `const obj = {
@@ -112,7 +109,6 @@ The throw is the correct reasoning about this, stopped one token early. this is 
     id: 'call-apply-bind',
     type: 'interview',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt:
       'An interviewer asks for the difference between call, apply and bind. Which answer is correct?',
@@ -144,7 +140,6 @@ The swapped option has call taking the array. Apply, array, both start with a: t
     id: 'settimeout-this',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'This timer never updates timer.count. Why?',
     code: `const timer = {
@@ -189,7 +184,6 @@ The last option is the only one where the code works, and the code does not work
     id: 'bind-once',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function whoAmI() {
@@ -222,7 +216,6 @@ The one exception is new: calling a bound function with new uses the new instanc
     id: 'binding-precedence-order',
     type: 'output',
     form: 'ordering',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them, run as a module.',
     code: `function whoAmI() {
@@ -266,7 +259,6 @@ holder is the belief that a method carries its object with it. It does not. The 
     id: 'class-field-vs-method',
     type: 'scenario',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A colleague writes every class method as an arrow-function class field so that `this` is never lost. What are the trade-offs?',
@@ -286,7 +278,6 @@ I would use a normal method by default and reach for a field only where the meth
     id: 'implement-call',
     type: 'coding',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'Implement Function.prototype.myCall without using call, apply or bind. Which of these is correct?',
@@ -327,7 +318,6 @@ The arrow version breaks the rule the question set and also does not work. An ar
     id: 'arrow-this-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What determines `this` inside an arrow function?',
     options: [
@@ -350,7 +340,6 @@ That also means call, apply and bind cannot change it. There is nothing for them
     id: 'new-beats-bind-choice',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `function Person(name) {

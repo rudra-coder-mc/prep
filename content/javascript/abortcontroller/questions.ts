@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'abort-in-flight-fetch',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt: 'A fetch is in flight when its signal is aborted. What happens?',
     options: [
@@ -40,7 +39,6 @@ Partial fulfilment is the dangerous misreading, because it produces plausible ga
     id: 'race-is-not-cancellation-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A teammate added a timeout by racing requests against timers. Server logs show every slow request still completing minutes later. Why?',
@@ -82,7 +80,6 @@ sleep rejecting correctly is what makes the timeout fire at all, so the last opt
     id: 'late-abort-noop',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A fetch completes successfully. Five seconds later the code calls controller.abort(). What happens?',
@@ -112,7 +109,6 @@ The abort event option is the subtle one, and wrong in an instructive way: signa
     id: 'stale-search-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'In a search box, each keystroke fires a request. Responses arrive out of order and older results overwrite newer ones. Which fix addresses the actual defect?',
@@ -153,7 +149,6 @@ allSettled waits for everything, including requests you already know are obsolet
     id: 'abort-event-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log('start')
@@ -190,7 +185,6 @@ Placing end before the timer pair forgets that await suspends the function. The 
     id: 'ignored-signal-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'generateReport accepts a signal, callers abort it correctly, yet the function always runs to completion. What is missing?',
@@ -238,7 +232,6 @@ Dismissing signals as fetch-only inverts the design. Fetch is just the most prom
     id: 'cancellable-delay-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'You are writing delay(ms, signal), a cancellable sleep. Which implementation aborts correctly?',
@@ -290,7 +283,6 @@ Racing against a raw signal fails on types: a signal is not a promise, so race a
     id: 'abort-reason-vs-aborterror-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this log?',
     code: `const ac = new AbortController()
@@ -341,7 +333,6 @@ The silent-catch option misreads timing. The abort happens before the timer, the
     id: 'cpu-bound-cancellation-limits',
     type: 'concept',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'A tight numeric loop runs ten seconds on the main thread, driven by a function that accepted a signal. Why does aborting have no visible effect until it finishes?',
@@ -379,7 +370,6 @@ Workers are real threads, which is why the third option half-appeals — but loo
     id: 'combining-signals-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'Design cancellability for a multi-step operation — three API calls, local shaping between each — so it stops promptly when the user navigates away, times out, or both. What do you build, and what do you lean on the platform for?',

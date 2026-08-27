@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-is-the-chain',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-1',
     prompt: 'What happens when you read a property an object does not have?',
     options: [
@@ -34,7 +33,6 @@ The last option describes a language where inheritance exists for methods and no
     id: 'shadowing-output',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const parent = { greeting: 'hello' }
@@ -68,7 +66,6 @@ Nothing in this reaches parent at any point after the first line, which is the f
     id: 'class-is-sugar',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'staff',
     prompt: 'Is `class` in JavaScript just syntax over prototypes? Be precise.',
     answerInFull: `Mostly, but not entirely. Methods declared in a class body go on the prototype and instances inherit them by lookup, exactly as with constructor functions, and extends sets up the prototype link.
@@ -88,7 +85,6 @@ The differences that are not sugar:
     id: 'proto-vs-prototype',
     type: 'concept',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'Given const d = new Dog(), which of these is true?',
     options: [
@@ -121,7 +117,6 @@ d.__proto__ === Dog swaps the two sides. The instance links to Dog.prototype, no
     id: 'hasownproperty',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       "This is meant to list an object's own keys and includes inherited ones. Which fix is right, and safe on any object?",
@@ -164,7 +159,6 @@ in is the guard that looks right and does nothing. It answers the same question 
     id: 'method-lookup-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `class Animal {
@@ -215,7 +209,6 @@ true for hasOwn is the same copying belief measured directly. If the instance ha
     id: 'inherited-mutation',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const defaults = { tags: [], name: 'unnamed' }
@@ -249,7 +242,6 @@ The rule to say out loud: mutating an inherited object is shared, assigning is n
     id: 'object-create-null',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'You are building a lookup keyed by strings that come from user input. Which statement about using Object.create(null) for it is right?',
@@ -279,7 +271,6 @@ The Map comparison is the one to think about rather than dismiss, because a Map 
     id: 'implement-instanceof',
     type: 'coding',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'Your myInstanceOf walks the prototype chain of value looking for Constructor.prototype. What else does it need to be correct?',
@@ -321,7 +312,6 @@ Comparing names is the workaround people reach for after being bitten by the rea
     id: 'class-methods-live-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'Where does a method declared in a class body actually live?',
     options: [
@@ -350,7 +340,6 @@ The private table option is the answer for private methods and fields declared w
     id: 'instanceof-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does `a instanceof B` actually test?',
     options: [

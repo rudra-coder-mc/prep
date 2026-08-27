@@ -78,7 +78,7 @@ content/javascript/closures/
                     lesson heading it covers. Optional
   questions.ts      typed question objects for this topic
   exercises.ts      practical exercises, solved locally in VS Code
-  meta.ts           slug, title, order, difficulty, tags, prerequisites
+  meta.ts           slug, title, order, tags, prerequisites
 ```
 
 A topic is a directory. Adding one means adding a directory. No registry to
