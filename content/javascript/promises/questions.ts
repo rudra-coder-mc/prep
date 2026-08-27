@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'A promise has been rejected. What can move it to fulfilled?',
     options: [
       'Calling resolve on it, since the last call inside the executor wins',
@@ -34,6 +35,7 @@ The last option has the irreversibility right and the handlers wrong. Attaching 
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Compare Promise.all, allSettled, race and any, with a practical use for each.',
     answerInFull: `- all: fulfils with every value, or rejects as soon as any one rejects. Use it when you need all of the results and any failure makes the whole thing pointless, such as loading data a page cannot render without.
 - allSettled: never rejects; fulfils with an array of status objects. Use it when you want everything attempted and reported, such as sending several independent analytics calls or a batch where partial success is fine.
@@ -50,6 +52,7 @@ The one that catches people out is that all does not cancel the others when it r
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'This takes three seconds when it should take one. Which change fixes it?',
     code: `async function loadAll(ids) {
   const results = []
@@ -87,6 +90,7 @@ The last option is the shape people reach for when "make it async" is the goal r
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log('script start')
 
@@ -132,6 +136,7 @@ Nothing here is affected by the timing of the promise. Replacing resolve('first'
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'This chain logs undefined instead of the posts. What is wrong?',
     code: `fetchUser(id)
   .then((user) => {
@@ -172,6 +177,7 @@ The last option is the version of this bug people reach for when a log shows a P
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt: 'Reviewing this, which criticism is the one worth making?',
     code: `async function load(id) {
   try {
@@ -212,6 +218,7 @@ The last option misreads what returning from a catch does. It fulfils the promis
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'You are writing withTimeout(promise, ms), which rejects if the promise has not settled in time. Which implementation is right?',
     options: [
@@ -251,6 +258,7 @@ Promise.any is race's optimistic sibling: it ignores rejections and waits for th
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'Does this produce an unhandled rejection?',
     code: `const p = Promise.reject(new Error('boom'))
 
@@ -284,6 +292,7 @@ The last option is a reasonable guess about runtimes differing, and they do diff
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does the second then receive?',
     code: `Promise.resolve(1)
   .then((n) => n + 1)
@@ -310,6 +319,7 @@ undefined is what the second callback receives when the first one has a body and
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does an async function return?',
     options: [
       'The value returned by the body',
@@ -336,6 +346,7 @@ undefined unless awaited is the reading where an async function is lazy, produci
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'One of four promises passed to Promise.all rejects. What happens?',
     options: [
       'It waits for all four, then rejects with an array of reasons',

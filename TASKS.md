@@ -45,26 +45,22 @@ Two boundaries do most of the work, both drawn from the glossary:
 - **SWE-2 against senior.** SWE-2 asks what went wrong. Senior asks what you
   would do instead. A trade-off whose answer is a single rule is still SWE-2.
 
-`easy` mostly maps to `swe-1`: 54 of the 68 easy questions tagged so far landed
+`easy` mostly maps to `swe-1`: 61 of the 82 easy questions tagged so far landed
 there. Where it breaks is a topic a junior has never met, since the label then
 describes the question rather than the round. Ask whether somebody two years in
 would have seen the API at all. The easy question on `Object.defineProperty`
 defaults is SWE-2, and the easy one asking why a static-only class should be a
 module is senior. `hard` does not map anywhere mechanically, so read every one of
-them. Seventeen of the 57 hard questions so far are SWE-2, because a famous gotcha
-is hard to answer and still the ordinary working-developer round. The bulk of the
-work is the medium questions, which spread across all four tiers.
+them. Twenty-six of the 76 hard questions so far are SWE-2, because a famous
+gotcha is hard to answer and still the ordinary working-developer round. The bulk
+of the work is the medium questions, which spread across all four tiers.
 
-A topic can be thin at either end, or empty at one. Three topics finished with a
-single SWE-1 question, and `weak-references` finished with none, because nothing
-in it is asked of somebody two years in. Report what the topic has rather than
-filling a tier to be even: a topic with no SWE-1 question drops out of the SWE-1
-topic list in task 13, which is the correct outcome and not a gap.
-
-## 9. Tag errors and the event loop
-
-`throwing-and-catching`, `error-types`, `custom-errors`, `event-loop`,
-`debounce-and-throttle`, `promises`, `promise-combinators`.
+A topic can be thin at either end, or empty at one. Eight topics finished with a
+single SWE-1 question, and `weak-references`, `error-types` and `custom-errors`
+finished with none, because nothing in them is asked of somebody two years in.
+Report what the topic has rather than filling a tier to be even: a topic with no
+SWE-1 question drops out of the SWE-1 topic list in task 13, which is the correct
+outcome and not a gap.
 
 ## 10. Tag async and modules
 

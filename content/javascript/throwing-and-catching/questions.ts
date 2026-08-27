@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt:
       'A throw happens four frames deep, and the only try/catch is in the outermost of them. What happens to the two frames in between?',
     options: [
@@ -35,6 +36,7 @@ Unwinding to the top first would mean every finally in the program ran before an
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function read() {
   let value = 'from try'
@@ -81,6 +83,7 @@ Nothing here is unreachable. The finally block is reached on every path out of t
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function run() {
   try {
@@ -127,6 +130,7 @@ Adding that return would print from finally instead, because the finally block r
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'The catch block logs "undefined undefined". Why?',
     code: `function parseAge(input) {
   const age = Number(input)
@@ -168,6 +172,7 @@ The stack has nothing to do with where the try is. It is captured when the Error
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'A disk failure inside work() is reported nowhere: withCleanup returns "done" and the caller carries on. What is swallowing the error?',
     code: `function withCleanup(work) {
@@ -213,6 +218,7 @@ releaseLock does not clear anything. Ordinary statements in a finally block leav
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-1',
     prompt: 'When does a finally block not run?',
     options: [
       'When the try block returns, since a return leaves the function immediately',
@@ -252,6 +258,7 @@ An error thrown from the catch block still goes out through the finally, the sam
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does scan return?',
     code: `function scan(items) {
   const log = []
@@ -301,6 +308,7 @@ Getting stop into the log needs the push below the break to run. The break leave
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A config loader parses JSON that users edit by hand, and should fall back to defaults when the file is malformed. Which catch is right?',
     code: `function loadConfig(raw) {
@@ -342,6 +350,7 @@ Replacing the error with a tidy message throws away the parser's line and column
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'Every failed database call in production is reported as "connection already released". The real errors are nowhere in the logs. The handler releases its connection in a finally. What do you change?',
     options: [
@@ -379,6 +388,7 @@ Releasing before the query is not cleanup, and the query needs the connection. O
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What is true of the value bound by a catch clause?',
     options: [
       'It is block scoped to the catch clause, and the binding can be left out entirely when the value is not needed',
@@ -416,6 +426,7 @@ The binding has been optional since ES2019 and is widely supported. Omitting it 
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'How do you decide where in a call chain to catch an error, and what do you do with one you cannot handle?',
     answerInFull: `- The rule is that a catch belongs where a decision can be made. If this function knows what to do instead, it catches; if it does not, it lets the error past. Catching in order to log and continue is not a decision, it is hiding one.

@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt:
       'Production logs show "Error: email is required" for every validation failure, never "ValidationError". The class is right and the throw is right. What is missing?',
     code: `class ValidationError extends Error {
@@ -48,6 +49,7 @@ There is no static name property that feeds this. A class does have a name, whic
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `class AppError extends Error {
   constructor(message) {
@@ -90,6 +92,7 @@ true is the last line. Native class extends puts Error.prototype on the chain, s
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `class LoadError extends Error {
   constructor(message, options) {
@@ -134,6 +137,7 @@ Declaring an unused parameter is legal and ordinary. The bug here is a silent om
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A custom error assigns this.name in its constructor. What does JSON.stringify of that error produce, and why does it matter?',
     options: [
@@ -174,6 +178,7 @@ Error has no toJSON. That is the whole problem, and adding one is the fix.`,
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A validator rejects a field, and an HTTP layer three frames up has to answer 422 with the field name in the body. Which error design gets it there?',
     options: [
@@ -215,6 +220,7 @@ A module level variable is the version that works in a demo and fails under conc
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A pull request adds fourteen error subclasses, one per failure the service can produce. Every one of them is caught by the same boundary handler and turned into a 400. What do you say in review?',
     options: [
@@ -250,6 +256,7 @@ Switching on constructor.name replaces a working check with a fragile one: minif
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'Custom errors work in tests and fail in the browser bundle: instanceof ValidationError is false there, and every validation failure becomes a 500. The build targets ES5. What is happening?',
     options: [
@@ -287,6 +294,7 @@ instanceof does not look at names at all. It walks the prototype chain, so minif
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'What does Error.captureStackTrace(this, ValidationError) do in a constructor?',
     options: [
       'It captures the stack for engines that do not populate one, and is required for a subclass to have a stack at all',
@@ -319,6 +327,7 @@ Nothing about it is related to freezing. The stack property stays writable, whic
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'Custom errors are pushed onto a queue as JSON and read back by a worker, which has to know which failure it was. What do you add?',
     options: [
@@ -354,6 +363,7 @@ Trusting the queue client assumes it special cases errors. Most do not, and the 
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'senior',
     prompt: 'Which failures are worth their own error type?',
     options: [
       'Every distinct failure, so each one has a name that can be searched for in the codebase',
@@ -389,6 +399,7 @@ Refusing to subclass at all loses the one distinction worth having, which is bet
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'You are designing the error surface of a library other teams will depend on. What do you expose, and what do you promise?',
     answerInFull: `- One base class everything I throw extends, so a consumer can separate my failures from bugs with a single check. That is the most valuable thing the surface gives them.
