@@ -3,7 +3,10 @@ import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { attempts, exerciseProgress, topicProgress } from '@/db/schema'
 import { getAllTopics, type Topic } from '@/content/loader'
+import { questionKey } from '@/content/schema'
 import { getStreaks } from './activity'
+import { DEFAULT_TIER, questionsUpTo } from './tiers'
+import { getTrackTiers } from './track-tier'
 import { summariseTracks, type TrackSummary } from './tracks'
 import {
   summariseTopic,
@@ -17,6 +20,8 @@ export type TopicOverview = TopicSummary & {
   technology: string
   directory: string
   title: string
+  /** How many of the topic's questions the track's tier covers. */
+  questions: number
 }
 
 export type Dashboard = {
@@ -32,8 +37,9 @@ export type Dashboard = {
 const WEAK_STATUSES: TopicStatus[] = ['weak', 'learning']
 
 export async function getDashboard(userId: string): Promise<Dashboard> {
-  const [topics, attemptRows, progressRows, exerciseRows, streak] = await Promise.all([
+  const [topics, tiers, attemptRows, progressRows, exerciseRows, streak] = await Promise.all([
     getAllTopics(),
+    getTrackTiers(userId),
     db
       .select({
         questionId: attempts.questionId,
@@ -57,17 +63,29 @@ export async function getDashboard(userId: string): Promise<Dashboard> {
 
   const learnedAt = new Map(progressRows.map((row) => [row.topicSlug, row.learnedAt]))
 
-  const overviews: TopicOverview[] = topics.map((topic: Topic) => ({
-    slug: topic.slug,
-    technology: topic.technology,
-    directory: topic.directory,
-    title: topic.title,
-    ...summariseTopic(
-      topic.questions.length,
-      attemptsByTopic.get(topic.slug) ?? [],
-      learnedAt.get(topic.slug) ?? null,
-    ),
-  }))
+  // A topic is on the path when the tier covers at least one of its questions,
+  // and only those questions count toward it. A staff question answered last
+  // month says nothing about how ready somebody is for the SWE-1 screen.
+  const overviews: TopicOverview[] = topics.flatMap((topic: Topic) => {
+    const inScope = questionsUpTo(topic.questions, tiers.get(topic.technology) ?? DEFAULT_TIER)
+    if (inScope.length === 0) return []
+
+    const keys = new Set(inScope.map((question) => questionKey(topic.slug, question.id)))
+    const attempts = (attemptsByTopic.get(topic.slug) ?? []).filter((attempt) =>
+      keys.has(attempt.questionId),
+    )
+
+    return [
+      {
+        slug: topic.slug,
+        technology: topic.technology,
+        directory: topic.directory,
+        title: topic.title,
+        questions: inScope.length,
+        ...summariseTopic(inScope.length, attempts, learnedAt.get(topic.slug) ?? null),
+      },
+    ]
+  })
 
   const byStatus = {
     not_started: 0,

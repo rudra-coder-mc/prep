@@ -1,9 +1,11 @@
 import 'server-only'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNotNull } from 'drizzle-orm'
 import { db } from '@/db'
 import { reviewSchedule, topicProgress } from '@/db/schema'
-import { getTopic } from '@/content/loader'
-import { questionKey } from '@/content/schema'
+import { getTopic, type Topic } from '@/content/loader'
+import { questionKey, type Tier } from '@/content/schema'
+import { questionsUpTo } from './tiers'
+import { getTrackTier, setTrackTier } from './track-tier'
 
 export type TopicProgressRow = typeof topicProgress.$inferSelect
 
@@ -20,15 +22,47 @@ export async function getTopicProgress(
 }
 
 /**
- * Marking a topic learned is what enrols its questions into recall. Every
- * question starts at the bottom of the ladder and is due immediately, so the
+ * Puts a topic's in-scope questions on the bottom rung, due immediately, so the
  * first review happens while the lesson is still fresh.
+ *
+ * Every question already scheduled is left exactly as it is. That is what makes
+ * re-reading a topic free, and it is also what makes stepping up a tier safe:
+ * the newly in-scope questions arrive at the bottom and nothing in rotation
+ * moves.
+ */
+async function enrol(userId: string, topics: Topic[], tier: Tier, now: Date) {
+  const rows = topics.flatMap((topic) =>
+    questionsUpTo(topic.questions, tier).map((question) => ({
+      userId,
+      questionId: questionKey(topic.slug, question.id),
+      topicSlug: topic.slug,
+      dueAt: now,
+      intervalStep: 0,
+    })),
+  )
+
+  if (rows.length === 0) return
+
+  await db
+    .insert(reviewSchedule)
+    .values(rows)
+    .onConflictDoNothing({
+      target: [reviewSchedule.userId, reviewSchedule.questionId],
+    })
+}
+
+/**
+ * Marking a topic learned is what enrols its questions into recall. Only the
+ * questions at or below the track's tier are enrolled: being asked a staff
+ * question while preparing for the SWE-1 screen teaches nothing and costs
+ * confidence. See docs/decisions/0028-tiers-are-interview-levels.md.
  */
 export async function markTopicLearned(userId: string, technology: string, directory: string) {
   const topic = await getTopic(technology, directory)
   if (!topic) throw new Error(`No such topic: ${technology}/${directory}`)
 
   const now = new Date()
+  const tier = await getTrackTier(userId, technology)
 
   await db
     .insert(topicProgress)
@@ -38,22 +72,38 @@ export async function markTopicLearned(userId: string, technology: string, direc
       set: { learnedAt: now },
     })
 
-  if (topic.questions.length === 0) return
+  await enrol(userId, [topic], tier, now)
+}
 
-  await db
-    .insert(reviewSchedule)
-    .values(
-      topic.questions.map((question) => ({
-        userId,
-        questionId: questionKey(topic.slug, question.id),
-        topicSlug: topic.slug,
-        dueAt: now,
-        intervalStep: 0,
-      })),
-    )
-    // Re-reading a topic should not reset progress on questions already in
-    // rotation, so existing schedule rows are left exactly as they are.
-    .onConflictDoNothing({
-      target: [reviewSchedule.userId, reviewSchedule.questionId],
-    })
+/**
+ * Picks the tier for a track, and brings what is already learned up to it.
+ *
+ * Without that second half the pick would only apply to topics learned after
+ * it, so stepping up would mean re-marking every topic by hand. Stepping down
+ * enrols nothing and removes nothing: a question already on the ladder is
+ * something you have started remembering, and dropping it would throw that
+ * away over a change of plan.
+ */
+export async function pickTrackTier(userId: string, technology: string, tier: Tier) {
+  await setTrackTier(userId, technology, tier)
+
+  const learned = await db
+    .select({ topicSlug: topicProgress.topicSlug })
+    .from(topicProgress)
+    .where(and(eq(topicProgress.userId, userId), isNotNull(topicProgress.learnedAt)))
+
+  const directories = learned
+    .map((row) => row.topicSlug.split('/'))
+    .filter(([track]) => track === technology)
+    .map(([, directory]) => directory)
+    .filter((directory) => directory !== undefined)
+
+  const topics = await Promise.all(directories.map((directory) => getTopic(technology, directory)))
+
+  await enrol(
+    userId,
+    topics.filter((topic) => topic !== null),
+    tier,
+    new Date(),
+  )
 }

@@ -1,7 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { sql } from 'drizzle-orm'
 import { createTestDatabase, insertTestUser, type TestDatabase } from './testing'
-import { attempts, dailyActivity, exerciseProgress, reviewSchedule, topicProgress } from './schema'
+import {
+  attempts,
+  dailyActivity,
+  exerciseProgress,
+  reviewSchedule,
+  topicProgress,
+  trackTier,
+} from './schema'
 
 let ctx: TestDatabase
 let userId: string
@@ -26,6 +33,7 @@ describe('migrations', () => {
       'session',
       'account',
       'verification',
+      'track_tier',
       'topic_progress',
       'attempts',
       'review_schedule',
@@ -34,6 +42,29 @@ describe('migrations', () => {
     ]) {
       expect(names).toContain(table)
     }
+  })
+})
+
+describe('track_tier', () => {
+  it('allows one pick per user per track', async () => {
+    await ctx.db.insert(trackTier).values({ userId, technology: 'javascript', tier: 'swe-2' })
+    await expect(
+      ctx.db.insert(trackTier).values({ userId, technology: 'javascript', tier: 'senior' }),
+    ).rejects.toThrow()
+  })
+
+  it('allows a different pick on another track', async () => {
+    await ctx.db.insert(trackTier).values({ userId, technology: 'browser', tier: 'swe-1' })
+    const rows = await ctx.db.select().from(trackTier)
+    expect(rows.map((r) => r.technology).sort()).toEqual(['browser', 'javascript'])
+  })
+
+  it('refuses a tier that is not one of the four interview levels', async () => {
+    await expect(
+      ctx.db.execute(
+        sql`insert into track_tier (id, user_id, technology, tier) values ('x', ${userId}, 'javascript', 'junior')`,
+      ),
+    ).rejects.toThrow()
   })
 })
 
