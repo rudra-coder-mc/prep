@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What happens when you assign to a name that was never declared?',
     options: [
       'It creates a global in both modes, but strict mode warns in the console',
@@ -39,6 +40,7 @@ Nothing warns. Sloppy mode is silent by design, which is what made these bugs so
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'This file is an ES module. What does it print?',
     code: `function whoAmI() {
   console.log(this)
@@ -82,6 +84,7 @@ An empty object would be observable and confusing. undefined is deliberate: it t
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This script was supposed to be strict, and a typo still created a global instead of throwing. Why?',
     code: `const VERSION = 2
@@ -121,6 +124,7 @@ Assignment is precisely what strict mode changes here. The rule is about writing
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'In a CommonJS file with no directive, this function reports success and the config never changes. What is happening?',
     code: `const config = Object.freeze({ retries: 3 })
@@ -162,6 +166,7 @@ Nothing is cached. Every call performs the same write and the same read, and eve
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A classic script declares const rate = 0.2 at its top level. Why is globalThis.rate undefined?',
     options: [
@@ -195,6 +200,7 @@ globalThis is the object itself, not a snapshot. Assigning to it is how a polyfi
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'You ship a library that runs in a page, in a web worker and in Node, and it has to install one shared registry object. Which approach is right?',
     options: [
@@ -227,6 +233,7 @@ A module level const is the right default for ordinary state, and wrong here: th
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'The same line, console.log(this), sits at the top level of three files: a classic script, an ES module, and a CommonJS file. What does each print?',
     options: [
@@ -258,6 +265,7 @@ Uniform empty objects would make the three interchangeable. The differences are 
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'This module is strict. Put the lines it prints in the order it prints them.',
     code: `const config = Object.freeze({ retries: 1 })
 
@@ -315,6 +323,7 @@ If delete config.retries had been written as delete retries, the file would not 
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A strict ES module imports a helper from an old sloppy CommonJS file, and that helper still creates a global when it assigns to an undeclared name. A colleague says the import should have made it strict. Who is right?',
     options: [
@@ -344,6 +353,7 @@ Splitting a file into a strict top level and sloppy functions is not something t
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'A sloppy script contains this function. What does it print?',
     code: `function update(price) {
   price = price * 2
@@ -384,6 +394,7 @@ arguments is writable in sloppy mode. What strict mode forbids is assigning to t
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'Why does strict mode exist, and why does almost nobody write the directive any more? What would you check before deleting it from an old file?',
     answerInFull: `- It exists because a set of early decisions made mistakes silent. Undeclared assignment created a global, failed writes did nothing, delete returned false, and a plain call bound this to the global object. All four turn a bug into a program that runs.

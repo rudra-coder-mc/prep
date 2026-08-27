@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What is a closure?',
     options: [
       'A function that has been returned from another function',
@@ -35,6 +36,7 @@ The last option names something real. The environment record is what the closure
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does a closure actually capture?',
     options: [
       'A copy of the value, taken when the function was defined',
@@ -59,6 +61,7 @@ The last option is the interesting one, because engines really do it. V8 will of
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-1',
     prompt: 'When is a closure created?',
     options: [
       'When the enclosing function returns',
@@ -81,6 +84,7 @@ The last option is the optimisation confused with the language. An engine may di
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `function makeCounter() {
   let count = 0
@@ -114,6 +118,7 @@ The version of this worth trying by hand is moving let count = 0 above makeCount
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function make() {
   let value = 0
@@ -146,6 +151,7 @@ That is the practical difference between closure based privacy and methods that 
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const fns = []
 for (let i = 0; i < 3; i++) {
@@ -172,6 +178,7 @@ The reason matters more than the result. It is not that let is block scoped in t
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `for (let i = 0; i < 2; i++) {
   setTimeout(() => console.log('timer ' + i), 0)
@@ -198,6 +205,7 @@ Nothing about the delay is involved. A zero millisecond timer is not "as soon as
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This is meant to print 0, 1, 2. It prints 3, 3, 3. Which change fixes it, for the right reason?',
     code: `for (var i = 0; i < 3; i++) {
@@ -239,6 +247,7 @@ Hoisting the arrow above the loop changes nothing, and it is worth knowing why: 
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'You are writing once(fn). It returns a wrapper that calls fn at most one time and returns that first result on every later call. fn is allowed to return undefined. Which design does that?',
     options: [
@@ -282,6 +291,7 @@ Hanging the result off the wrapper works and gives the state away. Anything hold
     type: 'scenario',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'A page slowly grows in memory. Event handlers are attached from inside a function that also builds a large array, and the handlers never touch that array. Which explanation fits?',
     options: [
@@ -312,6 +322,7 @@ Unremoved handlers are a real leak and are worth checking anyway, but a handful 
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'How do closures give you private state, and how does that compare with private class fields?',
     answerInFull: `A closure makes state private by construction: the variable lives in a scope nobody outside can name, so there is no syntax that reaches it. This is the module pattern: return an object of functions that all close over the same variables.

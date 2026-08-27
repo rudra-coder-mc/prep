@@ -45,16 +45,15 @@ Two boundaries do most of the work, both drawn from the glossary:
 - **SWE-2 against senior.** SWE-2 asks what went wrong. Senior asks what you
   would do instead. A trade-off whose answer is a single rule is still SWE-2.
 
-`easy` maps to `swe-1` reliably: 20 of the 21 easy questions in task 5 landed
+`easy` maps to `swe-1` reliably: 32 of the 34 easy questions tagged so far landed
 there. `hard` does not map anywhere mechanically, so read every one of them.
-Three of the eight hard questions in task 5 were SWE-2, because a famous gotcha
-is hard to answer and still the ordinary working-developer round. The bulk of
-the work is the medium questions, which spread across all four tiers.
+Ten of the 25 hard questions tagged so far are SWE-2, because a famous gotcha is
+hard to answer and still the ordinary working-developer round. The bulk of the
+work is the medium questions, which spread across all four tiers.
 
-## 6. Tag functions
-
-`closures`, `higher-order-functions`, `array-methods`,
-`currying-and-partial-application`, `this-binding`, `strict-mode-and-globalthis`.
+A topic can be thin at either end. `strict-mode-and-globalthis` finished with one
+SWE-1 question, because almost nothing in it is asked of somebody with two years
+of experience. Report what the topic has rather than filling a tier to be even.
 
 ## 7. Tag objects and classes
 
@@ -95,9 +94,9 @@ questions into a schema that now demands a tier.
 a `difficulty` of their own, and decision `0028` speaks only about questions and
 topic meta. Either exercises keep the old scale, and this task's wording narrows
 to questions and topic meta, or they need a decision of their own first. Nothing
-in tasks 6 through 11 depends on the answer.
+in tasks 7 through 11 depends on the answer.
 
-Blocked by 6 through 11. Done when nothing in `content/` or `src/` mentions
+Blocked by 7 through 11. Done when nothing in `content/` or `src/` mentions
 difficulty except what the exercise decision above leaves in place, and the
 check passes.
 
