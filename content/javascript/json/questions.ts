@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'What does JSON.stringify do with a property whose value is undefined, a function or a symbol?',
     options: [
@@ -33,6 +34,7 @@ null everywhere is half right. It is what arrays get, and the reason is position
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `console.log(
   JSON.stringify({
@@ -70,6 +72,7 @@ An empty array for c is the object rule applied to an array. Dropping the elemen
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const item = {
   name: 'pen',
@@ -123,6 +126,7 @@ Putting replacer "" before toJSON is the order reversed. toJSON runs first, on e
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt:
       'State is saved to localStorage with JSON.stringify and loaded back with JSON.parse. After a reload, state.createdAt.getTime is not a function. What happened, and what is the fix?',
     options: [
@@ -156,6 +160,7 @@ structuredClone does preserve Dates and cannot write to localStorage, which hold
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       "Write stringifySafe(value) that serialises like JSON.stringify but writes the string '[Circular]' wherever it meets an object it has already written, so a cyclic structure no longer throws. Which of these is correct?",
     options: [
@@ -192,6 +197,7 @@ A replacer given as an array is an allow-list of keys. No key is called '[Circul
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A backend sends 64-bit numeric ids. Some of them arrive in the frontend a few units off, and requests back to the server then hit the wrong record. Why, and what is the fix?',
     options: [
@@ -219,6 +225,7 @@ The loss happens on the way in, in parse, not on the way out. Moving the id to t
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'You are persisting application state as JSON, in localStorage or over the wire. What breaks, and how do you handle it?',
     answerInFull: `Start with the list of what JSON cannot hold, because that is what breaks: Dates become strings, Map and Set become empty objects, undefined disappears, NaN becomes null, class instances lose their prototype, BigInt throws, a cycle throws, and integers above 2 ** 53 are rounded. Anything in state that is one of those comes back different or not at all.
@@ -241,6 +248,7 @@ And say what I would not do: rely on JSON.parse(JSON.stringify(x)) as a deep cop
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'In what order does a JSON.parse reviver visit the values of {"a":{"b":1},"c":2}?',
     options: [
       'The root first, then a, then b, then c, top down in source order',
@@ -267,6 +275,7 @@ Leaves only would mean the reviver never sees an object, and seeing objects is h
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'What does this print?',
     code: `const parsed = JSON.parse('{"__proto__": {"admin": true}, "name": "x"}')
 console.log(parsed.admin, Object.keys(parsed))`,
@@ -295,6 +304,7 @@ __proto__ is an ordinary string as far as JSON's grammar is concerned. Nothing a
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: "What does JSON.stringify(new Map([['a', 1]])) return?",
     options: ['\'[["a",1]]\'', '\'{"a":1}\'', "'{}'", 'It throws a TypeError'],
     correctOption: 2,
@@ -316,6 +326,7 @@ Nothing throws. Silent emptiness is the failure mode, which is what makes it eas
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'JSON.stringify(config, 2) is meant to pretty-print and the output is still one line. Why?',
     options: [

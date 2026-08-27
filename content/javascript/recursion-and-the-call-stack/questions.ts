@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'Why does a deep recursion run out of stack when a loop doing the same work does not?',
     options: [
       'A recursive call costs more time than a loop iteration, and the engine aborts work that runs too long',
@@ -32,6 +33,7 @@ The garbage collector has no say over the stack. Frames are popped by returning,
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function countdown(n) {
   if (n === 0) return
@@ -61,6 +63,7 @@ The other misreading is not in the pool because it uses the pool's own words: up
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This throws RangeError: Maximum call stack size exceeded for every input, even an empty array. Why?',
     code: `function sum(list) {
@@ -100,6 +103,7 @@ The last option invents a throw. Adding undefined to a number makes NaN, silentl
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'You are rewriting a recursive flatten(list) as a loop, so that input nesting depth can no longer overflow the stack. What replaces the call stack?',
     options: [
@@ -152,6 +156,7 @@ The closure option is a true fact from the closures topic applied to nothing. Cl
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `let calls = 0
 
@@ -184,6 +189,7 @@ The important part is that this is not a stack depth problem. The deepest the st
     type: 'scenario',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'A recursive function that walks API responses to redact fields has started throwing RangeError in production. It has worked for a year. What do you do?',
     answerInFull: `The function is almost certainly fine and the data has changed. Something upstream is now returning a document nested deeper than the stack allows, or nested in a way that never ends.
@@ -204,6 +210,7 @@ For an immediate mitigation, catching the RangeError lets the request fail clean
     type: 'interview',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt: 'How do you decide between recursion and a loop?',
     options: [
       'Prefer whichever reads better: modern engines make recursion and loops equivalent in both speed and depth',
@@ -234,6 +241,7 @@ Tail calls are in the specification and shipped only by JavaScriptCore, so writi
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'What does this print?',
     code: `function depth(n) {
   try {
@@ -271,6 +279,7 @@ Treating the overflow as fatal imports the rule from other platforms. Running ou
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does a runaway recursion throw?',
     options: [
       'InternalError, in every engine',
@@ -289,6 +298,7 @@ Treating the overflow as fatal imports the rule from other platforms. Running ou
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'What is the state of tail call optimisation in JavaScript?',
     options: [
       'It is in the specification and implemented by every modern engine',
@@ -307,6 +317,7 @@ Treating the overflow as fatal imports the rule from other platforms. Running ou
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-1',
     prompt: 'When is a stack frame removed?',
     options: [
       'When the function returns or throws',

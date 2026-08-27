@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'Three of these cost the same whether the collection holds ten items or a million. Which one does not?',
     options: [
@@ -37,6 +38,7 @@ Property assignment on an object is a hash lookup and a write. It stays constant
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'What does the language specification actually promise about the cost of map.get?',
     options: [
       'Nothing. Map is specified as a list of entries, and every engine happens to optimise it',
@@ -67,6 +69,7 @@ Equating it with an object property read confuses two things that are both const
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const queue = ['a', 'b', 'c', 'd']
 
@@ -98,6 +101,7 @@ undefined is there for the other misreading, that the array keeps its length and
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const scores = [10, 20, 30]
 delete scores[1]
@@ -134,6 +138,7 @@ null appears nowhere: nothing in the language turns a removed property into null
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This report renders instantly against the twenty-row fixture and takes several seconds against the real ten thousand. What is the fix?',
     code: `function withCustomers(lines, orders) {
@@ -174,6 +179,7 @@ Moving it to a worker moves fifty million comparisons somewhere else. The point 
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'A profile of this shows most of the time in allocation and garbage collection rather than in the callback. Why?',
     code: `const byId = rows.reduce((acc, row) => ({ ...acc, [row.id]: row }), {})`,
@@ -209,6 +215,7 @@ reduce holds one accumulator, the current one. The intermediates are unreachable
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'You need the ids present in both of two arrays of about fifty thousand strings each. Which implementation would you write?',
     options: [
@@ -245,6 +252,7 @@ The spread of two objects does not intersect anything. It unions the keys, so it
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A worker drains a queue of a hundred thousand jobs with while (queue.length) run(queue.shift()). Draining it takes far longer than the jobs themselves. What do you change?',
     options: [
@@ -279,6 +287,7 @@ Reversing and shifting from the end still calls shift, which always operates on 
     type: 'coding',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'Fifty thousand rows are sorted by a date held as an ISO string, with rows.sort((a, b) => new Date(a.date) - new Date(b.date)). It is slow. What is the change worth making?',
     options: [
@@ -314,6 +323,7 @@ localeCompare is the slowest string comparison available, because it applies loc
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A reviewer asks you to change const BLOCKED = ["a", "b", "c", "d", "e", "f"] and BLOCKED.includes(code) into a Set, on the grounds that Set lookups are constant and array lookups are linear. Both statements are true. Is the change worth making?',
     options: [
@@ -345,6 +355,7 @@ Rebuilding a Set on every call is the worst of both: allocation and hashing on e
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'A page that renders a table of rows has become unusable since a customer started uploading much bigger files. Nothing about it changed. Walk me through how you would find and fix the problem.',
     answerInFull: `- First I would establish that it is a growth problem rather than a constant one, because nothing else in the answer follows without that. Render it at a hundred rows, a thousand and ten thousand and look at the shape: ten times the data taking ten times as long is linear and probably honest work, and taking a hundred times as long is quadratic and is a bug.

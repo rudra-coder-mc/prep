@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'Which of these is NOT a reason to prefer a Map over a plain object?',
     options: [
       'A Map can use objects, functions and NaN as keys; an object converts every key to a string',
@@ -32,6 +33,7 @@ The order rule is what makes an object sort your numeric ids for you whether you
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const obj = {}
 const map = new Map()
@@ -64,6 +66,7 @@ One entry in the Map would need the Map to stringify, which is precisely what it
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const map = new Map([
   ['a', 1],
@@ -104,6 +107,7 @@ c,a is the order if re-setting a had moved it. a,b,c forgets the delete.`,
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'cache is a Map. After cache["user:1"] = data, cache.get("user:1") returns undefined and cache.size is 0. Why?',
     options: [
@@ -131,6 +135,7 @@ Wrapping in new String makes a new object each time, which would be a key that n
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Write uniqueBy(items, key) that returns the items with duplicates removed by item[key], keeping the first occurrence of each, in original order, in linear time. Which is correct?',
     options: [
@@ -168,6 +173,7 @@ The Map version is linear and keeps the last occurrence of each key, not the fir
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A library attaches state to DOM elements it decorates, using a Map keyed by element. In a single-page app that creates and removes thousands of elements, memory grows without bound even though the elements are gone from the page. What is the fix?',
     options: [
@@ -201,6 +207,7 @@ Clearing on a timer throws away state for elements that are still on the page.`,
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'For each of these, say which collection you would use and why: a config object read from a file; a cache from request object to parsed body; a lookup from user id to user, filled from an API; the set of ids the user has selected in a list; and a registry of which plugin instances have been initialised.',
     answerInFull: `Config from a file: a plain object. The keys are a fixed set of names known when the code is written, it arrived as JSON so it is already an object, and dot access reads as a record. A Map would add ceremony and nothing else.
@@ -223,6 +230,7 @@ The rule across all five: fixed string keys known at write time is an object; ke
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const set = new Set([1, '1', NaN, NaN, { a: 1 }, { a: 1 }, 0, -0])
 console.log(set.size)`,
@@ -246,6 +254,7 @@ That is 1, '1', NaN, the first object, the second object, and 0: six.`,
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'Why can a WeakMap not be iterated, and why must its keys be objects?',
     options: [
       'Iteration was left out to keep the API small, and primitives are rejected because they cannot be hashed',
@@ -272,6 +281,7 @@ WeakMaps key by identity, not by hashed contents. Two objects with the same cont
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A Map keyed by user objects is converted with Object.fromEntries(map) so it can be sent as JSON. The result has one key, "[object Object]". What happened, and what is the right conversion?',
     options: [
@@ -304,6 +314,7 @@ A Map's default iterator is entries already. Asking for entries explicitly chang
     type: 'coding',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'An LRU cache is built on a single Map, relying on insertion order. On get(key) for a present key, what is the correct way to mark it most recently used?',
     options: [
