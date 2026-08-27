@@ -1,0 +1,351 @@
+## Why this matters
+
+Everything else in this track happens to the tree. Events travel through it,
+`fetch` exists to put things into it, and storage exists to survive it being
+thrown away. So it goes first.
+
+It is also the topic where interview answers are thinnest. Most people can name
+`querySelector` and stop. The questions that separate candidates are the ones
+about the model rather than the method names: what the tree is a model of, which
+collections change under you, and why the browser gets slow when you touch it in
+the wrong order.
+
+## The tree is not your HTML
+
+The HTML you serve is a byte stream. The browser parses it once, into a tree of
+objects, and from that moment the bytes are gone. The tree is what exists.
+
+That has three consequences worth having in your head before any API.
+
+**The tree can hold things the HTML never said.** An unclosed `<li>`, a `<p>`
+inside a `<p>`, a table row outside a `<table>`: the parser has recovery rules
+for all of them, and what you get is what the rules produced, not what you typed.
+Reading `document.body.innerHTML` gives you a serialisation of the tree, so it is
+frequently not the markup you sent.
+
+**Properties and attributes are different things.** The attribute is what the
+markup said and what `getAttribute` reads. The property is the current state.
+Type into an input and `input.value` changes while `getAttribute('value')` still
+reports whatever the page loaded with. For `value`, `checked` and `selected` the
+attribute is the initial value and the property is the live one, and confusing
+them is the single most common DOM bug in a form.
+
+**Nothing about the tree is JavaScript.** `document` is not defined by the
+language, and no engine on its own has one. It is supplied by the browser, which
+is why this is a separate track and why every one of these objects behaves
+slightly unlike an ordinary object: `NodeList` is not an array, `classList` is
+not a `Set`, and `style` is not a plain object.
+
+## Finding things
+
+Two families, and the difference between them is the part that matters.
+
+```js
+document.querySelector('.row') // first match, or null
+document.querySelectorAll('.row') // a static NodeList
+document.getElementById('total') // one element, or null
+document.getElementsByClassName('row') // a live HTMLCollection
+```
+
+The `querySelector` pair take any CSS selector and search the subtree of
+whatever you call them on, so `row.querySelector('.price')` is scoped to that
+row. Prefer them. `getElementById` is the one exception worth keeping, because it
+is the only lookup that does not involve matching a selector at all.
+
+Three things people get wrong about the results.
+
+`querySelectorAll` returns a `NodeList`, which has `forEach` and nothing else
+from the array methods. No `map`, no `filter`, no `find`. Spread it or use
+`Array.from` when you want them.
+
+`children` and `childNodes` are not the same. `children` is elements.
+`childNodes` is every node, including the text nodes made of the whitespace
+between your tags. A pretty printed list has text nodes between every `<li>`, so
+`ul.childNodes.length` on a three item list is usually seven.
+
+A selector matches against the whole document, not against where you started.
+`row.querySelector('div .price')` requires an ancestor `div` inside `row`, and
+the `row` itself does not count as that ancestor. This is what `:scope` is for.
+
+## Live and static
+
+`querySelectorAll` gives you a snapshot. `getElementsByClassName`,
+`getElementsByTagName` and `element.children` give you a live view that reflects
+the tree as it is now, every time you look at it.
+
+<MemoryModel
+  title="One removal, two collections"
+  steps={[
+    {
+      note: 'Three rows in the list. static came from querySelectorAll, live came from getElementsByClassName. Both report 3.',
+      stack: [
+        { name: 'static', ref: 'snapshot' },
+        { name: 'live', ref: 'view' },
+      ],
+      heap: [
+        {
+          id: 'snapshot',
+          label: 'NodeList (static)',
+          fields: { length: '3', holds: 'row1, row2, row3' },
+        },
+        { id: 'view', label: 'HTMLCollection (live)', fields: { query: '.row', length: '3' } },
+        { id: 'tree', label: 'ul', fields: { children: 'row1, row2, row3' } },
+      ],
+    },
+    {
+      note: 'Remove row1 from the tree. The live collection re-answers from the tree and now reports 2. The static one still holds the three nodes it was built with.',
+      stack: [
+        { name: 'static', ref: 'snapshot' },
+        { name: 'live', ref: 'view' },
+      ],
+      heap: [
+        {
+          id: 'snapshot',
+          label: 'NodeList (static)',
+          fields: { length: '3', holds: 'row1, row2, row3' },
+        },
+        { id: 'view', label: 'HTMLCollection (live)', fields: { query: '.row', length: '2' } },
+        { id: 'tree', label: 'ul', fields: { children: 'row2, row3' } },
+      ],
+      highlight: ['view', 'tree'],
+    },
+    {
+      note: 'row1 is still a perfectly good element object. It is detached, not destroyed, and appending it somewhere else puts it back in a tree with its listeners and its state intact.',
+      stack: [
+        { name: 'static', ref: 'snapshot' },
+        { name: 'live', ref: 'view' },
+      ],
+      heap: [
+        {
+          id: 'snapshot',
+          label: 'NodeList (static)',
+          fields: { length: '3', holds: 'row1, row2, row3' },
+        },
+        { id: 'view', label: 'HTMLCollection (live)', fields: { query: '.row', length: '2' } },
+        { id: 'detached', label: 'row1, detached', fields: { parentNode: 'null' } },
+      ],
+      highlight: ['detached'],
+    },
+  ]}
+/>
+
+Live sounds convenient and is mostly a hazard, because the classic loop breaks on
+it:
+
+```js
+const rows = document.getElementsByClassName('row')
+for (let i = 0; i < rows.length; i++) {
+  rows[i].remove() // removes every other row
+}
+```
+
+Removing index 0 shifts everything down while `i` moves up, and `length` shrinks
+as you go. Half the rows survive. The same loop over `querySelectorAll` is
+correct, because the snapshot does not move.
+
+Live collections are worth knowing for the opposite reason too. Something has to
+be live for the tree to be observable at all, and when you genuinely want "the
+current children", `element.children` saves you re-querying.
+
+## Changing the tree
+
+The tree is an object graph, and everything that changes it is either moving a
+node or parsing a string.
+
+`append`, `prepend`, `before` and `after` are the modern set. They accept several
+arguments, and they accept strings, which become text nodes:
+
+```js
+list.append(makeRow(a), makeRow(b), 'and that is all')
+```
+
+The older `appendChild` takes one node and returns it. Both have the property
+that surprises people the first time: **appending a node that is already in the
+tree moves it.** There is no copy. If you want a copy, ask for one with
+`cloneNode(true)`, where the argument is whether to take the descendants too.
+
+`textContent` sets text. `innerHTML` parses a string as markup and replaces the
+subtree with the result. That difference is worth stating as a rule you follow
+without thinking about it: **`textContent` for anything that came from a user or
+a server, `innerHTML` only for markup you wrote.** Assigning user input to
+`innerHTML` is how a page executes somebody else's script, and no amount of
+escaping done by hand is as reliable as using the property that cannot parse.
+
+`innerHTML += ` is worse than either. It serialises the whole subtree to a
+string, concatenates, and re-parses the result, which destroys and rebuilds every
+node inside. Every event listener on those nodes is gone, every input loses what
+was typed in it, and any reference you were holding now points at a detached
+node. Use `insertAdjacentHTML('beforeend', markup)` when you want to add markup,
+because it parses only the fragment and leaves the existing children alone.
+
+When you are building many nodes, build them off screen. A `DocumentFragment` is
+a node with no parent that disappears into its children when you append it, so
+the tree is touched once instead of a thousand times:
+
+```js
+const fragment = document.createDocumentFragment()
+for (const item of items) fragment.append(makeRow(item))
+list.replaceChildren(fragment) // one insertion, and the old children go
+```
+
+`replaceChildren` with no arguments is also the honest way to empty an element.
+`innerHTML = ''` works and takes the parser through a needless round trip.
+
+## What a read costs
+
+Writes to the DOM are cheap and lazy. The browser queues the change and
+recalculates layout later, once, before it paints. That batching is what makes a
+hundred small writes affordable.
+
+Reading a geometric property breaks it. `offsetHeight`, `offsetTop`,
+`getBoundingClientRect`, `scrollTop`, `getComputedStyle` and a dozen others
+cannot be answered from the queue, because the answer depends on every pending
+change. So the browser flushes: it stops, computes layout for the whole document,
+and then gives you the number. Once per frame that is fine. Once per iteration
+in a loop that also writes, it is a full layout pass for every element you touch.
+
+<CodeWalkthrough
+  title="Layout thrashing, and the fix"
+  code={`// Slow: each read forces a layout of everything written so far
+for (const box of boxes) {
+  box.style.height = box.offsetHeight * 2 + 'px'
+}
+
+// Fast: every read first, then every write
+const heights = boxes.map((box) => box.offsetHeight)
+boxes.forEach((box, i) => {
+box.style.height = heights[i] \* 2 + 'px'
+})`}
+steps={[
+{
+lines: [2, 3],
+note: 'First iteration. Reading offsetHeight forces layout, which is unavoidable: nothing is pending yet, so the cost is one pass.',
+variables: { 'layout passes': '1' },
+},
+{
+lines: [3],
+note: 'The write is queued, not applied. The browser marks the document dirty and moves on.',
+variables: { 'layout passes': '1', 'pending writes': '1' },
+},
+{
+lines: [2, 3],
+note: 'Second iteration reads offsetHeight again. There is a pending write, so the answer is unknowable without recomputing. Layout runs a second time, for the whole document.',
+variables: { 'layout passes': '2', 'pending writes': '0' },
+},
+{
+lines: [2, 3],
+note: 'And so on. One hundred boxes is one hundred layout passes, each one over the entire document rather than over the box you touched.',
+variables: { 'layout passes': '100' },
+},
+{
+lines: [7],
+note: 'The fix changes nothing about the work and everything about the order. Every read happens while nothing is pending, so the first one forces layout and the other ninety-nine are answered from it.',
+variables: { 'layout passes': '1' },
+},
+{
+lines: [8, 9, 10],
+note: 'Then every write, with no read between them. All hundred stay queued and are flushed together before the next paint.',
+variables: { 'layout passes': '1', 'pending writes': '100' },
+},
+]}
+/>
+
+The pattern is worth naming, because interviewers use the name: this is layout
+thrashing, and the fix is read-then-write batching. If the reads and the writes
+genuinely cannot be separated, put the writes in a `requestAnimationFrame`
+callback, which runs just before the browser paints and so is the right place to
+be making visual changes anyway.
+
+## The interview angle
+
+> **"What is the DOM?"**
+> The browser's object model of the parsed document. Not the HTML you sent, and
+> not part of JavaScript: it is supplied by the host, which is why the same code
+> has no `document` in Node.
+
+> **"What is the difference between `querySelectorAll` and `getElementsByClassName`?"**
+> One returns a static snapshot, the other a live collection that re-answers from
+> the tree every time you read it. Then give the loop that breaks on the live one,
+> because that is the reason the question gets asked.
+
+> **"How would you add five thousand rows without freezing the page?"**
+> Build them in a `DocumentFragment` and insert once, so layout runs once. If it
+> still blocks, the problem is not the DOM work, it is that five thousand rows are
+> five thousand rows, and the answer is to render only what is on screen.
+
+> **"Why is this loop slow?"**
+> Say layout thrashing, say that a geometric read has to flush pending writes,
+> and say the fix is to do all the reads and then all the writes.
+
+Expect a follow-up on `innerHTML` and user input, and answer it with `textContent`
+rather than with escaping.
+
+## Traps
+
+- **`innerHTML +=` rebuilds the subtree.** Listeners, input values and held
+  references all go. Use `insertAdjacentHTML` or append nodes.
+- **A live collection changes while you loop over it.** Iterate backwards, or
+  snapshot with `querySelectorAll` or a spread.
+- **`childNodes` contains whitespace text nodes.** `children` is the one you
+  meant.
+- **Appending an attached node moves it.** `cloneNode(true)` is how you get a
+  copy.
+- **The attribute is the initial value, the property is the current one.**
+  `getAttribute('value')` on a typed-in input is stale by design.
+- **`NodeList` has `forEach` and no other array method.** Spread it before you
+  reach for `map`.
+- **A geometric read flushes layout.** One in a loop that writes is the slowest
+  shape in front end code.
+
+## In one picture
+
+<ConceptMap
+  center={'The DOM'}
+  branches={[
+    {
+      label: 'What it is',
+      summary: 'A tree of objects the browser owns.',
+      nodes: [
+        'parsed once from HTML, then the bytes are gone',
+        'supplied by the host, not by the language',
+        'attribute is the initial value, property is the current one',
+      ],
+    },
+    {
+      label: 'Finding',
+      summary: 'Selectors, scoped to where you ask.',
+      nodes: [
+        'querySelector and querySelectorAll for everything',
+        'getElementById as the one shortcut worth keeping',
+        'childNodes has text nodes, children does not',
+      ],
+    },
+    {
+      label: 'Live or static',
+      summary: 'Whether the collection re-answers from the tree.',
+      nodes: [
+        'querySelectorAll is a snapshot',
+        'getElementsBy and children are live',
+        'a forward loop that removes skips half the matches',
+      ],
+    },
+    {
+      label: 'Changing',
+      summary: 'Move a node, or parse a string.',
+      nodes: [
+        'append moves an attached node rather than copying it',
+        'textContent for data, innerHTML only for markup you wrote',
+        'fragment then replaceChildren to touch the tree once',
+      ],
+    },
+    {
+      label: 'Cost',
+      summary: 'Writes batch, reads flush.',
+      nodes: [
+        'offsetHeight and friends force a layout pass',
+        'read everything, then write everything',
+        'requestAnimationFrame when they cannot be separated',
+      ],
+    },
+  ]}
+/>

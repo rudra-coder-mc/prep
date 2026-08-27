@@ -130,7 +130,11 @@ No page names a technology. The dashboard aggregates every topic under
 adding a track stays what it is at the data layer: adding a directory.
 `src/content/technologies.ts` holds the display spellings and title-cases
 anything it has not been told about, so a new track is readable before anyone
-names it. See `docs/decisions/0010-interview-prep-focus.md`.
+names it. The browser track was the first to exercise that: four directories,
+and no change anywhere in `src/`. A topic's prerequisites carry the technology
+in them, so they can point across a track boundary, and nothing checks that the
+topic on the other end exists. See `docs/decisions/0010-interview-prep-focus.md`
+and `docs/decisions/0027-the-browser-is-its-own-track.md`.
 
 Motion is one primitive (`<Rise>`) with shared easing, and every animated
 component checks `prefers-reduced-motion` before it moves. See

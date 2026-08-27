@@ -21,6 +21,27 @@ Roughly eight or nine choice questions, one ordering, one open.
 
 Every question carries `answerInFull` whatever its form.
 
+## What the topic ships around them
+
+A lesson with at least one visual, two exercises, and a `narration.ts` beside
+the lesson.
+
+`order` runs in tens, in teaching order across the whole track, so there is room
+to insert later. Renumber the topics below a new one rather than squeezing it in
+at 45.
+
+Every narration section names the lesson heading it covers, written exactly as
+the lesson writes it, which is what makes the lesson follow the voice. The
+content check fails on a heading the lesson does not have. See decision `0016`
+for why the script is separate text and `0018` for the anchor.
+
+A group of topics is a branch, not a block of the track: its topics take
+whatever positions in the teaching order they belong in, which usually means
+splitting the group and renumbering what is already there. See decision `0019`.
+
+A prerequisite carries its technology in it, `javascript/event-loop`, so it can
+point at another track. Nothing checks that it exists. See decision `0027`.
+
 ## Converting what is already there
 
 **A question that was written and self graded** already has its answer in full,
