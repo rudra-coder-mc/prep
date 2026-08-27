@@ -24,23 +24,10 @@ show their real counts rather than pretending.
 
 # Phase 1: audio stops being a build step
 
-Today every recording is made ahead of time by a command that runs for tens of
-minutes, and roughly 900 of the 1201 recordings have never been played. Decision
-`0029` reverses that. This phase comes first because every content task after it
-gets cheaper: editing a lesson stops being followed by a build.
-
-## 1. Synthesise a recording the first time it is asked for
-
-The speech engine runs whenever the platform runs on the server, and a request
-for a key with nothing behind it makes the audio instead of refusing. The
-endpoint resolves a key against the content on the server, so a question's script
-still never reaches the browser.
-
-Touches the compose profile, `scripts/deploy.sh`, the speech endpoint, and the
-question play button, which stops telling anyone to run a command.
-
-Done when the cache can be emptied, a lesson section and a question both play,
-and nothing in the interface mentions a build.
+Decision `0029` made a recording the first time it is asked for rather than ahead
+of a build. What is left is hiding the wait, and clearing up what the old build
+left behind. Task numbers are the blocking graph's names, so a finished task
+leaves a gap rather than renumbering the ones after it.
 
 ## 2. Warm ahead of the listener
 

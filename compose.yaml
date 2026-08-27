@@ -19,14 +19,16 @@ services:
       retries: 20
       start_period: 5s
 
-  # Piper neural text to speech, used to narrate a topic. The voice model is
-  # baked into the image, so this container needs no network and no setup.
+  # Piper neural text to speech, used to narrate a topic and to read a question
+  # out. The voice model is baked into the image, so this container needs no
+  # network and no setup.
   #
-  # Behind a profile, so `docker compose up` does not start it. Narration is
-  # built ahead of time by `npm run narration:build`, which starts this, records
-  # what has no recording yet, and stops it again. A voice model sitting in
-  # memory to serve nothing is the load this avoids. See
-  # docs/decisions/0020-the-speech-engine-runs-on-demand.md.
+  # Behind a profile, and the server turns the profile on: `scripts/deploy.sh`
+  # starts the stack with `--profile speech`, so the machine that serves the app
+  # always has a voice and every play button works. A laptop still gets the app
+  # and the database alone, and the commands that need speech start this
+  # themselves. See
+  # docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md.
   #
   # A cache entry is addressed by the words in the script and not by the voice,
   # so changing PIPER_VOICE means rebuilding this image *and* deleting
@@ -37,18 +39,20 @@ services:
     build:
       context: ./services/tts
     profiles: ['speech']
-    # A tool rather than a service, so nothing should bring it back by itself.
-    restart: 'no'
-    # Stopped after every recording session, so it should go down promptly and
-    # cleanly. As PID 1 the process only sees signals it installs a handler for,
-    # and Python installs one for SIGINT, not SIGTERM. Sending the one it
-    # handles is what makes a stop take a moment rather than the full grace
-    # period and a kill.
+    # Part of the stack on the server, so it comes back after a reboot the way
+    # the app does. On a laptop the scripts stop it by hand on their way out,
+    # and compose does not restart a container that was stopped deliberately.
+    restart: unless-stopped
+    # Started and stopped around every command that records, so it should go
+    # down promptly and cleanly. As PID 1 the process only sees signals it
+    # installs a handler for, and Python installs one for SIGINT, not SIGTERM.
+    # Sending the one it handles is what makes a stop take a moment rather than
+    # the full grace period and a kill.
     stop_signal: SIGINT
     stop_grace_period: 5s
     ports:
       # The scripts that record narration reach it here. The app reaches the
-      # container over the compose network, on the rare occasions it is up.
+      # container over the compose network.
       - '${TTS_PORT:-5001}:5000'
     healthcheck:
       test:
@@ -88,11 +92,11 @@ services:
       # there is one place recordings live rather than two that have to be kept
       # in step. See docs/decisions/0022-one-place-for-recordings.md.
       - ./.speech-cache:/cache/speech
-    # The database is the only thing that gates startup, and the only other
-    # container in the default set. The speech engine is not running at all
-    # under normal use, and the app does not need it to be: everything in
-    # content/ that can be listened to already has a recording in the directory
-    # mounted below.
+    # The database is the only thing that gates startup. The speech engine is
+    # not in the default set and is not needed to serve a page: a recording is
+    # asked for after the app is up, and a request that arrives before the voice
+    # model has loaded says the voice is unavailable rather than failing to
+    # start anything.
     depends_on:
       db:
         condition: service_healthy

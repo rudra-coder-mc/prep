@@ -7,8 +7,8 @@ import { NarrationProvider } from './narration-player'
 import { TopicReader } from './topic-reader'
 
 const SECTIONS: SpokenSection[] = [
-  { title: 'The opening', heading: 'Why this matters', script: 'Why it matters.', key: 'one' },
-  { title: 'The middle', heading: 'Truthiness', script: 'Eight falsy values.', key: 'two' },
+  { title: 'The opening', heading: 'Why this matters', key: 'one' },
+  { title: 'The middle', heading: 'Truthiness', key: 'two' },
 ]
 
 let pause: ReturnType<typeof vi.fn<() => void>>

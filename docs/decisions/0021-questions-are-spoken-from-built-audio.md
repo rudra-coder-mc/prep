@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted.
+Accepted, amended by `0029`. A question is still spoken from a key rather than a
+script, and the key is now resolved against the content on the server and
+synthesised, so nothing tells the reader to run a command.
 
 ## Context
 

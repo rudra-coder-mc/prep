@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted.
+Superseded by `0029`, which makes audio when it is asked for and warms it ahead
+of the listener rather than ahead of the build.
 
 ## Context
 

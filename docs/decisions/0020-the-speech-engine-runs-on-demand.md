@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted.
+Accepted, amended by `0029`. The profile stays and a laptop still starts the app
+and the database alone, but the machine that serves the platform turns the
+profile on, because audio is now made when it is asked for.
 
 ## Context
 

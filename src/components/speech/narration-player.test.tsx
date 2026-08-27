@@ -9,19 +9,16 @@ const SECTIONS: SpokenSection[] = [
   {
     title: 'Why this matters',
     heading: 'Why this matters',
-    script: 'The first thing to say out loud.',
     key: 'first',
   },
   {
     title: 'The idea',
     heading: 'The idea',
-    script: 'The second thing to say out loud.',
     key: 'second',
   },
   {
     title: 'The interview angle',
     heading: 'The interview angle',
-    script: 'The last thing to say out loud.',
     key: 'last',
   },
 ]

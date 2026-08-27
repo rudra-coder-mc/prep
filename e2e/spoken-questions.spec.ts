@@ -4,11 +4,12 @@ import { revealButton, walkToForm } from './answering'
 /**
  * A question and its answer can be listened to rather than read.
  *
- * The recordings themselves are made by `npm run narration:build`, and this
- * suite runs against a cache the runner empties on purpose, so that a spec
- * asserting something had to be synthesised is asserting something. The audio is
- * therefore stubbed here. What is under test is the page asking for the right
- * recording at the right moment, not the engine, which the speech specs cover.
+ * This suite runs against a cache the runner empties on purpose, so every
+ * recording here would have to be made from scratch. The audio is therefore
+ * stubbed in all but the last spec: what is under test is the page asking for
+ * the right recording at the right moment, not the engine, which the speech
+ * specs cover. The last spec lets the real endpoint answer, because a question
+ * nobody has recorded being made on the spot is the whole point of the change.
  */
 
 /**
@@ -94,12 +95,19 @@ test('a multiple choice question offers its options by ear', async ({ page }) =>
   expect(asked).toHaveLength(1)
 })
 
-test('a question nobody has recorded says which command records it', async ({ page }) => {
+test('a question nobody has recorded is made when it is asked for', async ({ page }) => {
   // No route, so the real endpoint answers, and the cache this runs against is
-  // empty by design.
-  await page.goto('/topics/javascript/closures/practice')
+  // empty by design. The browser sends a key and the server turns it back into
+  // the words, so nothing about the question has to travel to be spoken.
+  test.setTimeout(90_000)
 
+  await page.goto('/topics/javascript/closures/practice')
   await page.getByRole('button', { name: 'Listen to the question' }).click()
 
-  await expect(page.getByRole('status')).toContainText('npm run narration:build')
+  // Piper runs at about 22 milliseconds per character, so a prompt is several
+  // seconds of work and the button says so while it waits.
+  await expect(page.getByRole('status')).toContainText('first time')
+  await expect(page.getByRole('button', { name: 'Stop listening' })).toBeVisible({
+    timeout: 60_000,
+  })
 })

@@ -36,9 +36,9 @@ describe('SpeakButton', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Listen to the question' }))
 
     await waitFor(() => expect(play).toHaveBeenCalled())
-    // No cache option: a forced cache would replay a 404 taken before the
-    // recording was built, and the response carries its own caching anyway.
-    expect(fetch).toHaveBeenCalledWith('/api/speech/abc123')
+    // A key and nothing else: the server resolves it against its own content,
+    // so a question's words never travel to be read back.
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe('/api/speech/abc123')
   })
 
   it('pauses when it is pressed again, rather than starting a second time', async () => {
@@ -52,19 +52,46 @@ describe('SpeakButton', () => {
     expect(pause).toHaveBeenCalled()
   })
 
-  it('says what to run when the section has never been recorded', async () => {
+  it('says the voice is unavailable when the engine is not answering, and names no command', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response('', { status: 404 })),
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ error: 'The voice is not available right now.' }), {
+            status: 502,
+          }),
+      ),
     )
-    render(<SpeakButton audioKey="missing" label="Listen to the question" />)
+    render(<SpeakButton audioKey="abc123" label="Listen to the question" />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Listen to the question' }))
 
-    await waitFor(() =>
-      expect(screen.getByRole('status').textContent).toContain('npm run narration:build'),
-    )
+    await waitFor(() => {
+      const said = screen.getByRole('status').textContent
+      expect(said).toContain('The voice is not available')
+      expect(said).not.toContain('npm run')
+    })
     expect(play).not.toHaveBeenCalled()
+  })
+
+  it('explains a wait long enough to look like a broken button', async () => {
+    // Never answers, which is what a recording being made for the first time
+    // looks like from here. Real timers, because the delay is the behaviour.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    )
+    render(<SpeakButton audioKey="abc123" label="Listen to the question" />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Listen to the question' }))
+
+    // A recording that already exists arrives long before this, so an ordinary
+    // press says nothing at all.
+    expect(screen.queryByRole('status')).toBeNull()
+
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('first time'), {
+      timeout: 3000,
+    })
   })
 
   it('says the session expired rather than blaming the recording', async () => {

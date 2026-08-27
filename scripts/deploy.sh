@@ -6,9 +6,10 @@
 # so there is nothing on the other side to pull from. The transfer goes over
 # Tailscale, so the two machines need no open ports and no key management.
 #
-# The narration cache is gitignored and around 400 MB. It ships anyway, because
-# without it no lesson can be listened to. rsync sends only what changed, so it
-# costs nothing after the first run.
+# The narration cache is gitignored and around 400 MB. It ships anyway, so the
+# server starts with everything that has already been recorded rather than
+# making it all again. rsync sends only what changed, so it costs nothing after
+# the first run.
 #
 # .env is excluded in both directions. The server's copy holds the public URL,
 # its own auth secret and the shared password, and none of that belongs in this
@@ -33,8 +34,12 @@ rsync -a --delete \
   --exclude .DS_Store \
   ./ "$HOST:$DIR/"
 
+# --profile speech, because on the server the speech engine is part of the stack
+# rather than a tool: audio is made the first time it is asked for, so a play
+# button only works if the voice is running. See
+# docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md.
 echo "rebuilding the stack"
-ssh "$HOST" "cd '$DIR' && docker compose up -d --build"
+ssh "$HOST" "cd '$DIR' && docker compose --profile speech up -d --build"
 
 # The image is rebuilt on every deploy, so the app is down for as long as the
 # build takes. Nothing here should report success before it is answering again.
@@ -51,6 +56,31 @@ until ssh "$HOST" 'curl -sf -o /dev/null http://127.0.0.1:3000/'; do
   sleep 2
 done
 echo ' ready'
+
+# The voice model takes about half a minute to load, and the app is usually
+# answering before it has. A deploy is not a failure without it, since every
+# page still works, so this reports rather than exits: what it catches is an
+# engine that never came up, which otherwise shows up as every play button
+# saying the voice is unavailable.
+printf 'waiting for the voice'
+tries=0
+voice=''
+until ssh "$HOST" 'curl -sf -o /dev/null http://127.0.0.1:5001/info'; do
+  tries=$((tries + 1))
+  if [ "$tries" -ge 30 ]; then
+    voice=missing
+    break
+  fi
+  printf '.'
+  sleep 2
+done
+
+if [ -n "$voice" ]; then
+  echo ' not answering'
+  echo "nothing can be listened to. logs: ssh $HOST 'docker logs prep-tts-1'" >&2
+else
+  echo ' ready'
+fi
 
 # Funnel config survives reboots and deploys, so this only ever reports what is
 # already true. It is here because a deploy that quietly landed behind a dead

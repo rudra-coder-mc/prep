@@ -39,14 +39,13 @@ in the stack that exists because of what it can do rather than what it stores.
         |
    content/ baked into the image at build time
         |
-   reads ./.speech-cache, mounted at /cache/speech
-
-
-                npm run narration:build
-                        |
-                   tts container          starts, records what has no
-                   Piper + HTTP server    recording yet, and stops again
-                   voice model baked in   writes ./.speech-cache
+   reads and writes ./.speech-cache, mounted at /cache/speech
+        |
+        | synthesises what the cache has no answer for
+        v
+   tts container            behind the `speech` profile: on wherever the
+   Piper + HTTP server      platform is served, started by the commands
+   voice model baked in     that need it anywhere else
 ```
 
 One directory holds every recording, and the app mounts it rather than keeping a
@@ -258,45 +257,50 @@ A topic can be listened to rather than read. The voice is Piper, a neural text t
 speech engine in the `tts` container with its voice model baked into the image,
 so narration works offline and no lesson text leaves the machine.
 
-That container is behind a compose profile and is off almost all the time. It is
-a tool the author runs, not a service the reader depends on: recordings are made
-ahead of time and served from a volume, so listening never touches it. See
-`docs/decisions/0020-the-speech-engine-runs-on-demand.md`.
+That container is behind a compose profile, and the machine that serves the
+platform turns the profile on. It is a service the reader depends on there, not a
+tool the author runs: audio is made the first time somebody asks for it, so a
+play button only works if the voice is up. A laptop still starts the app and the
+database alone. See
+`docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md`.
 
-`src/lib/speech/` is the whole engine, and it has two entry points. Audio is
-cached by content, since the file's name is a hash of the script, so a script is
-synthesised once and read from a volume every time after. Editing a script is
-therefore a new recording rather than a stale one, and the old entry is orphaned
-rather than served.
+`src/lib/speech/` is the whole engine. Audio is cached by content, since the
+file's name is a hash of the script, so a script is synthesised once and read
+from disk every time after. Editing a script is therefore a new recording rather
+than a stale one, and the old entry is orphaned rather than served.
 
-**`npm run narration:build` makes the recordings, and `GET /api/speech/<key>`
-plays them.** The scripts are static text in git, so nothing is synthesised while
-a listener waits. The build walks every topic, synthesises what has no recording
-yet, and skips what has. The key is the hash of the words, so the bytes behind one
-can never change and the browser is told to keep it forever. The topic page
-computes each section's key on the server and hands it to the player.
+**`GET /api/speech/<key>` plays a recording, and makes it first if nobody has
+asked for those words before.** A key with a file behind it is a read. A key with
+nothing behind it is resolved against `content/` by
+`src/lib/speech/spoken-content.ts`, which addresses every narration section and
+every question script the same way the cache does, and only a key that no script
+hashes to is a 404. Either way the reply is immutable for a year, because the key
+is the hash of the words and the bytes behind one can never change.
 
-**`POST /api/speech` is the fallback for a script with no recording.** A script
-in, a WAV out, synthesised and cached. The player asks for the built recording
-first and comes here when there isn't one. With the engine off, that request
-answers 502 naming `npm run narration:build`, which is the honest answer: the
-section has not been recorded, and recording it is a command rather than
-something to wait for. Start the container by hand and the fallback works as it
-always did, which is what makes editing a script and pressing play immediately
-possible while authoring.
+That resolution on the server is what lets a page send a key and never a script.
+It matters most for a question: the answer's script would give the answer away,
+so it cannot travel with the question and cannot be posted back to be
+synthesised. The page computes the key, the browser plays it, and the words stay
+here.
+
+**`POST /api/speech` is the engine's own door**, a script in and a WAV out. No
+page uses it. It exists so the speech specs can put arbitrary words through the
+engine without borrowing a lesson's, and so a script that `content/` does not own
+can still be spoken.
 
 Synthesis costs about a second of CPU for three and a half seconds of speech, so
 a request carries one section of a narration rather than a whole one, and a
-script over 3000 characters is refused rather than left to hang. Nothing about
-the audio gates the application starting, and with the engine out of the default
-stack there is nothing left to gate it: the app waits on the database and on
-nothing else.
+script over 3000 characters is refused rather than left to hang. Two requests for
+the same key arriving together join one piece of work rather than doing it twice.
+Nothing about the audio gates the application starting: the app waits on the
+database and on nothing else, and a request that lands before the voice model has
+loaded says the voice is unavailable.
 
 **A question is spoken from its own words.** Lessons carry a hand-written script
 and questions do not, because a prompt is already a sentence somebody asks out
 loud. `src/lib/speech/spoken-question.ts` builds two scripts per question, one of
-the prompt and its options and one of the answer and its explanation, and both
-are recorded by the same build. Code is not read: a paragraph containing an
+the prompt and its options and one of the answer and its explanation, and each is
+recorded the first time it is played. Code is not read: a paragraph containing an
 indented line is dropped and the script says it is on screen instead. The
 answer's key comes back with the reveal rather than with the question, for the
 same reason the answer does. See
@@ -324,9 +328,9 @@ who has not pressed play. One `NarrationProvider` drives all three, because two
 audio elements would be two voices. See
 `docs/decisions/0015-piper-narration-engine.md` for the engine,
 `docs/decisions/0016-narration-is-written-not-read.md` for the script and the
-player, `docs/decisions/0017-narration-is-built-once.md` for why the audio is
-made ahead of time, and `docs/decisions/0018-the-lesson-follows-the-voice.md` for
-how a section of speech finds its section of lesson.
+player, `docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md` for
+when the audio is made, and `docs/decisions/0018-the-lesson-follows-the-voice.md`
+for how a section of speech finds its section of lesson.
 
 ## Not in V1
 

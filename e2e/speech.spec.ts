@@ -8,6 +8,11 @@ import { playBuilt, speak } from './speaking'
  * application. This spec is the layer that does: a page in a browser, holding
  * the session it signed in with, asking the running server for audio.
  *
+ * It works in scripts rather than keys because what is under test is the engine
+ * behind the endpoints: normalising, addressing and caching. A key resolving
+ * back to the words in `content/` is proved where it matters, by a question
+ * being listened to in `spoken-questions.spec.ts`.
+ *
  * The player has its own spec on top of this one rather than instead of it,
  * because everything here is about the two endpoints' contract, which the player
  * depends on and cannot itself prove.
@@ -72,10 +77,10 @@ test('an unspeakable script is refused rather than left to hang', async ({ page 
   expect((await speak(page, 'a'.repeat(3001))).status).toBe(400)
 })
 
-test('a recording that has been built is served by its key', async ({ page }) => {
+test('a recording that already exists is served by its key', async ({ page }) => {
   await page.goto('/')
 
-  const built = await speak(page, 'A script that has been built is a file, not a synthesis.')
+  const built = await speak(page, 'A script that has been recorded is a file, not a synthesis.')
   const played = await playBuilt(page, built.key ?? '')
 
   expect(played.status).toBe(200)
@@ -85,13 +90,15 @@ test('a recording that has been built is served by its key', async ({ page }) =>
   expect(played.cacheControl).toContain('immutable')
 })
 
-test('a key with nothing behind it is refused, which is what the player falls back from', async ({
+test('a key no script in content hashes to is refused rather than synthesised', async ({
   page,
 }) => {
   await page.goto('/')
 
   const missing = await playBuilt(page, 'b'.repeat(64))
 
+  // A key with no recording behind it is made on the spot when content owns the
+  // words. This one belongs to nothing, so there is nothing to make.
   expect(missing.status).toBe(404)
   expect(missing.contentType).toContain('application/json')
 })

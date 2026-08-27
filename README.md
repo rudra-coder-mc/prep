@@ -49,11 +49,16 @@ Nothing else to install. Postgres, the migrations and the seed user are all
 handled inside the stack, and that stack is two containers: the app and the
 database.
 
-The speech engine is not one of them. Every narration script already has a
-recording, so nothing has to be synthesised while you listen, and a voice model
-sitting in memory to serve nothing is load for no reason. It starts only when
-`npm run narration:build` needs it and stops again afterwards. That first run
-builds its image, which downloads the voice model and takes a few minutes.
+The speech engine is not one of them. On a laptop it stays behind a compose
+profile, so a voice model does not sit in memory while you work on something
+else, and the commands that need it start it themselves. On the machine that
+serves the platform it runs with the app, because that is where recordings are
+made. Its first start builds the image, which downloads the voice model and
+takes a few minutes.
+
+Without it, a topic plays whatever is already in `.speech-cache` and says the
+voice is unavailable for the rest. To listen while you write, start it:
+`docker compose up -d tts`.
 
 ## Running it on the machine that serves it
 
@@ -64,9 +69,10 @@ The platform also runs on a spare Ubuntu machine, `work`, published at
 npm run deploy
 ```
 
-That rsyncs the tree over Tailscale, rebuilds the image, and waits until the app
-answers again. Narration ships with it, `.env` does not: the server keeps its
-own, holding the public URL, its auth secret and the login password.
+That rsyncs the tree over Tailscale, rebuilds the image with the speech profile
+on, and waits until both the app and the voice answer again. Recordings already
+made ship with it, `.env` does not: the server keeps its own, holding the public
+URL, its auth secret and the login password.
 
 The URL is fixed. It comes from the machine name and the tailnet name, so it
 survives reboots and deploys, and the certificate is Tailscale's to renew.
@@ -113,10 +119,9 @@ npm run dev:docker -- --build
   progress, nothing else.
 - `src/lib/speech/` turns a narration script into audio and caches it by content.
   `services/tts/` is the Piper container it talks to, and no text leaves the
-  machine. `npm run narration:build` makes every recording ahead of time, so no
-  lesson is ever synthesised while somebody is waiting for it. That command is
-  also the only thing that runs the container: it is behind a compose profile
-  and is off the rest of the time.
+  machine. A recording is made the first time it is asked for and kept for good,
+  addressed by a hash of the words, so a page asks for audio with a key and the
+  server turns that key back into the script.
 - `src/components/speech/` is the player on a topic page, which reads that
   topic's `narration.ts` aloud a section at a time, and the speaker button on a
   question, which reads the prompt and then the answer once it has been given.
