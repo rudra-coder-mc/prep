@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-calling-does',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What happens when you call a generator function, function* gen() { ... }, as gen()?',
     options: [
@@ -32,7 +31,6 @@ There are no threads. A generator runs on the caller's stack, during next(), and
     id: 'next-argument-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function* g() {
@@ -68,7 +66,6 @@ undefined for the last line would be right if the body had no return. It does, a
     id: 'yield-star-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function* inner() {
@@ -114,7 +111,6 @@ The loop calls next() on outer, which runs to yield*. That starts inner, which l
     id: 'reused-generator-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt:
       'A function takes a generator object and logs every value, then another function receives the same object and gets nothing. Why, and what is the fix?',
@@ -149,7 +145,6 @@ yield produces a value every time the body reaches it, on every generator object
     id: 'take-generator-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Write take(iterable, n) as a generator that yields the first n values of any iterable and stops, so that take(naturals(), 3) on an infinite generator terminates and releases the source. Which is correct?',
@@ -183,7 +178,6 @@ Yielding it.next() yields the { value, done } objects rather than the values, an
     id: 'lazy-pipeline-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A report reads a 10 GB log file, keeps lines containing "ERROR", parses each, and shows the first 20. The current code loads the file into an array of lines, filters, maps, then slices. Memory blows up. How do generators fix it, and what changes about when work happens?',
@@ -215,7 +209,6 @@ Generators are exactly the tool for this, because an iterator holds one position
     id: 'async-await-relationship-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'Explain how async/await could be built out of generators and promises. Sketch the runner and say what each generator method is used for.',
@@ -256,7 +249,6 @@ That is also why await splits a function where it does: each yield returns from 
     id: 'finally-on-break-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `function* lines() {
@@ -299,7 +291,6 @@ Printing 'c' would need the loop to carry on past the break.
     id: 'yield-in-callback-choice',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'This generator is a syntax error. Why, and what is the fix?',
     code: `function* values(items) {
@@ -337,7 +328,6 @@ yield can appear anywhere a statement or expression can, inside the generator bo
     id: 'return-value-for-of-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function* g() {

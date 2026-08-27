@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'undeclared-assignment-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What happens when you assign to a name that was never declared?',
     options: [
@@ -39,7 +38,6 @@ Nothing warns. Sloppy mode is silent by design, which is what made these bugs so
     id: 'plain-call-this-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'This file is an ES module. What does it print?',
     code: `function whoAmI() {
@@ -83,7 +81,6 @@ An empty object would be observable and confusing. undefined is deliberate: it t
     id: 'directive-not-first-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'This script was supposed to be strict, and a typo still created a global instead of throwing. Why?',
@@ -123,7 +120,6 @@ Assignment is precisely what strict mode changes here. The rule is about writing
     id: 'frozen-write-silent-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'In a CommonJS file with no directive, this function reports success and the config never changes. What is happening?',
@@ -165,7 +161,6 @@ Nothing is cached. Every call performs the same write and the same read, and eve
     id: 'let-not-on-globalthis-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A classic script declares const rate = 0.2 at its top level. Why is globalThis.rate undefined?',
@@ -199,7 +194,6 @@ globalThis is the object itself, not a snapshot. Assigning to it is how a polyfi
     id: 'portable-global-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'You ship a library that runs in a page, in a web worker and in Node, and it has to install one shared registry object. Which approach is right?',
@@ -232,7 +226,6 @@ A module level const is the right default for ordinary state, and wrong here: th
     id: 'top-level-this-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'The same line, console.log(this), sits at the top level of three files: a classic script, an ES module, and a CommonJS file. What does each print?',
@@ -264,7 +257,6 @@ Uniform empty objects would make the three interchangeable. The differences are 
     id: 'strict-failures-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'This module is strict. Put the lines it prints in the order it prints them.',
     code: `const config = Object.freeze({ retries: 1 })
@@ -322,7 +314,6 @@ If delete config.retries had been written as delete retries, the file would not 
     id: 'mode-is-lexical-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A strict ES module imports a helper from an old sloppy CommonJS file, and that helper still creates a global when it assigns to an undeclared name. A colleague says the import should have made it strict. Who is right?',
@@ -352,7 +343,6 @@ Splitting a file into a strict top level and sloppy functions is not something t
     id: 'arguments-aliasing-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'A sloppy script contains this function. What does it print?',
     code: `function update(price) {
@@ -393,7 +383,6 @@ arguments is writable in sloppy mode. What strict mode forbids is assigning to t
     id: 'why-strict-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'Why does strict mode exist, and why does almost nobody write the directive any more? What would you check before deleting it from an old file?',

@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-stringify-drops',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt:
       'What does JSON.stringify do with a property whose value is undefined, a function or a symbol?',
@@ -33,7 +32,6 @@ null everywhere is half right. It is what arrays get, and the reason is position
     id: 'mixed-values-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `console.log(
@@ -71,7 +69,6 @@ An empty array for c is the object rule applied to an array. Dropping the elemen
     id: 'tojson-replacer-order',
     type: 'output',
     form: 'ordering',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const item = {
@@ -125,7 +122,6 @@ Putting replacer "" before toJSON is the order reversed. toJSON runs first, on e
     id: 'date-round-trip-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt:
       'State is saved to localStorage with JSON.stringify and loaded back with JSON.parse. After a reload, state.createdAt.getTime is not a function. What happened, and what is the fix?',
@@ -159,7 +155,6 @@ structuredClone does preserve Dates and cannot write to localStorage, which hold
     id: 'stringify-safe',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       "Write stringifySafe(value) that serialises like JSON.stringify but writes the string '[Circular]' wherever it meets an object it has already written, so a cyclic structure no longer throws. Which of these is correct?",
@@ -196,7 +191,6 @@ A replacer given as an array is an allow-list of keys. No key is called '[Circul
     id: 'large-ids-precision',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A backend sends 64-bit numeric ids. Some of them arrive in the frontend a few units off, and requests back to the server then hit the wrong record. Why, and what is the fix?',
@@ -224,7 +218,6 @@ The loss happens on the way in, in parse, not on the way out. Moving the id to t
     id: 'json-for-state-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'You are persisting application state as JSON, in localStorage or over the wire. What breaks, and how do you handle it?',
@@ -247,7 +240,6 @@ And say what I would not do: rely on JSON.parse(JSON.stringify(x)) as a deep cop
     id: 'reviver-order-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'staff',
     prompt: 'In what order does a JSON.parse reviver visit the values of {"a":{"b":1},"c":2}?',
     options: [
@@ -274,7 +266,6 @@ Leaves only would mean the reviver never sees an object, and seeing objects is h
     id: 'proto-key-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `const parsed = JSON.parse('{"__proto__": {"admin": true}, "name": "x"}')
@@ -303,7 +294,6 @@ __proto__ is an ordinary string as far as JSON's grammar is concerned. Nothing a
     id: 'map-stringify-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt: "What does JSON.stringify(new Map([['a', 1]])) return?",
     options: ['\'[["a",1]]\'', '\'{"a":1}\'', "'{}'", 'It throws a TypeError'],
@@ -325,7 +315,6 @@ Nothing throws. Silent emptiness is the failure mode, which is what makes it eas
     id: 'indent-argument-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt:
       'JSON.stringify(config, 2) is meant to pretty-print and the output is still one line. Why?',

@@ -6,7 +6,7 @@ const base: Question = {
   id: 'q',
   type: 'concept',
   form: 'open',
-  difficulty: 'easy',
+  tier: 'swe-1',
   prompt: 'What is a closure?',
   answerInFull: 'A function plus the scope it was defined in.',
   explanation: 'The binding is shared.',

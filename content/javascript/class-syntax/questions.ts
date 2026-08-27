@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'where-things-live-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt:
       'In a class with a field, a method, a getter and a static property, where does each one end up after new?',
@@ -31,7 +30,6 @@ The getter is an accessor property on the prototype exactly like a method. It is
     id: 'stringify-instance-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Point {
@@ -70,7 +68,6 @@ Empty output would mean fields were not own properties, and they are.`,
     id: 'constructor-order-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `class Widget {
@@ -128,7 +125,6 @@ Printing static s after before new treats a static field like an instance field.
     id: 'class-before-declaration-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt:
       'A helper at the top of a module does new Config() and a class Config is declared further down the same file. The module throws ReferenceError: Cannot access Config before initialization. Why, when the same pattern with function Config() {} works?',
@@ -156,7 +152,6 @@ Strict mode does not change hoisting, and a class expression assigned to a const
     id: 'arrow-field-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'handleClick = () => this.toggle() is written as a class field instead of a method. Which statement about the result is true?',
@@ -182,7 +177,6 @@ It is not a style choice. The location changes, and with it memory per instance 
     id: 'call-without-new-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Temp {
@@ -226,7 +220,6 @@ undefined twice is what you would get if a class could be called like a function
     id: 'shared-array-field-bug',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Every Cart instance seems to share the same items: adding to one cart shows up in every other. The class is written as shown. What is wrong?',
@@ -264,7 +257,6 @@ Instance field initialisers run per instance, not once. Static field initialiser
     id: 'readonly-counter-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Write a class Temperature constructed with a celsius value, exposing celsius and fahrenheit as properties that can be read and assigned, where assigning either one updates the other. Which implementation is correct?',
@@ -310,7 +302,6 @@ Getters with no setters are read-only views. Assigning to t.fahrenheit then thro
     id: 'entity-modelling-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A team is modelling a User with several methods and a created timestamp. Instances are stored in React state, spread into new objects on every update, and serialised to localStorage. Methods keep "disappearing" after updates and reloads. What is going on, and what is the right shape?',
@@ -338,7 +329,6 @@ Spread does not preserve the prototype. Object.assign onto a fresh instance afte
     id: 'sugar-or-not-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'staff',
     prompt:
       'Is class just syntactic sugar over constructor functions and prototypes? Make the case precisely.',
@@ -357,7 +347,6 @@ The precise case, then: same object model, stricter and more predictable rules, 
     id: 'method-enumerability-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `class A {

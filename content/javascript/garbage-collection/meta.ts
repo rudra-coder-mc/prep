@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'What keeps an object alive, why a cycle is not a problem, the four leaks that actually happen in real code, and how to tell a leak from a cache.',
   order: 250,
-  difficulty: 'hard',
   tags: ['memory', 'performance', 'gc'],
   prerequisites: ['javascript/value-and-reference', 'javascript/closures'],
 }

@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'What an Error actually holds, which of the seven built-in types the engine throws and when, what cause is for, and why instanceof is not always the right check.',
   order: 280,
-  difficulty: 'medium',
   tags: ['error'],
   prerequisites: ['javascript/throwing-and-catching', 'javascript/prototypes'],
 }

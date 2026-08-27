@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'unwinding-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-2',
     prompt:
       'A throw happens four frames deep, and the only try/catch is in the outermost of them. What happens to the two frames in between?',
@@ -35,7 +34,6 @@ Unwinding to the top first would mean every finally in the program ran before an
     id: 'finally-reassign-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function read() {
@@ -82,7 +80,6 @@ Nothing here is unreachable. The finally block is reached on every path out of t
     id: 'try-catch-finally-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function run() {
@@ -129,7 +126,6 @@ Adding that return would print from finally instead, because the finally block r
     id: 'thrown-string-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'The catch block logs "undefined undefined". Why?',
     code: `function parseAge(input) {
@@ -171,7 +167,6 @@ The stack has nothing to do with where the try is. It is captured when the Error
     id: 'finally-return-swallows-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'A disk failure inside work() is reported nowhere: withCleanup returns "done" and the caller carries on. What is swallowing the error?',
@@ -217,7 +212,6 @@ releaseLock does not clear anything. Ordinary statements in a finally block leav
     id: 'finally-guarantee-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-1',
     prompt: 'When does a finally block not run?',
     options: [
@@ -257,7 +251,6 @@ An error thrown from the catch block still goes out through the finally, the sam
     id: 'finally-with-break-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does scan return?',
     code: `function scan(items) {
@@ -307,7 +300,6 @@ Getting stop into the log needs the push below the break to run. The break leave
     id: 'narrow-catch-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A config loader parses JSON that users edit by hand, and should fall back to defaults when the file is malformed. Which catch is right?',
@@ -349,7 +341,6 @@ Replacing the error with a tidy message throws away the parser's line and column
     id: 'cleanup-masks-cause-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'Every failed database call in production is reported as "connection already released". The real errors are nowhere in the logs. The handler releases its connection in a finally. What do you change?',
@@ -387,7 +378,6 @@ Releasing before the query is not cleanup, and the query needs the connection. O
     id: 'catch-binding-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What is true of the value bound by a catch clause?',
     options: [
@@ -425,7 +415,6 @@ The binding has been optional since ES2019 and is widely supported. Omitting it 
     id: 'where-to-catch-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'How do you decide where in a call chain to catch an error, and what do you do with one you cannot handle?',

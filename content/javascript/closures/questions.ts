@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-is-a-closure',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What is a closure?',
     options: [
@@ -35,7 +34,6 @@ The last option names something real. The environment record is what the closure
     id: 'what-a-closure-captures-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does a closure actually capture?',
     options: [
@@ -60,7 +58,6 @@ The last option is the interesting one, because engines really do it. V8 will of
     id: 'when-closure-created-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-1',
     prompt: 'When is a closure created?',
     options: [
@@ -83,7 +80,6 @@ The last option is the optimisation confused with the language. An engine may di
     id: 'counter-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `function makeCounter() {
@@ -117,7 +113,6 @@ The version of this worth trying by hand is moving let count = 0 above makeCount
     id: 'shared-scope',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function make() {
@@ -150,7 +145,6 @@ That is the practical difference between closure based privacy and methods that 
     id: 'loop-capture-fix-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const fns = []
@@ -177,7 +171,6 @@ The reason matters more than the result. It is not that let is block scoped in t
     id: 'loop-timer-order',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `for (let i = 0; i < 2; i++) {
@@ -204,7 +197,6 @@ Nothing about the delay is involved. A zero millisecond timer is not "as soon as
     id: 'var-in-loop',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'This is meant to print 0, 1, 2. It prints 3, 3, 3. Which change fixes it, for the right reason?',
@@ -246,7 +238,6 @@ Hoisting the arrow above the loop changes nothing, and it is worth knowing why: 
     id: 'private-state',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'You are writing once(fn). It returns a wrapper that calls fn at most one time and returns that first result on every later call. fn is allowed to return undefined. Which design does that?',
@@ -290,7 +281,6 @@ Hanging the result off the wrapper works and gives the state away. Anything hold
     id: 'memory-retention',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'A page slowly grows in memory. Event handlers are attached from inside a function that also builds a large array, and the handlers never touch that array. Which explanation fits?',
@@ -321,7 +311,6 @@ Unremoved handlers are a real leak and are worth checking anyway, but a handful 
     id: 'module-pattern',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'How do closures give you private state, and how does that compare with private class fields?',

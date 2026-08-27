@@ -76,8 +76,7 @@ export default async function TopicsPage() {
                       </div>
 
                       <p className="mt-3 text-xs text-faint">
-                        {topic.questions.length} questions · {topic.exercises.length} exercises ·{' '}
-                        {topic.difficulty}
+                        {topic.questions.length} questions · {topic.exercises.length} exercises
                       </p>
 
                       {overview && overview.progress > 0 ? (

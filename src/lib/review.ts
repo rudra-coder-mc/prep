@@ -49,7 +49,7 @@ export async function getDailyQueue(userId: string, now = new Date()): Promise<D
     topicSlug: topic.slug,
     topicTitle: topic.title,
     type: question.type,
-    difficulty: question.difficulty,
+    tier: question.tier,
     prompt: question.prompt,
     code: question.code,
     hints: question.hints,

@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'ordering-basic',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log('1')
@@ -32,7 +31,6 @@ rejection to handle and the catch callback is never called at all.`,
     id: 'microtask-vs-macrotask',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Which of these runs as a macrotask?',
     options: [
@@ -64,7 +62,6 @@ The code after an await is the one people miss. An async function looks like a f
     id: 'async-await-ordering',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `async function a() {
@@ -110,7 +107,6 @@ The last order suspends a() at the call to b() rather than at the await, which p
     id: 'blocking-loop',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A user reports the page freezes for two seconds when they click the button. Which change fixes it, for the right reason?',
@@ -147,7 +143,6 @@ async on the handler does nothing to its body. It makes the function return a pr
     id: 'nested-microtasks',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt: 'What order do these print?',
     code: `setTimeout(() => console.log('timeout'), 0)
@@ -180,7 +175,6 @@ The starvation option over-applies a true rule. An unbounded chain of microtasks
     id: 'settimeout-delay',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Does setTimeout(fn, 1000) guarantee fn runs in exactly one second? Explain.',
     answerInFull: `No. It guarantees a minimum delay, not an exact time. After 1000ms the callback becomes eligible, and it runs when the loop next takes a macrotask and the stack is empty. If synchronous work is running, or a long queue is ahead of it, it runs later.
@@ -196,7 +190,6 @@ Two more details:
     id: 'render-timing',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'You set an element to show a loading spinner, then immediately run a long synchronous task. The spinner never appears. Which explanation fits?',
@@ -224,7 +217,6 @@ Forcing layout is the sophisticated wrong answer. Reading offsetHeight really do
     id: 'starvation',
     type: 'coding',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'You are processing a large array in chunks so the page keeps painting. Which yield between chunks does that?',
@@ -264,7 +256,6 @@ A promise around the whole loop moves nothing anywhere. The body runs synchronou
     id: 'log-order-choice',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-1',
     prompt: 'In what order do these print?',
     code: `console.log('a')
@@ -290,7 +281,6 @@ a c d b drains the microtask between the two synchronous lines, which would mean
     id: 'microtask-drain-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'How much of the microtask queue runs between two macrotasks?',
     options: [
@@ -317,7 +307,6 @@ The last option confuses an empty stack with an idle page. An empty stack is the
     id: 'queue-microtask-vs-timeout-choice',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'Which callback runs first?',
     code: `setTimeout(() => console.log('timeout'), 0)

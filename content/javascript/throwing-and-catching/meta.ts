@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'What throw does to the stack, the exact order try, catch and finally run in, and the return value finally quietly replaces.',
   order: 270,
-  difficulty: 'medium',
   tags: ['error', 'control-flow'],
   prerequisites: ['javascript/recursion-and-the-call-stack', 'javascript/scope-and-hoisting'],
 }

@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'How a specifier becomes a file, why a module evaluates exactly once, and what importing for a side effect really promises.',
   order: 380,
-  difficulty: 'medium',
   tags: ['modules', 'runtime', 'tooling'],
   prerequisites: ['javascript/es-modules-and-commonjs'],
 }

@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'Extending Error properly, why the name is wrong until you set it, carrying data a caller can act on, and when a code beats a class.',
   order: 290,
-  difficulty: 'medium',
   tags: ['error', 'class'],
   prerequisites: ['javascript/error-types', 'javascript/extends-and-super'],
 }

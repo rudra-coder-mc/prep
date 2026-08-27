@@ -20,7 +20,7 @@ import { CheckIcon, LightbulbIcon } from '@/components/ui/icons'
 import { SpeakButton } from '@/components/speech/speak-button'
 import { warmAnswer } from '@/components/speech/warm'
 import { RESULT_LABELS, type Result } from '@/lib/interval-ladder'
-import type { AnswerForm } from '@/content/schema'
+import { TIER_LABELS, type AnswerForm, type Tier } from '@/content/schema'
 import { cx } from '@/lib/cx'
 
 /**
@@ -33,7 +33,7 @@ export type SessionQuestion = {
   topicSlug: string
   topicTitle: string
   type: string
-  difficulty: string
+  tier: Tier
   prompt: string
   code?: string
   hints: string[]
@@ -96,7 +96,7 @@ function QuestionPrompt({ question }: { question: SessionQuestion }) {
     <>
       <div className="mt-5 flex flex-wrap gap-1.5">
         <Chip>{question.type}</Chip>
-        <Chip>{question.difficulty}</Chip>
+        <Chip>{TIER_LABELS[question.tier]}</Chip>
       </div>
 
       <div className="mt-3 flex items-start gap-3">

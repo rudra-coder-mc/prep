@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { getAllTopics, type Topic } from '@/content/loader'
 import { collidingHeadings, unknownHeadings } from '@/content/headings'
+import { TIER_LABELS, TIERS } from '@/content/schema'
 import { checkScript, MAX_SCRIPT_LENGTH } from '@/lib/speech/script'
 import { answerScript, questionScript } from '@/lib/speech/spoken-question'
 
@@ -26,19 +27,14 @@ async function main() {
       : `narration: ${spoken.length} of ${topics.length} topics have a script, missing ${silent.join(', ')}`,
   )
 
-  // `tier` is being migrated in beside `difficulty`, batch by batch. A count of
-  // what is still untagged gives the migration a number that goes down, and no
-  // topic silently gets skipped.
-  const untagged = topics.reduce(
-    (total, topic) =>
-      total + topic.questions.filter((question) => question.tier === undefined).length,
-    0,
+  // The schema demands a tier, so there is nothing here to fail on. What the
+  // count is for is authoring: a tier the bank is thin at is the one Phase 4
+  // fills, and reading it off the files beats deriving it by hand per batch.
+  const perTier = TIERS.map(
+    (tier) =>
+      `${TIER_LABELS[tier]} ${topics.reduce((total, topic) => total + topic.questions.filter((question) => question.tier === tier).length, 0)}`,
   )
-  console.log(
-    untagged === 0
-      ? `tiers: all ${questions} questions carry a tier`
-      : `tiers: ${questions - untagged} of ${questions} questions carry a tier, ${untagged} still untagged`,
-  )
+  console.log(`tiers: ${questions} questions, ${perTier.join(', ')}`)
 
   await checkNarrationAnchors(spoken)
   checkQuestionScripts(topics)

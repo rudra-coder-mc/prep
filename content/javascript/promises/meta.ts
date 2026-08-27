@@ -5,7 +5,6 @@ export const meta: TopicMeta = {
   title: 'Promises and async/await',
   summary: 'Composing asynchronous work, and the error handling most code gets wrong.',
   order: 320,
-  difficulty: 'medium',
   tags: ['promise', 'async'],
   prerequisites: ['javascript/event-loop'],
 }

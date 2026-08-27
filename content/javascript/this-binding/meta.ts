@@ -5,7 +5,6 @@ export const meta: TopicMeta = {
   title: '`this`, call, apply and bind',
   summary: 'What decides the value of `this`, and why pulling a method off its object breaks it.',
   order: 110,
-  difficulty: 'medium',
   tags: ['this', 'functions', 'objects'],
   prerequisites: ['javascript/closures'],
 }

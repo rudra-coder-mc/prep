@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-is-a-higher-order-function',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What makes a function a higher order function?',
     options: [
@@ -34,7 +33,6 @@ The answer that stops at "it makes code reusable" is true of every abstraction a
     id: 'foreach-return-and-throw',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const items = ['a', 'b', 'c']
@@ -76,7 +74,6 @@ The sentence to carry away is that a callback runs on the caller's stack. return
     id: 'async-foreach',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'This logs "all saved" immediately, with every save still in flight. Why?',
     code: `async function saveAll(items) {
@@ -124,7 +121,6 @@ The last option is true, and it is the symptom rather than the cause. Putting aw
     id: 'implement-reduce',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'You are implementing reduce(array, fn, initial) by hand. How should it decide whether an initial value was passed?',
@@ -176,7 +172,6 @@ Treating null as absent is the same mistake made wider, and null is an even more
     id: 'function-identity',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function makeHandler() {
@@ -208,7 +203,6 @@ true false is the same belief the other way round, that toString produces someth
     id: 'listener-never-removed',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'A widget adds a scroll listener when it opens and removes it when it closes. Listeners keep accumulating and scrolling gets slower on every reopen. The add and remove calls both look correct. What would you check first?',
@@ -252,7 +246,6 @@ The general rule is that any API which registers a function and later unregister
     id: 'when-callbacks-hurt',
     type: 'interview',
     form: 'open',
-    difficulty: 'medium',
     tier: 'senior',
     prompt: 'When do higher order functions make code worse rather than better?',
     answerInFull: `Four situations where the abstraction costs more than it saves:
@@ -271,7 +264,6 @@ There is also a readability limit. Point free style, where the arguments are nev
     id: 'reduce-single-element',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt: 'What does this print?',
     code: `let calls = 0
@@ -303,7 +295,6 @@ The TypeError is the empty array rule applied one element too early. Empty with 
     id: 'which-is-higher-order-choice',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'Which of these is not a higher order function?',
     options: ['setTimeout', 'Array.prototype.map', 'Number.parseInt', 'Function.prototype.bind'],
@@ -327,7 +318,6 @@ map is the one nobody doubts, and it is in the list to make the point that this 
     id: 'filter-boolean-choice',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does this evaluate to?',
     code: `['0', '', 'false', 0, null, []].filter(Boolean)`,
@@ -352,7 +342,6 @@ The four element answer keeps the empty string, which is the falsy value people 
     id: 'stop-a-foreach-choice',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'How do you stop iterating early inside a forEach?',
     options: [

@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'Two promises rather than one, why a 500 is not an error, the body you can only read once, and the cross-origin rules that are enforced in the browser rather than on the server.',
   order: 30,
-  difficulty: 'medium',
   tags: ['fetch', 'network', 'async'],
   prerequisites: [
     'browser/the-dom',

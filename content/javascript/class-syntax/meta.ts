@@ -6,7 +6,6 @@ export const meta: TopicMeta = {
   summary:
     'What a class declaration creates, where fields and methods land, the order the constructor runs in, and the ways a class is not just sugar.',
   order: 150,
-  difficulty: 'medium',
   tags: ['classes', 'objects', 'prototype'],
   prerequisites: ['javascript/prototypes', 'javascript/this-binding'],
 }

@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { exerciseKey, questionKey, questionSchema, topicMetaSchema } from './schema'
+import {
+  exerciseKey,
+  questionKey,
+  questionSchema,
+  TIER_LABELS,
+  TIERS,
+  topicMetaSchema,
+} from './schema'
 
 describe('question keys', () => {
   it('namespaces a question by its topic', () => {
@@ -17,7 +24,6 @@ describe('validation', () => {
       title: 'Event Loop',
       summary: 'x',
       order: 1,
-      difficulty: 'hard',
     })
     expect(result.success).toBe(false)
     expect(result.error?.issues[0]?.path).toEqual(['slug'])
@@ -28,7 +34,7 @@ describe('validation', () => {
       id: 'q1',
       type: 'trivia',
       form: 'open',
-      difficulty: 'easy',
+      tier: 'swe-1',
       prompt: 'x',
       answerInFull: 'y',
     })
@@ -36,12 +42,26 @@ describe('validation', () => {
     expect(result.error?.issues[0]?.path).toEqual(['type'])
   })
 
+  it('refuses a question with no tier, so nothing can be authored outside the path', () => {
+    const result = questionSchema.safeParse({
+      id: 'q1',
+      type: 'concept',
+      form: 'choice',
+      prompt: 'x',
+      options: ['a', 'b'],
+      correctOption: 0,
+      answerInFull: 'y',
+    })
+    expect(result.success).toBe(false)
+    expect(result.error?.issues[0]?.path).toEqual(['tier'])
+  })
+
   it('refuses an open question about anything but an interview or a scenario', () => {
     const result = questionSchema.safeParse({
       id: 'q1',
       type: 'concept',
       form: 'open',
-      difficulty: 'easy',
+      tier: 'swe-1',
       prompt: 'x',
       answerInFull: 'y',
     })
@@ -54,23 +74,11 @@ describe('validation', () => {
       id: 'q1',
       type: 'scenario',
       form: 'open',
-      difficulty: 'easy',
+      tier: 'swe-1',
       prompt: 'x',
       answerInFull: 'y',
     })
     expect(result.success).toBe(true)
-  })
-
-  it('leaves a question with no tier untagged rather than giving it one, while the bank is migrated', () => {
-    const parsed = questionSchema.parse({
-      id: 'q1',
-      type: 'scenario',
-      form: 'open',
-      difficulty: 'easy',
-      prompt: 'x',
-      answerInFull: 'y',
-    })
-    expect(parsed.tier).toBeUndefined()
   })
 
   it('accepts a question carrying a valid tier', () => {
@@ -78,7 +86,6 @@ describe('validation', () => {
       id: 'q1',
       type: 'scenario',
       form: 'open',
-      difficulty: 'easy',
       tier: 'swe-2',
       prompt: 'x',
       answerInFull: 'y',
@@ -91,7 +98,6 @@ describe('validation', () => {
       id: 'q1',
       type: 'scenario',
       form: 'open',
-      difficulty: 'easy',
       tier: 'junior',
       prompt: 'x',
       answerInFull: 'y',
@@ -105,7 +111,7 @@ describe('validation', () => {
       id: 'q1',
       type: 'interview',
       form: 'open',
-      difficulty: 'easy',
+      tier: 'swe-1',
       prompt: 'x',
       answerInFull: 'y',
     })
@@ -119,7 +125,7 @@ describe('choice validation', () => {
     id: 'typeof-null',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does typeof null return?',
     options: ["'object'", "'null'", "'undefined'", "'number'"],
     correctOption: 0,
@@ -179,7 +185,7 @@ describe('choice validation', () => {
       id: 'q1',
       type: 'interview',
       form: 'open',
-      difficulty: 'easy',
+      tier: 'swe-1',
       prompt: 'x',
       answerInFull: 'y',
       options: ['a', 'b'],
@@ -203,7 +209,7 @@ describe('ordering validation', () => {
     id: 'drain-order',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print, in order?',
     items: ['three', 'one', 'caught', 'two'],
     correctOrder: [1, 3, 0],
@@ -281,7 +287,7 @@ describe('ordering validation', () => {
       id: 'q1',
       type: 'interview',
       form: 'open',
-      difficulty: 'easy',
+      tier: 'swe-1',
       prompt: 'x',
       answerInFull: 'y',
       items: ['a', 'b', 'c', 'd'],
@@ -289,5 +295,11 @@ describe('ordering validation', () => {
 
     expect(result.success).toBe(false)
     expect(result.error?.issues[0]?.path).toEqual(['items'])
+  })
+})
+
+describe('tier labels', () => {
+  it('names every tier, so a chip can never render a slug', () => {
+    expect(TIERS.map((tier) => TIER_LABELS[tier])).toEqual(['SWE-1', 'SWE-2', 'Senior', 'Staff'])
   })
 })

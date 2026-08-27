@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'strings-only-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt:
       'What does localStorage actually store, and what does getItem return for a missing key?',
@@ -46,7 +45,6 @@ And nothing is deferred to unload. Writes are synchronous and hit the disk, whic
     id: 'synchronous-cost-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Why is "we keep application state in localStorage" a problem worth raising in a code review?',
@@ -82,7 +80,6 @@ Writes are not batched or deferred. If they were, this API would be considerably
     id: 'storage-timing-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'db is an already-open IndexedDB handle wrapped in promises. Put the lines this prints in the order it prints them.',
@@ -123,7 +120,6 @@ Two lines that never print are worth naming. There is no storage event, because 
     id: 'round-trip-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `localStorage.setItem('count', 5)
@@ -173,7 +169,6 @@ undefined for the missing key is the natural guess from working with plain objec
     id: 'storage-event-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Two tabs on the same origin both run this code. The user clicks the toggle in tab 1. What is logged, and where?',
@@ -217,7 +212,6 @@ And a listener cannot pre-empt the handler that is running. The write is synchro
     id: 'httponly-cookie-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'The user is logged in and authenticated requests work. This check always sends them to the login page. The session cookie is visible in the browser devtools cookie panel. Why?',
@@ -258,7 +252,6 @@ Path is a real reason a cookie might not be readable, and it would also stop the
     id: 'corrupt-value-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A few users see a completely blank page. Their console has a SyntaxError from JSON.parse, thrown while this module is still evaluating. The code has not changed in months, it works for everyone else, and clearing site data fixes it permanently for whoever does it. What happened?',
@@ -311,7 +304,6 @@ And each setItem is atomic, so concurrent tabs do not interleave characters. Wha
     id: 'quota-write-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A page saves the draft the user is typing to localStorage on every change. On some devices the save silently stops working and the draft is lost. Which save is right?',
@@ -350,7 +342,6 @@ Deferring the write changes nothing about the failure. setItem is synchronous wh
     id: 'idb-transaction-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'Saving a note writes the note and its attachment to IndexedDB, then records an audit row once the server has accepted it. Which shape works?',
@@ -391,7 +382,6 @@ Keeping a transaction alive by issuing requests from inside callbacks is a real 
     id: 'where-drafts-go-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A notes feature keeps drafts locally: long text, an image attachment, the date it was last edited, and a set of tags. It is in localStorage today, the app takes a second to become interactive on a slow phone, and saves have started failing for the heaviest users. Where does it go?',
@@ -429,7 +419,6 @@ sessionStorage really does have its own quota, and it is the same API with the s
     id: 'token-storage-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       '"Where do you store a session token?" Give the answer, then give the follow-up an interviewer is waiting for.',

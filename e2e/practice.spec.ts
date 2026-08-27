@@ -84,3 +84,12 @@ test('the session reports completion after the last question', async ({ page }) 
   await expect(page.getByText('Session complete')).toBeVisible()
   await expect(page.getByText(`${total} questions recorded.`)).toBeVisible()
 })
+
+test('a question is chipped with the interview level that asks it', async ({ page }) => {
+  await page.goto('/topics/javascript/closures/practice')
+
+  // The tier is stored as a slug and shown as a name, so a chip reading swe-1
+  // means the label map was bypassed. Which of the four is content's business,
+  // so this asserts on the shape rather than on the closures bank.
+  await expect(page.getByText(/^(SWE-1|SWE-2|Senior|Staff)$/)).toBeVisible()
+})

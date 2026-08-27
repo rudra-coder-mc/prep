@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'what-gets-collected-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What makes an object eligible for collection?',
     options: [
@@ -38,7 +37,6 @@ Nothing measures how long it has been since you touched an object. Recency is a 
     id: 'cycles-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Two objects hold references to each other, and nothing else references either of them. What happens?',
@@ -74,7 +72,6 @@ There is no separate cycle detection pass. Tracing never needed one.`,
     id: 'listener-identity-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const listeners = new Set()
@@ -119,7 +116,6 @@ added 2 is there for a reading where the anonymous arrow gets added rather than 
     id: 'nulling-a-binding-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'easy',
     tier: 'swe-1',
     prompt: 'What does this print?',
     code: `let buffer = new Uint8Array(8)
@@ -162,7 +158,6 @@ Nothing throws: holder.buffer was never null.`,
     id: 'interval-not-cleared-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A dashboard opens and closes a chart panel all day. After a few hours the tab is using gigabytes, and a heap snapshot shows hundreds of chart instances. What is holding them?',
@@ -213,7 +208,6 @@ The returned object is released as soon as the caller drops it. Its captured var
     id: 'detached-dom-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'A snapshot of a long-lived page shows thousands of entries reading "Detached HTMLTableRowElement", growing every time the table is refreshed. The table itself is replaced wholesale each time. Where is the reference?',
@@ -261,7 +255,6 @@ getBoundingClientRect forces layout and caches nothing against the node.`,
     id: 'closure-capture-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'staff',
     prompt:
       'A function allocates a fifty megabyte buffer, reads one number out of it, and returns a small closure that logs only that number. The buffer stays in memory. There is also an unused closure in the same function that mentions the buffer. Why does that matter?',
@@ -311,7 +304,6 @@ A function object does not retain its inner function declarations. Only a closur
     id: 'bounding-a-cache-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A server memoises an expensive computation in a module-level Map keyed by a request id string. It is fast, and memory grows all day. Which change fixes it?',
@@ -359,7 +351,6 @@ setTimeout changes when the computation runs and nothing about what the Map hold
     id: 'sawtooth-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A Node service is restarted nightly because it dies after about thirty hours. Its memory chart rises and falls constantly, with peaks near the limit. What tells you whether this is a leak, and what do you do next?',
@@ -394,7 +385,6 @@ Waiting for a local reproduction throws away the one measurement you already hav
     id: 'gc-timing-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'staff',
     prompt: 'What can a program rely on about when garbage collection happens?',
     options: [
@@ -429,7 +419,6 @@ There is no ordering. A tracing collector does not know when anything became unr
     id: 'finding-a-leak-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'What is a memory leak in a language with a garbage collector, and how would you go about finding one in an application you did not write?',

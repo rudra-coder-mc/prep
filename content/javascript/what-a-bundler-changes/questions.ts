@@ -5,7 +5,6 @@ export const questions: Question[] = [
     id: 'tree-shaking-requirements-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What has to be true before a bundler can drop an unused export?',
     options: [
@@ -39,7 +38,6 @@ Minifying works inside a module and never removes a module. The two passes are o
     id: 'split-point-ordering',
     type: 'output',
     form: 'ordering',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'The bundle is built, the page loads, and the user clicks once with an empty data set. Put the lines that print in the order they print.',
@@ -101,7 +99,6 @@ Placing "main body" first reads the file top to bottom. Static imports are evalu
     id: 'inlined-env-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'A frontend container reads its API URL from an env var. Changing the var and restarting the container has no effect; the old URL is still requested. Why?',
@@ -135,7 +132,6 @@ A cached response would be visible in the network tab against the correct URL. H
     id: 'module-as-function-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'staff',
     prompt: 'In a bundle, what has happened to each of your modules?',
     options: [
@@ -170,7 +166,6 @@ Leaving modules as modules and rewriting specifiers is roughly what a dev server
     id: 'shakeable-module-coding',
     type: 'coding',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'You are writing a utility package and want consumers to pay only for what they import. How should it be shaped?',
@@ -207,7 +202,6 @@ One file per export as a build step is the same idea taken past its usefulness. 
     id: 'dev-versus-production-scenario',
     type: 'scenario',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'senior',
     prompt:
       'A team keeps finding bugs that only exist in production. The dev server serves unbundled modules; production is a bundled, minified build. What is the useful response?',
@@ -239,7 +233,6 @@ Dynamic imports do not behave identically. They are a split point in the build a
     id: 'barrel-file-debugging',
     type: 'debugging',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'Importing one small helper from a shared package added 200kB to the bundle. The helper itself is twenty lines. What is the likely cause?',
@@ -277,7 +270,6 @@ A lazily loaded transitive dependency would appear as its own chunk rather than 
     id: 'minified-name-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt:
       'This dispatch works in development and picks the wrong branch in production. What does handler.constructor.name give in the production bundle?',
@@ -320,7 +312,6 @@ Nothing flattens a class into an object. It is still a class, still with a proto
     id: 'code-splitting-concept',
     type: 'concept',
     form: 'choice',
-    difficulty: 'medium',
     tier: 'swe-2',
     prompt: 'What does a bundler do with a dynamic import(), and when is that worth it?',
     options: [
@@ -353,7 +344,6 @@ No bundler converts a dynamic import to a static one, because that would change 
     id: 'interop-default-output',
     type: 'output',
     form: 'choice',
-    difficulty: 'hard',
     tier: 'swe-2',
     prompt:
       'An old CommonJS package sets module.exports = function stamp() {}. In a bundled TypeScript app, what does this import give you?',
@@ -391,7 +381,6 @@ undefined would be the outcome if there were no interop rule at all. There is on
     id: 'bundler-interview',
     type: 'interview',
     form: 'open',
-    difficulty: 'hard',
     tier: 'senior',
     prompt:
       'What does a bundler actually do to your code, and what would you check first when something works in development and breaks in production?',

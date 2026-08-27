@@ -26,73 +26,6 @@ show their real counts rather than pretending.
 
 ---
 
-# Phase 2: every question carries a tier
-
-`tier` replaces `difficulty`. This is a wide mechanical change over 466 questions,
-so it runs as expand, migrate, contract: the field arrives beside the old one,
-the bank is tagged in batches that each stay green, and the old field is deleted
-only when nothing is left untagged. All 466 now carry a tier, so only the
-contract step is left.
-
-**How to tag.** The four tiers are defined in `docs/glossary.md`, and those
-definitions are the rule. Ask what level of interview asks a question, not how
-hard it feels. Task 12 writes this rule into
-`docs/tasks/converting-a-topic.md`, which is where Phase 4 will read it.
-
-Two boundaries do most of the work, both drawn from the glossary:
-
-- **Senior against staff.** A senior question has a decision at the end of it.
-  A staff question has spec internals or a failure mode at the end of it, and
-  nothing to decide.
-- **SWE-2 against senior.** SWE-2 asks what went wrong. Senior asks what you
-  would do instead. A trade-off whose answer is a single rule is still SWE-2.
-
-`easy` mostly maps to `swe-1`: 69 of the 97 easy questions landed there. Where it
-breaks is a topic a junior has never met, since the label then describes the
-question rather than the round. Ask whether somebody two years in would have seen
-the API at all. The easy question on `Object.defineProperty` defaults is SWE-2,
-and the easy one asking why a static-only class should be a module is senior.
-`hard` does not map anywhere mechanically, so read every one of them. Thirty-seven
-of the 103 hard questions are SWE-2, because a famous gotcha is hard to answer and
-still the ordinary working-developer round. The bulk of the bank is the 266 medium
-questions, which spread across all four tiers.
-
-A topic can be thin at either end, or empty at one. Twelve topics finished with a
-single SWE-1 question and seven with none at all, because nothing in them is
-asked of somebody two years in. A whole batch can come out that way: the async
-and modules batch produced two SWE-1 questions across six topics, since
-cancellation, async iteration, resolution and bundling are not what a first round
-asks about. Report what the topic has rather than filling a tier to be even. A
-topic with no SWE-1 question drops out of the SWE-1 topic list in task 13, which
-is the correct outcome and not a gap.
-
-The reverse also holds, and the browser track is the case. All four topics are
-things a junior meets, so every easy question in them is SWE-1 and none of the
-others are: 6 SWE-1, 32 SWE-2, 5 senior and 1 staff across 44. A track being
-approachable makes its easy questions map cleanly. It does not make the rest of
-them junior questions.
-
-## 12. Make `tier` required and delete `difficulty`
-
-The schema demands a tier, `difficulty` goes from questions and from topic meta,
-and the chip on a question shows the tier instead. Topic difficulty is deleted
-rather than replaced, because a topic's tier is derived from its questions.
-
-`docs/tasks/converting-a-topic.md` gains the rule for tagging a new question,
-because Phase 4 authors against that brief and would otherwise write untiered
-questions into a schema that now demands a tier.
-
-**Decide before starting: what happens to exercise difficulty.** Exercises carry
-a `difficulty` of their own, and decision `0028` speaks only about questions and
-topic meta. Either exercises keep the old scale, and this task's wording narrows
-to questions and topic meta, or they need a decision of their own first.
-
-Nothing blocks it any more: every question carries a tier. Done when nothing in
-`content/` or `src/` mentions difficulty except what the exercise decision above
-leaves in place, and the check passes.
-
----
-
 # Phase 3: the tier becomes the path
 
 ## 13. A tier per track, and enrolment that respects it
@@ -103,7 +36,7 @@ enrols only the questions at or below the picked tier. The topic list shows only
 the topics that have a question at that tier, so scope follows the questions
 rather than a second list.
 
-Blocked by 12. Done when picking SWE-1 on a track and marking a topic learned
+Nothing blocks it. Done when picking SWE-1 on a track and marking a topic learned
 puts SWE-1 questions on the ladder and nothing else, and the topic list changes
 with the picker.
 
@@ -127,8 +60,8 @@ per topic, in the topics a real interview at these levels opens with. Senior and
 Staff stay as they are.
 
 Each task below is four topics, one branch, authored to
-`docs/tasks/converting-a-topic.md`. All four are blocked by 12 and by nothing
-else, so they can be taken in any order.
+`docs/tasks/converting-a-topic.md`, which carries the rule for tagging a new
+question with a tier. Nothing blocks them, so they can be taken in any order.
 
 ## 15. Fill the language fundamentals
 
@@ -159,7 +92,8 @@ global regex, and when not to use one. Numbers and precision: floating point,
 Strings: code points against code units, template literals and tagged templates,
 normalisation.
 
-Blocked by 12, so they are written tier-aware from the start. Done when the three
+Nothing blocks them, and they are written tier-aware from the start, so the
+schema will refuse a question with no tier. Done when the three
 pass the content check and read as lessons rather than lists of facts.
 
 ---
