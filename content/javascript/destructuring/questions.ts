@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does const { name, address } = user actually do?',
     options: [
       'Creates two bindings by reading user.name and user.address, exactly as two separate const declarations would. The string is copied and the address object is shared',
@@ -30,6 +31,7 @@ The "copies user" answer gives destructuring a protective power it does not have
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const { a = 1, b = 2, c = 3 } = { a: 0, b: null, c: undefined }
 console.log(a, b, c)`,
@@ -53,6 +55,7 @@ The null case is the one worth saying out loud in an interview, because it is wh
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function log(label) {
   console.log(label)
@@ -84,6 +87,7 @@ z undefined is what happens if the = {} on y is missed and you imagine the inner
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt:
       'Every caller that passes an object works, but connect() with no argument throws "Cannot destructure property host of undefined". What is the fix?',
     code: `function connect({ host, port = 5432 }) {
@@ -116,6 +120,7 @@ Reading options.host in the body would throw in the same way on options being un
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Write firstAndLast(list) that returns { first, last } for any array, using destructuring only. An empty array gives two undefineds and a single element is both first and last. Which of these is correct?',
     options: [
@@ -152,6 +157,7 @@ The list.length version is off by one. The last index is length - 1, so that key
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A handler destructures const { data: { items } } = response. Since the API started returning { data: null } on errors, every error crashes the page with a TypeError instead of showing the message. Why, and what is the fix?',
     options: [
@@ -181,6 +187,7 @@ There is no optional pattern syntax. Optional chaining works in expressions, not
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'Walk me through what can go wrong when a function destructures an API response, and how you would defend against each.',
     answerInFull: `Four things, in the order they bite.
@@ -205,6 +212,7 @@ The renamed field is the one most candidates miss, and it is the one that ships.
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'Which of these is true of rest and spread?',
     options: [
       'Rest collects what a pattern did not name into a new array or object and must be last; spread expands one value into many and can appear anywhere in a literal or a call',
@@ -233,6 +241,7 @@ Spreading an object copies own enumerable properties, the same set Object.keys l
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const { a, ...rest } = { a: 1, b: { n: 2 }, c: 3 }
 const copy = { ...rest }
@@ -258,6 +267,7 @@ c is in rest because rest takes everything the pattern did not name, and the pat
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Given const { [key]: value = 0, size: n } = stats, which bindings exist afterwards?',
     options: [
       'key, value, size and n',
@@ -284,6 +294,7 @@ Computed keys are allowed in patterns and are the destructuring form of bracket 
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const [a, , b = 'x', ...rest] = 'hey'
 console.log(a, b, rest)`,

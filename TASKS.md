@@ -34,15 +34,22 @@ the bank is tagged in batches that each stay green, and the old field is deleted
 only when nothing is left untagged.
 
 **How to tag.** The four tiers are defined in `docs/glossary.md`, and those
-definitions are the rule. `easy` maps to `swe-1` and `hard` to `senior` or
-`staff` almost mechanically. The work is the 266 medium questions, which have to
-be split by hand between `swe-2` and `senior`. Ask what level of interview asks
-this, not how hard it feels.
+definitions are the rule. Ask what level of interview asks a question, not how
+hard it feels.
 
-## 5. Tag the fundamentals
+Two boundaries do most of the work, both drawn from the glossary:
 
-`types-and-coercion`, `scope-and-hoisting`, `value-and-reference`,
-`destructuring`, `optional-chaining-and-nullish`, `parameters-and-arguments`.
+- **Senior against staff.** A senior question has a decision at the end of it.
+  A staff question has spec internals or a failure mode at the end of it, and
+  nothing to decide.
+- **SWE-2 against senior.** SWE-2 asks what went wrong. Senior asks what you
+  would do instead. A trade-off whose answer is a single rule is still SWE-2.
+
+`easy` maps to `swe-1` reliably: 20 of the 21 easy questions in task 5 landed
+there. `hard` does not map anywhere mechanically, so read every one of them.
+Three of the eight hard questions in task 5 were SWE-2, because a famous gotcha
+is hard to answer and still the ordinary working-developer round. The bulk of
+the work is the medium questions, which spread across all four tiers.
 
 ## 6. Tag functions
 
@@ -80,8 +87,19 @@ The schema demands a tier, `difficulty` goes from questions and from topic meta,
 and the chip on a question shows the tier instead. Topic difficulty is deleted
 rather than replaced, because a topic's tier is derived from its questions.
 
-Blocked by 5 through 11. Done when nothing in `content/` or `src/` mentions
-difficulty and the check passes.
+`docs/tasks/converting-a-topic.md` gains the rule for tagging a new question,
+because Phase 4 authors against that brief and would otherwise write untiered
+questions into a schema that now demands a tier.
+
+**Decide before starting: what happens to exercise difficulty.** Exercises carry
+a `difficulty` of their own, and decision `0028` speaks only about questions and
+topic meta. Either exercises keep the old scale, and this task's wording narrows
+to questions and topic meta, or they need a decision of their own first. Nothing
+in tasks 6 through 11 depends on the answer.
+
+Blocked by 6 through 11. Done when nothing in `content/` or `src/` mentions
+difficulty except what the exercise decision above leaves in place, and the
+check passes.
 
 ---
 

@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Is JavaScript pass by value or pass by reference?',
     options: [
       'Pass by value for primitives and pass by reference for objects, which is why a function can change an object it was given but not a number',
@@ -34,6 +35,7 @@ If it were genuinely pass by reference, the second case would replace the caller
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `function mutate(o) {
   o.count += 1
@@ -67,6 +69,7 @@ The TypeError comes from reading o = ... as a write to the const. box is const; 
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const user = { name: 'Ada', tags: ['admin'] }
 const copy = { ...user }
@@ -116,6 +119,7 @@ shared false is the same misreading as tags 1, asked directly. Anyone who answer
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Every request after the first one uses a 50ms timeout, even though the defaults say 1000. What is the bug, and what is the fix?',
     code: `const defaults = { retries: 3, timeout: { ms: 1000 } }
@@ -159,6 +163,7 @@ The const story confuses the binding with the object. const stops config being r
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Write deepFreeze(value) that freezes an object and everything reachable from it, and survives a structure that contains a cycle. Which of these is correct?',
     options: [
@@ -201,6 +206,7 @@ The Object.keys version freezes the object and skips its symbol-keyed and non-en
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A list component does not re-render after items are added, even though the array clearly has more entries. The code does items.push(next) and then sets state to items. What is happening?',
     options: [
@@ -230,6 +236,7 @@ Index keys produce the wrong rows, not no rows. A list whose state reference cha
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt: 'How would you check whether two objects are equal?',
     answerInFull: `First I would ask what equal means for this data, because the language only gives identity: === is true only when both names point at the same object.
 
@@ -248,6 +255,7 @@ The performance angle is the other half. Deep comparison is O(size) on every cal
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What is the value of [1, 2] === [1, 2]?',
     options: ['true', 'false', 'It depends on the contents', 'It throws a TypeError'],
     correctOption: 1,
@@ -264,6 +272,7 @@ The performance angle is the other half. Deep comparison is O(size) on every cal
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What survives JSON.parse(JSON.stringify(value)) unchanged?',
     options: [
       'A Date, which comes back as a Date',
@@ -287,6 +296,7 @@ The Map looks like it should work because it is iterable and has a size. JSON on
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'Which line throws, given const config = { retries: 3 }?',
     options: [
       'config.retries = 5',

@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What is coercion, and what decides which conversion happens?',
     options: [
       'Converting a value from one type to another. The values decide: a string operand always turns the expression into string handling, whichever operator is used',
@@ -37,6 +38,7 @@ The last option has the boolean case and misses the rest. Numbers and strings ar
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log(1 + '2')
 console.log('3' - 1)
@@ -67,6 +69,7 @@ NaN is [] + {} converted to numbers: [] is 0, {} is NaN, and 0 + NaN is NaN. Tha
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'What does this print?',
     code: `console.log(null == 0)
 console.log(null >= 0)
@@ -96,6 +99,7 @@ true, false, false is the real rule mirrored: == converting and the relational o
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A user who sets their display count to 0 sees 10 items instead, and a user with an empty bio sees the placeholder text they deleted. What is the bug, and what is the fix?',
     code: `function settings(input) {
@@ -138,6 +142,7 @@ The second option knows the bug and not the fix. ?? does not look at truthiness 
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Write isEmpty(value) that is true for null, undefined, an empty string, an empty array and an object with no own keys, and false for 0, false and NaN. Which of these is correct?',
     options: [
@@ -173,6 +178,7 @@ The one line version looks right for every value in the list, until Object.keys(
     type: 'scenario',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'An API returns ids as strings, and the codebase compares them with numeric ids using ==. It works today. What would you change, and what would you worry about?',
     answerInFull: `== works here only because the string is numeric and the conversion happens to be right. It stops being right the moment an id is '0012', ' 42 ', an empty string, or larger than Number.MAX_SAFE_INTEGER, and it silently makes '' == 0 true.
@@ -192,6 +198,7 @@ The precision point matters in practice. Ids from a database bigint column excee
     type: 'interview',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'Is there ever a good reason to use == instead of ===?',
     options: [
       'No. == always converts, so the result depends on a table nobody remembers, and every linter bans it outright',
@@ -220,6 +227,7 @@ value == false does not do what it says. '' == false and 0 == false are true, bu
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does typeof null return?',
     options: ["'null'", "'undefined'", "'object'", 'It throws a TypeError'],
     correctOption: 2,
@@ -236,6 +244,7 @@ value == false does not do what it says. '' == false and 0 == false are true, bu
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'Which of these is truthy?',
     options: ['0n', "''", "'0'", 'NaN'],
     correctOption: 2,
@@ -252,6 +261,7 @@ value == false does not do what it says. '' == false and 0 == false are true, bu
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'What is the value of [] == false?',
     options: ['true', 'false', 'It throws a TypeError', 'undefined'],
     correctOption: 0,
@@ -266,6 +276,7 @@ value == false does not do what it says. '' == false and 0 == false are true, bu
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Which of these evaluates to true?',
     options: ['NaN === NaN', 'NaN == NaN', 'Object.is(NaN, NaN)', '[NaN].indexOf(NaN) > -1'],
     correctOption: 2,
