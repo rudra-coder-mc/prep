@@ -18,8 +18,8 @@ first. The terms are in `docs/glossary.md`, and the content conventions are in
 task says what blocks it. One task is one branch and one merge, as always.
 
 Task numbers are the blocking graph's names, so a finished task leaves a gap
-rather than renumbering the ones after it. Phase 1 made audio stop being a build
-step and is done, which is why the numbering starts at 4.
+rather than renumbering the ones after it. The numbering starts partway through
+because the tasks before it are done.
 
 The focus is SWE-1 and SWE-2. Senior and Staff exist, they stay thin, and they
 show their real counts rather than pretending.
@@ -39,51 +39,40 @@ definitions are the rule. `easy` maps to `swe-1` and `hard` to `senior` or
 be split by hand between `swe-2` and `senior`. Ask what level of interview asks
 this, not how hard it feels.
 
-## 4. Add `tier` beside `difficulty`
-
-Optional in the schema, read by nothing yet, and the content check reports how
-many questions still lack one so the migration has a number that goes down.
-
-Done when the check prints the count and the build is green with nothing tagged.
-
 ## 5. Tag the fundamentals
 
 `types-and-coercion`, `scope-and-hoisting`, `value-and-reference`,
 `destructuring`, `optional-chaining-and-nullish`, `parameters-and-arguments`.
-Blocked by 4.
 
 ## 6. Tag functions
 
 `closures`, `higher-order-functions`, `array-methods`,
 `currying-and-partial-application`, `this-binding`, `strict-mode-and-globalthis`.
-Blocked by 4.
 
 ## 7. Tag objects and classes
 
 `prototypes`, `property-descriptors`, `class-syntax`, `extends-and-super`,
-`static-and-private`, `composition-over-inheritance`. Blocked by 4.
+`static-and-private`, `composition-over-inheritance`.
 
 ## 8. Tag collections and memory
 
 `iterables-and-iterators`, `generators`, `map-and-set`, `collection-performance`,
 `json`, `recursion-and-the-call-stack`, `garbage-collection`, `weak-references`.
-Blocked by 4.
 
 ## 9. Tag errors and the event loop
 
 `throwing-and-catching`, `error-types`, `custom-errors`, `event-loop`,
-`debounce-and-throttle`, `promises`, `promise-combinators`. Blocked by 4.
+`debounce-and-throttle`, `promises`, `promise-combinators`.
 
 ## 10. Tag async and modules
 
 `async-error-handling`, `abortcontroller`, `async-iteration`,
 `es-modules-and-commonjs`, `module-resolution-and-side-effects`,
-`what-a-bundler-changes`. Blocked by 4.
+`what-a-bundler-changes`.
 
 ## 11. Tag the browser track
 
-`the-dom`, `events-and-delegation`, `fetch-and-the-network`, `storage`. Blocked
-by 4.
+`the-dom`, `events-and-delegation`, `fetch-and-the-network`, `storage`.
 
 ## 12. Make `tier` required and delete `difficulty`
 

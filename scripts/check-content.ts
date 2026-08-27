@@ -26,6 +26,20 @@ async function main() {
       : `narration: ${spoken.length} of ${topics.length} topics have a script, missing ${silent.join(', ')}`,
   )
 
+  // `tier` is being migrated in beside `difficulty`, batch by batch. A count of
+  // what is still untagged gives the migration a number that goes down, and no
+  // topic silently gets skipped.
+  const untagged = topics.reduce(
+    (total, topic) =>
+      total + topic.questions.filter((question) => question.tier === undefined).length,
+    0,
+  )
+  console.log(
+    untagged === 0
+      ? `tiers: all ${questions} questions carry a tier`
+      : `tiers: ${questions - untagged} of ${questions} questions carry a tier, ${untagged} still untagged`,
+  )
+
   await checkNarrationAnchors(spoken)
   checkQuestionScripts(topics)
 }
