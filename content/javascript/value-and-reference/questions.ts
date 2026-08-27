@@ -301,4 +301,96 @@ The Map looks like it should work because it is iterable and has a size. JSON on
     hints: [],
     tags: ['objects', 'immutability'],
   },
+  {
+    id: 'two-variables-one-object-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `let a = 1
+let b = a
+b += 1
+
+const x = { n: 1 }
+const y = x
+y.n += 1
+
+console.log(a, b, x.n, y.n)`,
+    options: ['1 2 1 2', '2 2 2 2', '1 2 1 1', '1 2 2 2'],
+    correctOption: 3,
+    answerInFull: `1 2 2 2
+
+Both assignments copy a value into a second variable. The difference is what that value is.
+
+For the number, the value is the number itself, so b holds its own 1 and incrementing it cannot reach a.
+
+For the object, the value is a reference to it. x and y hold the same reference, so there is one object, and y.n += 1 changes the thing both names point at. Reading x.n afterwards sees 2.
+
+The sentence worth carrying: a variable never holds an object. It holds a reference to one, and copying a variable copies the reference rather than what it points at.`,
+    explanation: `1 2 1 2 is the answer if objects are copied on assignment the way numbers are. Then x and y would be two objects and only y would have changed. That is what structuredClone(x) would have given.
+
+2 2 2 2 is the mirror mistake, treating the number the way the object behaves, as if b were another name for a. Nothing in JavaScript makes two variables share a primitive.
+
+1 2 1 1 has the object copied and reads the result off the wrong one. It is worth noticing that no reading of this program gives x.n and y.n different values, because there is only ever one n.`,
+    hints: ['How many objects does this program create?'],
+    tags: ['memory', 'objects'],
+  },
+  {
+    id: 'making-a-copy-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'settings is a flat object of strings and numbers. Which of these gives you a copy you can change without touching settings?',
+    options: [
+      'const copy = settings',
+      'const copy = Object.assign(settings, {})',
+      'const copy = { ...settings }',
+      'const copy = JSON.stringify(settings)',
+    ],
+    correctOption: 2,
+    answerInFull: `const copy = { ...settings }
+
+Spread builds a new object and copies the own enumerable properties across. For a flat object that is a complete copy, and writing to it cannot reach the original. Object.assign({}, settings) does the same thing with an explicit empty target.
+
+Two things to say alongside it. Spread copies one level only, so an object holding another object shares that inner one, which is where the interesting bugs live. And spread skips inherited properties and non-enumerable ones, which is almost always what you want and is worth knowing before it surprises you.`,
+    explanation: `const copy = settings makes a second name for one object. Every write through either name is visible through the other, which is the thing a copy is supposed to prevent.
+
+Object.assign(settings, {}) has the arguments the wrong way round. The first argument is the target that gets written into and returned, so this copies nothing into settings and hands back settings itself. The empty object is the one that should be first.
+
+JSON.stringify returns a string, not an object. Parsing it back, JSON.parse(JSON.stringify(settings)), is a real copying technique and a deep one, and it quietly drops undefined values, turns a Date into a string and throws on a cycle.`,
+    hints: ['Which argument of Object.assign is written into?'],
+    tags: ['memory', 'objects'],
+  },
+  {
+    id: 'includes-compares-identity-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `const target = { id: 1 }
+const items = [{ id: 1 }, target]
+
+console.log(items.includes({ id: 1 }), items.includes(target), items.indexOf(target))`,
+    options: ['true true 1', 'false false -1', 'false true 1', 'true true 0'],
+    correctOption: 2,
+    answerInFull: `false true 1
+
+includes and indexOf compare with identity, not with contents. The object written inline in the call is a third object that nothing else points at, so it matches neither element, however similar it looks to the first one.
+
+target is the second element, so both searches find it and indexOf reports position 1.
+
+This is why searching an array of objects is almost always written as a predicate:
+
+  items.find((item) => item.id === 1)
+
+which asks about a field rather than about which object this is. Reach for includes only when you are holding the exact object you are looking for, such as an element you already pulled out of the array.`,
+    explanation: `true true 1 is the answer if the search compares contents. Nothing in the language compares two objects by their contents, which is why every deep-equality helper is a library function rather than an operator.
+
+false false -1 has identity right and then applies it to target as well. target is the array's second element, not a copy of it, so it is found.
+
+true true 0 finds the inline object at position 0, which would mean the first element and the argument are the same object. They were written in two places, so they are two allocations.`,
+    hints: ['How many objects does this program create?'],
+    tags: ['equality', 'objects', 'arrays'],
+  },
 ]

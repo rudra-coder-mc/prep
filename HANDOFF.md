@@ -14,17 +14,18 @@ covers every hosted service rather than only the company GitLab.
 
 **`main` is green.** `npm run verify` exited 0 through lint, format check,
 typecheck, 373 unit tests, 48 integration tests against real Postgres and a real
-speech engine, the production build, and all 61 Playwright tests. That run
-included `e2e/spoken-questions.spec.ts:63`, which is flaky rather than broken and
-passed this time; the open item on it below carries the tally and is still the
-most urgent thing in this file, because a spec that fails half the time makes the
-merge rule mean nothing. That run also included
-`spoken-questions.spec.ts:75`, which has now failed alongside it once. The
-content check reports 43 topics, 481 questions, 86 exercises, 269 narration
-sections and 962 question scripts, tiered as SWE-1 91, SWE-2 258, Senior 73 and
-Staff 59. Re-run `verify` rather than trusting any
-figure you read anywhere, including here, and read the section on piping it
-before you do.
+speech engine, the production build, and all 61 Playwright tests. It took two
+runs on the same tree to get there: the first failed on
+`e2e/spoken-questions.spec.ts:63` alone, in its usual way, and the second passed
+everything. That is the convention below being applied rather than an exception
+to it, and it is why the open item on that spec is still the most urgent thing in
+this file. A spec that fails half the time makes the merge rule mean nothing.
+
+At the head of `main` the content check reports 43 topics, 496 questions, 86
+exercises, 269 narration sections and 992 question scripts, tiered as SWE-1 106,
+SWE-2 258, Senior 73 and Staff 59. The working tree is clean and matches that.
+Re-run `verify` rather than trusting any figure you read anywhere, including
+here, and read the section on piping it before you do.
 
 The platform is an interview preparation tool built around one loop: read a
 topic, mark it learned, answer recall questions on a schedule. The shell names no
@@ -89,30 +90,42 @@ and nothing checks that the topic on the other end exists.
 
 ## In flight
 
-**Nothing is half done.** The working tree is clean at the head of `main`.
+**Nothing.** Task 16 is committed and merged into `main`, its branch is deleted,
+and the working tree is clean. It was the last thing carried between sessions.
 
 **Merged branches are piling up undeleted**, which the conventions below say
-should not happen. `git branch --merged main` is the list; it runs to sixteen and
-now includes `feature/a-tier-per-track` and `feature/readiness-and-the-step-up`. All of them are merged, so deleting them
+should not happen. `git branch --merged main` is the list; seventeen of its
+entries are branches other than `main`, and the newest is
+`feature/fill-language-fundamentals`. All of them are merged, so deleting them
 loses nothing, and nobody has done it because permission was never asked for. The
 tagging branches from Phase 2 were deleted on merge, which is why they are not
 among them.
 
+Read that list before acting on it. A branch with no commits of its own also
+shows as merged, so a session that is holding work on a fresh branch has that
+branch sitting in the output looking exactly like the dead ones. Task 16 spent a
+session in that state.
+
 ## The next action
 
-**Phase 4 in `TASKS.md`: fill SWE-1 and SWE-2.** Everything left in the file is
-content. Four tiers over 43 topics is roughly two questions per tier per topic,
+**Phase 4 in `TASKS.md`: fill SWE-1 and SWE-2.** Everything left in the file
+is content. Four tiers over 43 topics is roughly two questions per tier per topic,
 which carries no promise at all, so the tiers being prepared for have to reach
-five or six per topic before readiness means anything. Tasks 16 to 18 are four
-topics each and nothing blocks any of them, so pick by which subject is worth
-knowing soonest rather than by the order they are listed in.
+five or six per topic before readiness means anything. Tasks 17 and 18 are four
+topics each and nothing blocks either of them.
 
-Task 15 is done and set the shape they match. `types-and-coercion`,
-`scope-and-hoisting`, `closures` and `this-binding` each carry six SWE-1
-questions and six SWE-2 questions now, which took them from eleven questions to
-fourteen or fifteen. Everything added was a choice question, because each of
-those topics already had its one open question and its ordering question, and the
-caps in the brief did not move to make room.
+Tasks 15 and 16 are done and set the shape the rest match. Eight topics now carry
+six SWE-1 questions and six SWE-2 questions each, which takes a topic from ten or
+eleven questions to thirteen, fourteen or fifteen. Everything added was a choice
+question, because every one of those topics already had its one open question and
+its ordering question, and the caps in the brief did not move to make room.
+
+**Task 16 was almost entirely SWE-1.** Its four topics were already at six or
+seven SWE-2 questions and at two or three SWE-1, so fifteen of the sixteen
+questions written for it were SWE-1. Expect the same shape ahead. The bank was
+authored before tiers existed and tagged afterwards, and tagging it honestly
+produced few SWE-1 questions, so what Phase 4 is filling is a thin bottom rather
+than a thin middle.
 
 Author to `docs/tasks/converting-a-topic.md`, which carries the rule for tagging a
 new question with a tier. Read the section below on what the tagging taught
@@ -266,17 +279,18 @@ written since keeps the two in the same order, so this is the only one.
 a cap rather than a quota, so it passes the check. Worth knowing before reading
 it as an omission.
 
-**Two topics ask the same open question.** `prototypes` and `class-syntax` both
-end on whether `class` is only syntax over prototypes, with substantially the
-same answer, and both are tagged staff. It may be deliberate, since a learner
-working through one topic should not have to have done the other. If it is not,
-Phase 4 revisits `prototypes` in task 16 and that is where one of them would go.
-Nobody owns the decision.
+**The duplicate open question is settled.** `prototypes` and `class-syntax` both
+used to end on whether `class` is only syntax over prototypes. Task 16 dropped
+`class-is-sugar` from `prototypes` and left the `class-syntax` one, which is the
+fuller answer and is in the topic named after the thing being asked about. The
+prototypes lesson still teaches what `class` really is, so nothing about the
+reading order changed. Its open question is now `patching-a-built-in`, which is
+about the shared mutable prototype and shares nothing with `class-syntax`.
 
 **One end-to-end spec is flaky, nobody owns it, and it now blocks the merge
 rule.** "A question can be listened to before it is answered",
-`e2e/spoken-questions.spec.ts:63`, has failed six times in twelve full suite
-runs, and passes on a re-run of the same commit every time.
+`e2e/spoken-questions.spec.ts:63`, has failed seven times in fourteen full suite
+runs, and passes on a re-run of the same commit every time. Exactly half.
 
 **It has now taken a second spec with it.** In one run,
 `spoken-questions.spec.ts:75`, "the answer gets its own listen button", failed
@@ -287,14 +301,15 @@ interception hypothesis below and against the hydration one: a hydration race
 would not pick out two specs that share a stub.
 It always fails the same way: the listen button never becomes "Stop listening"
 within the five second timeout, so the audio never started. Every failure has
-been on a branch that touched nothing but content data, and the most recent one
-was on unmodified `main` immediately after a green run of the same commit, which
-rules out the content and rules out the last change. Passing in isolation is not
+been on a tree that touched nothing but content data, and one of them was on
+unmodified `main` immediately after a green run of the same commit, which rules
+out the content and rules out the last change. Passing in isolation is not
 evidence either; it has done that after every failure.
 
 This is the urgent one, because the convention below says nothing merges into
-`main` with `verify` failing, and at four in ten the rule now means running the
-suite until it passes. That is the same as not having the rule. **The decision
+`main` with `verify` failing, and at one in two the rule now means running the
+suite until it passes. That is the same as not having the rule, and task 16 was
+merged that way. **The decision
 worth taking first is whether this becomes a task**, and the answer is probably
 yes, because whoever writes the fix also gets to decide what the spec should
 assert rather than being told by a timeout.
@@ -444,6 +459,23 @@ keeping a stale colour.
 
 **Never add a git remote, and never push.** The self-hosted GitLab belongs to
 the company and this is a personal project. `CLAUDE.md` states the rule in full.
+
+**A scripted rewrite of a `questions.ts` can eat a whole question silently, and
+the content check is the only thing that will tell you.** Reordering the options
+on a few questions with a Python script that located each `options: [` by
+searching forward from an id went wrong on the second question it touched: the
+region it computed spanned the end of one object and the start of the next, and
+it wrote over a question that was never mentioned in the script. Nothing failed.
+Prettier reformatted the result happily, TypeScript accepted it, and the only
+visible symptom was `npm run content:check` reporting 495 questions where the
+previous run said 496.
+
+Two rules come out of it. Read the question count after any bulk edit of a
+content file and compare it against the run before; it is the cheapest tripwire
+in the repository. And prefer editing the block of new questions before appending
+it, or an exact whole-string replacement, over any script that computes a region
+by searching for delimiters, because the objects in these files are large enough
+that a wrong region looks plausible.
 
 **Prettier checks untracked files, so a scratch file at the repo root fails
 `verify` and blocks every commit.** The pre-commit hook runs the same check.

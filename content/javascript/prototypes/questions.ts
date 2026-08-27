@@ -63,23 +63,31 @@ Nothing in this reaches parent at any point after the first line, which is the f
     tags: ['objects', 'prototype'],
   },
   {
-    id: 'class-is-sugar',
+    id: 'patching-a-built-in',
     type: 'interview',
     form: 'open',
     tier: 'staff',
-    prompt: 'Is `class` in JavaScript just syntax over prototypes? Be precise.',
-    answerInFull: `Mostly, but not entirely. Methods declared in a class body go on the prototype and instances inherit them by lookup, exactly as with constructor functions, and extends sets up the prototype link.
+    prompt:
+      'A library adds a helper to Array.prototype so that every array in the application can use it. What goes wrong, and what would you do instead?',
+    answerInFull: `It works, and it works retroactively on every array that already exists, because an array holds a link to Array.prototype rather than a copy of it. That is the appeal, and it is also the whole problem: there is one Array.prototype per realm and every piece of code in the process is looking at it.
 
-The differences that are not sugar:
-- Class bodies are always strict mode.
-- A class cannot be called without new; it throws.
-- Class declarations are not hoisted in a usable way; they sit in the temporal dead zone.
-- Class methods are non-enumerable, so they do not appear in for...in.
-- Private fields with # are genuinely inaccessible, not merely conventional.
-- super works through a proper reference, which is awkward to replicate by hand.`,
-    explanation: `Saying "just sugar" is the answer that gets probed. The honest version is that the inheritance mechanism is the same, but the class form adds real semantics that constructor functions do not have.`,
+What goes wrong, roughly in order of how badly:
+
+- Enumerability. Array.prototype.pluck = fn creates an enumerable property, so it turns up in every for...in over an array anywhere in the application, including in code written before the library existed. Object.defineProperty with enumerable: false avoids that one and none of the others. The real built-ins are all non-enumerable, which is why nobody notices them.
+- Collision with the language. Two libraries choosing the same name fight silently, and so does a future version of the specification. Array.prototype.flatten had to be renamed to flat because shipping it broke sites that had already been given a flatten by a library. That is the concrete precedent, and it is the strongest evidence this is a constraint rather than a preference.
+- Collision with the reader. A method that exists only if some module was imported cannot be traced from the call site, and it does not exist in a REPL or a test file that imported something else.
+- Optimisation. Engines specialise on the shape of the built-in prototypes, and changing one after code has been running invalidates what depended on it.
+
+What I would do instead: export a plain function and call it, pluck(list, 'id'). If the fluent style is genuinely the requirement, a subclass of Array is the honest version, because it adds to an object of your own rather than to everybody's.
+
+The one case worth allowing is a polyfill: implementing a standard method the environment lacks, guarded by a check that it is missing, and matching the specified behaviour exactly. That is not adding to the prototype, it is filling in what should already have been there.`,
+    explanation: `The two things an interviewer is listening for are that the prototype is shared for the whole realm rather than per module, and the enumerability point, because that is the one that breaks unrelated code rather than your own.
+
+The flatten story is worth telling if you know it, under the name SmooshGate. It also shows what the alternative costs: the committee took the rename rather than the breakage, which is a decision about somebody else's monkey patch.
+
+The answer that stops at "it is bad practice" is the one this question exists to get past. Every mechanism named above is a consequence of the chain, which is the topic, and being able to derive them beats having read the rule.`,
     hints: [],
-    tags: ['objects', 'prototype', 'classes'],
+    tags: ['objects', 'prototype', 'design'],
   },
   {
     id: 'proto-vs-prototype',
@@ -365,5 +373,137 @@ The constructor property is the version people describe when asked to implement 
 Checking for the properties B.prototype declares is structural typing, which is what TypeScript does at compile time and what nothing does at runtime. instanceof compares one object identity and nothing else.`,
     hints: [],
     tags: ['prototypes'],
+  },
+  {
+    id: 'what-new-does-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does new Point(3) do?',
+    options: [
+      'Copies every property and method from Point.prototype onto a fresh object, then runs Point with this bound to it',
+      'Creates a fresh object linked to Point.prototype, runs Point with this bound to it, and returns that object unless the body returns an object of its own',
+      'Runs Point and returns whatever it returns, with new only marking the function as a constructor for instanceof',
+      'Creates a fresh object linked to Point itself, so the instance inherits everything declared on the constructor function',
+    ],
+    correctOption: 1,
+    answerInFull: `Four steps, and the third is the one that matters here.
+
+1. Create a new empty object.
+2. Link it to Point.prototype, so the instance inherits whatever is on that object.
+3. Run Point with this bound to the new object, so the body's assignments become own properties of it.
+4. Return the new object, unless the body explicitly returns an object of its own, in which case that one wins.
+
+The split those steps produce is the shape of every instance: the data the constructor assigned is own, and the methods are inherited by lookup. That is why one function object serves a thousand instances, and why a method added to the prototype afterwards is available to instances that already exist.
+
+Step four is the detail people forget. Returning a primitive from a constructor is ignored; returning an object replaces the instance, which is how a constructor can hand back a cached object or a proxy.`,
+    explanation: `The copying answer is how classes work in several other languages, and it predicts that a method added to a prototype later would not reach existing objects. It does reach them, because the instance holds a link rather than a copy.
+
+"new only marks it for instanceof" removes the mechanism entirely. Nothing about the function is marked; new changes what happens at the call, and instanceof reads the chain that step two built.
+
+Linking to Point rather than Point.prototype is the mistake the naming invites. Point.prototype is not Point's own prototype, it is the object Point hands out to its instances, and the instance links to that.`,
+    hints: [],
+    tags: ['objects', 'prototype'],
+  },
+  {
+    id: 'array-methods-are-inherited-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'const list = [1, 2]. Where does the map that list.map(...) calls actually live?',
+    options: [
+      'On list, put there when the array literal was evaluated',
+      'On Array.prototype, which is the next link in the chain from list',
+      'On the Array constructor, which every array is given a reference to',
+      'Nowhere reachable. Array methods are built into the engine rather than being properties of any object',
+    ],
+    correctOption: 1,
+    answerInFull: `On Array.prototype. list has no map of its own: Object.hasOwn(list, 'map') is false, and the lookup follows the link to Array.prototype and finds it there.
+
+The chain for a plain array is short and worth being able to recite: the array, then Array.prototype, then Object.prototype, then null. That is where toString and hasOwnProperty come from too.
+
+The consequence is that arrays are ordinary objects following the ordinary rules, and Array.prototype is one shared object that every array in the realm is looking at. Adding to it or changing it is visible to every array everywhere, including ones created before the change, which is the mechanism behind monkey patching and the reason not to.
+
+length is the exception on the other side: it is an own property of each array, which is why hasOwn reports it true.`,
+    explanation: `A method on the array itself would mean a copy of every array method per array, which is the cost the prototype exists to avoid.
+
+The Array constructor holds the static members, Array.from and Array.isArray, which is why you call those on Array and never on an array. The instance methods are on Array.prototype, the object the constructor hands out.
+
+"Built into the engine" is true of the implementation and not of the visibility. Array.prototype.map is a property you can read, pass around, call with call, and unfortunately also replace.`,
+    hints: ['What does Object.hasOwn(list, "map") return?'],
+    tags: ['objects', 'prototype', 'arrays'],
+  },
+  {
+    id: 'in-versus-hasown-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `const defaults = { theme: 'dark' }
+const settings = Object.create(defaults)
+settings.fontSize = 14
+
+console.log('theme' in settings, Object.hasOwn(settings, 'theme'), Object.keys(settings))`,
+    options: [
+      "true false [ 'fontSize' ]",
+      "true true [ 'theme', 'fontSize' ]",
+      "false false [ 'fontSize' ]",
+      "true false [ 'theme', 'fontSize' ]",
+    ],
+    correctOption: 0,
+    answerInFull: `true false [ 'fontSize' ]
+
+Three ways of asking about a property, and they are asking three different questions.
+
+in asks whether a read would find it anywhere, so it walks the chain and answers true for theme.
+
+Object.hasOwn asks only about the object itself, so it answers false for theme and would answer true for fontSize.
+
+Object.keys lists own enumerable string keys, so it reports fontSize and nothing inherited.
+
+Choosing between them is the practical part. A defaults object reached through the prototype is exactly the case where the three disagree, and picking the wrong one gives a config merge that treats every default as something the user set.
+
+Object.hasOwn is the modern spelling of settings.hasOwnProperty('theme'), and it is safer, because it works on an object with no prototype and on an object that arrived from JSON carrying its own hasOwnProperty key.`,
+    explanation: `true true is hasOwn read as "does this object have it", which is what its name almost says. The own in the name is the whole meaning: it refuses to walk.
+
+false false is in read as own-only. Then in and hasOwn would be the same function, and the reason for...in surprises people would not exist.
+
+Object.keys listing theme is the mirror mistake, treating keys as a walk of the chain. for...in is the one that walks; Object.keys never does.`,
+    hints: ['Which of the three follow the prototype link?'],
+    tags: ['objects', 'prototype'],
+  },
+  {
+    id: 'method-versus-arrow-field-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `class Button {
+  handle() {}
+  onClick = () => {}
+}
+
+const a = new Button()
+const b = new Button()
+
+console.log(a.handle === b.handle, a.onClick === b.onClick)`,
+    options: ['true true', 'false false', 'false true', 'true false'],
+    correctOption: 3,
+    answerInFull: `true false
+
+handle is a method, so it lives on Button.prototype. There is one function object and both instances find it by lookup, so comparing them gives true.
+
+onClick is a class field. Fields are created per instance, in the constructor, so each Button gets its own arrow function and the two are different objects.
+
+Both halves have a practical consequence. The method is shared, which is why a thousand buttons cost one handle, and it loses its receiver when it is pulled off the instance. The field is per instance, which costs a function object each, and it captures this where it was created, so it survives being passed to addEventListener.
+
+The identity difference is the one that causes bugs. removeEventListener matches by identity, and a React dependency array compares by identity, so a per instance function that is recreated is a value that never settles.`,
+    explanation: `true twice is the belief that fields go on the prototype like methods. If they did, every instance would share one arrow and the pattern would not fix the receiver, since there would be nothing per instance to capture.
+
+false twice treats methods as copied into instances. The prototype exists precisely so they are not, which is also why deleting a method from a prototype changes what existing instances do.
+
+false true has the two the wrong way round, and it is the reading to check yourself against: the one written like a method is shared, and the one written like an assignment happens once per object, at construction.`,
+    hints: ['Which of the two is on the prototype, and which is created per instance?'],
+    tags: ['prototypes', 'classes'],
   },
 ]
