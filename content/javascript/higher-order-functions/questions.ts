@@ -369,4 +369,145 @@ Returning is the near miss. It does end the current call, which is enough to loo
     hints: [],
     tags: ['functions', 'callbacks', 'arrays'],
   },
+  {
+    id: 'called-instead-of-passed',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'The message appears the moment the page loads, and clicking the button does nothing at all. Why?',
+    code: `function save() {
+  console.log('saved')
+}
+
+button.addEventListener('click', save())`,
+    options: [
+      'save has no parameters, so it cannot be used as a listener. A listener must accept the event object',
+      'The listener has to be registered after the button exists in the DOM, and this line runs too early. Move it inside a load handler',
+      'save is a function declaration, so it is hoisted and runs once at registration. Assign it to a const instead',
+      'The parentheses call save immediately and pass its return value, undefined, as the listener. Pass the function itself: addEventListener("click", save)',
+    ],
+    correctOption: 3,
+    answerInFull: `save() calls the function. The parentheses are the call, so the log happens at the moment that line runs, and what is handed to addEventListener is what save returned, which is undefined.
+
+Pass the function rather than its result:
+
+  button.addEventListener('click', save)
+
+A listener of undefined is legal, so nothing complains. The browser accepts it and registers nothing, which is why the failure is completely silent. Node is stricter in the equivalent case: setTimeout(save(), 1000) throws a TypeError naming the callback, which is a nicer failure than the one you get here.
+
+When the callback needs an argument, wrap it rather than calling it:
+
+  button.addEventListener('click', () => save(id))
+
+That is the whole distinction a higher order function rests on. save is a value; save() is what running it produces.`,
+    explanation: `A listener does not have to accept the event. Every callback is called with whatever arguments the caller supplies, and a function is free to ignore them, which is why the no-parameter version would work perfectly once the parentheses are removed.
+
+The DOM timing option is a real cause of listeners never firing, and it fails differently: button would be null and the line would throw on reading addEventListener of null. Here the line succeeded and the log already ran.
+
+Hoisting is why calling save above its definition works, and it has nothing to do with when it runs. A declaration does not execute itself; the parentheses on the last line did.`,
+    hints: ['What is the difference between save and save()?'],
+    tags: ['functions', 'callbacks'],
+  },
+  {
+    id: 'returned-function-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `function multiplier(factor) {
+  return (n) => n * factor
+}
+
+const double = multiplier(2)
+
+console.log(double(5), multiplier(3)(5))`,
+    options: ['10 15', '10 10', 'NaN NaN', '2 3'],
+    correctOption: 0,
+    answerInFull: `10 15
+
+multiplier does not multiply anything. It builds and returns a function that will, and the factor it was given stays available to that function through the closure over multiplier's scope.
+
+double is the function built with a factor of 2, so double(5) is 10. multiplier(3)(5) is the same thing without keeping the intermediate function: the first call returns a function, and the second pair of parentheses calls it with 5.
+
+This is the returning half of what a higher order function is, and it is the shape behind partial application, middleware, and every configure-then-use API. The reason to reach for it is that the configuration and the call happen at different times and in different places.`,
+    explanation: `10 10 is the answer if factor were shared between every function multiplier produces. Each call creates a new scope with its own factor, which is exactly why double keeps working after the second call.
+
+NaN NaN is multiplier read as returning n * factor directly, so that the outer call is doing the arithmetic with an n that does not exist yet. It returns the function unevaluated; nothing multiplies until the inner call supplies n.
+
+2 3 reads the second pair of parentheses as doing nothing, leaving each expression at whatever the factor was. Calling the returned function is what produces a number.`,
+    hints: ['What does multiplier(3) evaluate to, before the second call?'],
+    tags: ['functions', 'closure'],
+  },
+  {
+    id: 'callback-arguments-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What arguments does map call its callback with?',
+    options: [
+      'The element only',
+      'The element and the index',
+      'The element, the index and the whole array',
+      'The element, the index, the whole array and the accumulator',
+    ],
+    correctOption: 2,
+    answerInFull: `Three: the element, its index, and the array being mapped. forEach, filter, find, some and every all pass the same three.
+
+reduce is the odd one out, and passes four: the accumulator, the element, the index and the array.
+
+The reason to know the count rather than look it up is what happens when you pass an existing function straight through. ['1','2','3'].map(parseInt) gives [1, NaN, NaN], because parseInt's second parameter is the radix and map is supplying the index for it. Boolean survives the same treatment only because it ignores everything past the first argument.
+
+The habit that avoids it is to wrap anything you did not write: .map((s) => parseInt(s, 10)).`,
+    explanation: `"The element only" is what almost every callback anybody writes actually uses, so it is the natural assumption. The extra arguments are always sent; the callback usually declines them.
+
+"Element and index" stops one short, and the array is the argument that makes a callback able to look at its neighbours without closing over anything.
+
+The four-argument answer is reduce's signature applied to map. Knowing that reduce is different, and different by having its accumulator first, is worth as much as knowing the three.`,
+    hints: [],
+    tags: ['functions', 'callbacks', 'arrays'],
+  },
+  {
+    id: 'filter-missing-return',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'This is meant to keep the even numbers. It returns an empty array. Why?',
+    code: `const nums = [1, 2, 3, 4]
+
+const evens = nums.filter((n) => {
+  n % 2 === 0
+})
+
+console.log(evens)`,
+    options: [
+      'The braces make it a block body, so the callback returns undefined on every element. filter keeps the truthy ones, and undefined is falsy, so it keeps none. Either add return, or drop the braces',
+      'filter needs a comparison against true, so the callback has to end in === true for the result to count',
+      'n % 2 === 0 is a statement rather than an expression, so it is evaluated and thrown away before filter sees it',
+      'filter passes the index as well as the element, so n is the index on some calls and the arithmetic is done against the wrong value',
+    ],
+    correctOption: 0,
+    answerInFull: `An arrow function with braces has a block body, and a block body returns undefined unless something in it says return. The callback computes the comparison and discards it, so filter is told undefined for all four elements, and undefined is falsy.
+
+Either say return:
+
+  nums.filter((n) => {
+    return n % 2 === 0
+  })
+
+or drop the braces, which makes the body an expression and the return implicit:
+
+  nums.filter((n) => n % 2 === 0)
+
+The second is what most code does, and the block form is what you get the moment you add a console.log inside the callback to debug something. Adding a line to a working filter and finding it now matches nothing is this bug, and it is a matter of seconds to spot once you have met it.
+
+The same trap applies to map, which fills its array with undefined, and to sort's comparator, which then never says "before".`,
+    explanation: `filter converts whatever the callback returns to a boolean. There is nothing to compare against true, and adding === true would change nothing here, because undefined === true is false as well.
+
+n % 2 === 0 is an expression, and expressions are perfectly legal as statements. That is exactly the problem: it is evaluated, it produces true or false, and then a block body throws the value away rather than returning it.
+
+filter does pass the index as a second argument, and this callback declares one parameter, so it never sees it. n is the element on every call.`,
+    hints: ['What does an arrow function with braces return?'],
+    tags: ['functions', 'callbacks', 'arrays'],
+  },
 ]

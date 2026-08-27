@@ -335,4 +335,145 @@ All three NaN would need the first call to fail too, and radix 0 is accepted as 
     hints: ['How many arguments does map pass, and what is the second parameter of parseInt?'],
     tags: ['arrays', 'parsing'],
   },
+  {
+    id: 'what-each-method-returns-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What do map, forEach, filter and find each return?',
+    options: [
+      'map a new array, forEach a new array, filter a new array, find the element',
+      'map a new array, forEach the original array, filter a new array, find a new array of the matches',
+      'All four return a new array. They differ only in which elements end up in it',
+      'map a new array, forEach undefined, filter a new array, find the element or undefined',
+    ],
+    correctOption: 3,
+    answerInFull: `map returns a new array of the same length, holding what the callback returned each time.
+
+forEach returns undefined. It exists for its side effects, and there is nothing to chain onto it.
+
+filter returns a new array of the elements the callback approved, so it is anywhere from empty to the same length.
+
+find returns the element itself, or undefined if nothing matched. findIndex is the version that returns the position, and -1 when nothing matched.
+
+The pattern worth carrying: the return value tells the reader what you expected to get back, so pick the method whose return type is the answer. const found = list.filter(match)[0] and const found = list.find(match) do the same job, and only one of them says so.`,
+    explanation: `"forEach returns a new array" is the belief that turns forEach into a slower map. If it did, .forEach(...).filter(...) would work, and it is a TypeError: undefined has no filter.
+
+"forEach returns the original array" is what a chainable each returns in several libraries, jQuery included, which is where the expectation comes from.
+
+"find returns the matches" is find confused with filter. It returns one element and stops at it, which is what makes it cheaper.
+
+The all-four answer collapses two real distinctions: forEach gives back nothing, and find gives back an element rather than a collection.`,
+    hints: [],
+    tags: ['arrays'],
+  },
+  {
+    id: 'slice-versus-splice-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `const letters = ['a', 'b', 'c', 'd']
+
+const taken = letters.slice(1, 3)
+const cut = letters.splice(1, 3)
+
+console.log(taken, cut, letters)`,
+    options: [
+      "[ 'b', 'c' ] [ 'b', 'c', 'd' ] [ 'a' ]",
+      "[ 'b', 'c' ] [ 'b', 'c' ] [ 'a', 'd' ]",
+      "[ 'b', 'c' ] [ 'b', 'c', 'd' ] [ 'a', 'b', 'c', 'd' ]",
+      "[ 'b', 'c', 'd' ] [ 'b', 'c', 'd' ] [ 'a' ]",
+    ],
+    correctOption: 0,
+    answerInFull: `[ 'b', 'c' ] [ 'b', 'c', 'd' ] [ 'a' ]
+
+Two methods with similar names that differ in both of the ways they could.
+
+slice(start, end) copies. It takes a start and an end, the end is not included, and the original array is untouched. So it returns b and c and letters still has four elements at that point.
+
+splice(start, count) cuts. Its second argument is how many to remove, not where to stop, so splice(1, 3) removes three elements starting at index 1. It returns what it removed and leaves letters holding only a.
+
+The order of the two calls matters here: slice ran first, on the full array. Swapping the two lines would give slice a one element array to work on.
+
+toSpliced is the copying twin added in 2023, for when you want splice's result without losing the original.`,
+    explanation: `Both returning [ 'b', 'c' ] is splice read as taking an end index like slice. It takes a count, and that difference in the second argument is half of what makes the two easy to confuse.
+
+letters left at four elements is splice read as a copy. It is one of the nine mutating methods, and cutting is the whole point of it.
+
+The last option has slice taking a count. It takes an end index and stops before it, which is why slice(1, 3) gives two elements rather than three.`,
+    hints: ['What is the second argument of each of the two methods?'],
+    tags: ['arrays', 'mutation'],
+  },
+  {
+    id: 'push-returns-length-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      "Given const list = ['a'], what does list.push('b') evaluate to, and what happens to list?",
+    options: [
+      "The new array [ 'a', 'b' ], and list is left as [ 'a' ]",
+      "The new length, 2, and list is changed in place to [ 'a', 'b' ]",
+      "The new array [ 'a', 'b' ], and list is changed in place to the same thing",
+      "The value pushed, 'b', and list is changed in place to [ 'a', 'b' ]",
+    ],
+    correctOption: 1,
+    answerInFull: `push returns the new length, 2, and changes list in place.
+
+That combination is what makes const longer = list.push('b') a bug that type checks and runs: longer is a number, and the next line treating it as an array fails somewhere else.
+
+To add an element and get an array back, build a new one:
+
+  const longer = [...list, 'b']
+
+which is also what state in a framework needs, since pushing into the array it already holds changes nothing about its identity and so triggers no re-render.
+
+pop, shift and unshift are in the same family: pop and shift return the element they removed, unshift returns the new length, and all four mutate.`,
+    explanation: `"Returns the new array and leaves list alone" is push read as the copying method it is not. Nothing in the mutating group returns a new array; that is what the group is.
+
+"Returns the new array, changed in place" is the half-right version that catches people out, because the mutation is right and the return value is a number. Assigning it to something named list or items is where the bug starts.
+
+"Returns the value pushed" is what an assignment expression does, and what push would return if it were designed to chain. It returns the length so that a loop can use it, which is a decision from 1995 that nothing has changed since.`,
+    hints: [],
+    tags: ['arrays', 'mutation'],
+  },
+  {
+    id: 'indexof-zero-is-falsy',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'This prints "found grace" and nothing else, although ada is in the list. Why?',
+    code: `const names = ['ada', 'grace']
+
+if (names.indexOf('ada')) console.log('found ada')
+if (names.indexOf('grace')) console.log('found grace')`,
+    options: [
+      'indexOf returns the index, and ada is at index 0, which is falsy. Test the result against -1, or use includes, which returns a boolean',
+      'indexOf compares with ==, so the string is converted to a number first and only the second lookup survives the conversion',
+      'indexOf returns -1 when it does not find something, and -1 is falsy, so the first name was never found. Check that the strings match exactly',
+      'The array is searched from the end, so grace is found first and the loop stops before it reaches ada',
+    ],
+    correctOption: 0,
+    answerInFull: `indexOf returns a position, and ada is at position 0. The if test converts that to a boolean, and 0 is falsy, so the branch is skipped even though the name was found. grace is at position 1, which is truthy.
+
+The fix that says what it means:
+
+  if (names.includes('ada')) console.log('found ada')
+
+includes returns a boolean, so there is nothing to convert and no position to misread. Before it existed, the idiom was to compare against the failure value explicitly:
+
+  if (names.indexOf('ada') !== -1)
+
+which is what makes the -1 sentinel safe to use: -1 is truthy, so the naive test is wrong in both directions. It says "not found" for the first element and "found" for everything that is missing.
+
+The general shape is worth recognising, because it is not about arrays. Any function that returns a number where 0 is a legitimate answer cannot be tested for truthiness. String.prototype.indexOf and search have exactly the same trap.`,
+    explanation: `The == option invents a conversion. indexOf compares with strict equality and never converts, which is also why it cannot find NaN.
+
+The -1 option is the right sentinel attached to the wrong name. -1 is what indexOf returns when the value is missing, and ada is present, so it was never the answer here. It is also worth noticing that -1 is truthy, so a missing name would have printed.
+
+Searching from the end is lastIndexOf, and neither method stops the program: these are two independent if statements, not a loop.`,
+    hints: ['What number does indexOf return for the first element?'],
+    tags: ['arrays', 'coercion'],
+  },
 ]
