@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What makes an object eligible for collection?',
     options: [
       'Nothing in the program can reach it by following references from a root',
@@ -38,6 +39,7 @@ Nothing measures how long it has been since you touched an object. Recency is a 
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Two objects hold references to each other, and nothing else references either of them. What happens?',
     options: [
@@ -73,6 +75,7 @@ There is no separate cycle detection pass. Tracing never needed one.`,
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const listeners = new Set()
 
@@ -117,6 +120,7 @@ added 2 is there for a reading where the anonymous arrow gets added rather than 
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `let buffer = new Uint8Array(8)
 const holder = { buffer }
@@ -159,6 +163,7 @@ Nothing throws: holder.buffer was never null.`,
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A dashboard opens and closes a chart panel all day. After a few hours the tab is using gigabytes, and a heap snapshot shows hundreds of chart instances. What is holding them?',
     code: `function mountChart(node, data) {
@@ -209,6 +214,7 @@ The returned object is released as soon as the caller drops it. Its captured var
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'A snapshot of a long-lived page shows thousands of entries reading "Detached HTMLTableRowElement", growing every time the table is refreshed. The table itself is replaced wholesale each time. Where is the reference?',
     code: `const heights = new Map()
@@ -256,6 +262,7 @@ getBoundingClientRect forces layout and caches nothing against the node.`,
     type: 'concept',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'A function allocates a fifty megabyte buffer, reads one number out of it, and returns a small closure that logs only that number. The buffer stays in memory. There is also an unused closure in the same function that mentions the buffer. Why does that matter?',
     code: `function handler() {
@@ -305,6 +312,7 @@ A function object does not retain its inner function declarations. Only a closur
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A server memoises an expensive computation in a module-level Map keyed by a request id string. It is fast, and memory grows all day. Which change fixes it?',
     options: [
@@ -352,6 +360,7 @@ setTimeout changes when the computation runs and nothing about what the Map hold
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A Node service is restarted nightly because it dies after about thirty hours. Its memory chart rises and falls constantly, with peaks near the limit. What tells you whether this is a leak, and what do you do next?',
     options: [
@@ -386,6 +395,7 @@ Waiting for a local reproduction throws away the one measurement you already hav
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'What can a program rely on about when garbage collection happens?',
     options: [
       'That it runs between turns of the event loop, so nothing is collected in the middle of a function',
@@ -420,6 +430,7 @@ There is no ordering. A tracing collector does not know when anything became unr
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'What is a memory leak in a language with a garbage collector, and how would you go about finding one in an application you did not write?',
     answerInFull: `- The definition first: an object that is still reachable from a root and that the program has no further use for. The collector is working correctly. The bug is a reference nobody remembers holding, so the fix is always to find the reference rather than to make the collector try harder.

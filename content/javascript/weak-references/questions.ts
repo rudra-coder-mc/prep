@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'Why does a WeakMap have no size, no iteration and no clear?',
     options: [
       'Because the entries are stored on the key objects themselves rather than in the map, so there is no list to walk',
@@ -36,6 +37,7 @@ Keeping keys alive during a walk is a genuine implementation wrinkle, and it is 
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Why can a string not be a WeakMap key?',
     options: [
       'Because strings are immutable, and a weak entry needs a mutable slot on the key',
@@ -72,6 +74,7 @@ Nothing is reserved for later. Symbols as keys is the change that did happen, an
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `const meta = new WeakMap()
 const key = { id: 1 }
@@ -109,6 +112,7 @@ has is not doing anything clever about reachability. It answers about the entry,
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const seen = new WeakSet()
 
@@ -159,6 +163,7 @@ visit root.child.parent is what prints if the guard is missing entirely, and it 
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This was written specifically to avoid a leak, and memory still grows without bound. Why?',
     code: `const mounted = []
@@ -206,6 +211,7 @@ Order of operations changes nothing. A key is weak because of how the WeakMap ho
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'This cleanup callback never fires, no matter how much memory pressure there is. Why?',
     code: `const open = new Map()
 
@@ -247,6 +253,7 @@ Callbacks already run outside any job of yours, and the timing is unspecified. N
     type: 'concept',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'What can you rely on after ref.deref() returns an object rather than undefined?',
     options: [
       'That the object is alive for the rest of the current job, so it will not vanish partway through your synchronous work',
@@ -280,6 +287,7 @@ Saying nothing is guaranteed over-corrects, and would make the API useless.`,
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'You are writing a library that decorates objects created by somebody else, and you need to attach state to each one without touching it. What do you reach for?',
     options: [
@@ -322,6 +330,7 @@ A private field is not available for an object you did not construct. Adding one
     type: 'scenario',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'A service caches parsed documents by a string id. The parsed documents are large, and most of them are also held by whatever is currently rendering them. A colleague proposes a Map of id to WeakRef, with a FinalizationRegistry to delete dead entries. Is that the right design?',
     options: [
@@ -365,6 +374,7 @@ A WeakMap cannot be keyed by a string at all, so the last option does not compil
     type: 'concept',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'A WeakMap holds two entries: key a maps to object b, and object b is the key of the second entry, whose value is a large state object. Only a is referenced from outside. What is alive?',
     options: [
@@ -396,6 +406,7 @@ There is no entry order in a WeakMap to be specified or unspecified, which is th
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'When would you reach for a WeakMap, and when for a WeakRef? What would make you use neither?',
     answerInFull: `- The one-line version first: a WeakMap is for data about an object whose lifetime somebody else owns, and a WeakRef is for the rare case where you need to follow a lifetime you cannot key on.
