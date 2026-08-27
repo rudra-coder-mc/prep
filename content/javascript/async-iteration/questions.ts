@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'What makes an object consumable by for await...of?',
     options: [
       'A next() method that returns values synchronously, the same as for...of',
@@ -39,6 +40,7 @@ Callbacks invert the control entirely: registration is push, where the source de
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'This loop never logs a value; it throws immediately. What is the mistake?',
     code: `async function* results() {
   yield await load(1)
@@ -79,6 +81,7 @@ await between yields is half the reason async generators exist. No wrapping or c
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `async function* vals() {
   yield Promise.resolve(1)
@@ -125,6 +128,7 @@ Rejection is impossible here by construction. Yielding a rejected promise would 
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A for-await loop consumes 100 URLs from an async generator, fetching inside the body. Each fetch takes one second. How long does the loop take?',
     options: [
@@ -160,6 +164,7 @@ Pipelining ten at once invents behaviour no runtime has. JavaScript offers no im
     type: 'coding',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'You need to consume an event emitter ("data" events, occasional "error") with a for-await loop. Which design converts push into pull correctly?',
     options: [
@@ -215,6 +220,7 @@ The stream option is not wrong in spirit — Node streams ARE async-iterable —
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A team iterates a database cursor with for-await and breaks on a match. In review, what guarantees the connection closes?',
     options: [
@@ -255,6 +261,7 @@ Internal exhaustion contradicts break's meaning. If the loop drained its source 
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'Explain push versus pull in the context of async iteration. Why do async generators make good converters, and where does each model win?',
     answerInFull: `- Push: the source decides timing. Events, streams, sockets, webhooks. The consumer registers callbacks and must be ready for values at any moment, including overlapping ones. Backpressure — telling the source to slow down — is the hard problem, and unhandled, it means buffering without bound or dropping.
@@ -274,6 +281,7 @@ The senior-shaped ending: backpressure is the whole game. Pull models have it fo
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'staff',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `async function* gen() {
   console.log('body start')
@@ -319,6 +327,7 @@ Reading the body as eager — printing body start at creation — misses the sin
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'You call next() twice on an async generator in quick succession, before either resolves. What happens?',
     options: [
@@ -353,6 +362,7 @@ Sharing one result object would break the contract visibly: each next() reports 
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'After one bad record, this import stops entirely — the catch around the loop ran, and restarting re-processes from scratch. What happened and what is the fix?',
     code: `try {
@@ -397,6 +407,7 @@ Crashing the event loop is the uncaught-rejection story, not the caught one. Thi
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt:
       'You have an async iterable and need all its values in an array. What is the idiomatic approach?',
     options: [

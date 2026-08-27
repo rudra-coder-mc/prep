@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What has to be true before a bundler can drop an unused export?',
     options: [
       'The bundle has to be minified first, since minification is what removes the code',
@@ -39,6 +40,7 @@ Minifying works inside a module and never removes a module. The two passes are o
     type: 'output',
     form: 'ordering',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'The bundle is built, the page loads, and the user clicks once with an empty data set. Put the lines that print in the order they print.',
     code: `// analytics.js
@@ -100,6 +102,7 @@ Placing "main body" first reads the file top to bottom. Static imports are evalu
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A frontend container reads its API URL from an env var. Changing the var and restarting the container has no effect; the old URL is still requested. Why?',
     code: `const apiUrl = process.env.API_URL
@@ -133,6 +136,7 @@ A cached response would be visible in the network tab against the correct URL. H
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'In a bundle, what has happened to each of your modules?',
     options: [
       'They are inlined at every import site, so a module imported twice appears twice',
@@ -167,6 +171,7 @@ Leaving modules as modules and rewriting specifiers is roughly what a dev server
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'You are writing a utility package and want consumers to pay only for what they import. How should it be shaped?',
     options: [
@@ -203,6 +208,7 @@ One file per export as a build step is the same idea taken past its usefulness. 
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'A team keeps finding bugs that only exist in production. The dev server serves unbundled modules; production is a bundled, minified build. What is the useful response?',
     options: [
@@ -234,6 +240,7 @@ Dynamic imports do not behave identically. They are a split point in the build a
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Importing one small helper from a shared package added 200kB to the bundle. The helper itself is twenty lines. What is the likely cause?',
     code: `import { formatBytes } from '@acme/utils'`,
@@ -271,6 +278,7 @@ A lazily loaded transitive dependency would appear as its own chunk rather than 
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This dispatch works in development and picks the wrong branch in production. What does handler.constructor.name give in the production bundle?',
     code: `class RetryPolicy {}
@@ -313,6 +321,7 @@ Nothing flattens a class into an object. It is still a class, still with a proto
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does a bundler do with a dynamic import(), and when is that worth it?',
     options: [
       'It leaves the request to the runtime, so nothing is decided at build time',
@@ -345,6 +354,7 @@ No bundler converts a dynamic import to a static one, because that would change 
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'An old CommonJS package sets module.exports = function stamp() {}. In a bundled TypeScript app, what does this import give you?',
     code: `import stamp from 'old-stamp'
@@ -382,6 +392,7 @@ undefined would be the outcome if there were no interop rule at all. There is on
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'What does a bundler actually do to your code, and what would you check first when something works in development and breaks in production?',
     answerInFull: `- It resolves the module graph with its own implementation of the resolution rules, plus whatever aliases and conditions are configured.

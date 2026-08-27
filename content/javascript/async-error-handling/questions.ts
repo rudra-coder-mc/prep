@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does awaiting a rejected promise do?',
     options: [
       'Returns the rejection reason as the value of the await expression',
@@ -38,6 +39,7 @@ The macrotask option borrows real scheduling vocabulary. The resumption after an
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `Promise.resolve()
   .then(() => {
@@ -77,6 +79,7 @@ Stopping at "caught boom" forgets that returning from catch is still a normal re
     type: 'debugging',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-2',
     prompt: 'This logs neither "handled" nor the fallback. Where did the error go?',
     code: `async function main() {
   try {
@@ -118,6 +121,7 @@ Nothing cancels the work. Returning from main does not reach into the pending pr
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A teammate wrapped a timer in try/catch and the process still crashed. Why did the catch not run?',
     code: `try {
@@ -164,6 +168,7 @@ Microtasks are the wrong vocabulary twice over: timer callbacks are macrotasks, 
     type: 'concept',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'In a plain (non-async) function, the try block returns 1 and the finally block assigns a variable but returns nothing. What does the caller receive?',
     options: [
@@ -196,6 +201,7 @@ The illegality option invents a rule. Returning from try alongside a finally is 
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'readCache may legitimately fail (cold cache) and should fall back to null. fetchFresh failing must propagate to the caller. Which implementation draws that line correctly?',
     options: [
@@ -231,6 +237,7 @@ allSettled never rejects, which sounds ideal, but it flattens both outcomes into
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'senior',
     prompt:
       'An async request handler throws while processing a route. Where does the error end up?',
     code: `app.get('/orders', async (req, res) => {
@@ -264,6 +271,7 @@ Crashing the process is what Node does with an unhandled rejection under modern 
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'Where can an error get lost in asynchronous JavaScript? Walk me through the boundaries, and how you make sure nothing escapes unnoticed.',
     answerInFull: `Name the boundaries where a throw lands with nobody listening:
@@ -286,6 +294,7 @@ Two hygiene points worth adding unprompted: throw Error objects so stacks surviv
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `Promise.reject(new Error('early'))
   .then(() => console.log('first'))
@@ -314,6 +323,7 @@ Ordering cleanup after "last" misreads finally as a post-chain hook rather than 
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'This validation loop is supposed to stop at the first bad record. Records after the invalid one still get processed, and the failure appears as an unhandled rejection warning. Why?',
     code: `records.forEach(async (record) => {
@@ -354,6 +364,7 @@ The persist-before-check swap invents a data race that this code does not have. 
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Your error logger sends JSON.stringify(error) to your monitoring service, and failures arrive as "{}". What is wrong and what is the fix?',
     options: [
