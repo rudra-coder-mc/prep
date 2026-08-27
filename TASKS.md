@@ -17,27 +17,12 @@ first. The terms are in `docs/glossary.md`, and the content conventions are in
 **Phases run in order.** Inside a phase, take the tasks top to bottom unless a
 task says what blocks it. One task is one branch and one merge, as always.
 
+Task numbers are the blocking graph's names, so a finished task leaves a gap
+rather than renumbering the ones after it. Phase 1 made audio stop being a build
+step and is done, which is why the numbering starts at 4.
+
 The focus is SWE-1 and SWE-2. Senior and Staff exist, they stay thin, and they
 show their real counts rather than pretending.
-
----
-
-# Phase 1: audio stops being a build step
-
-Decision `0029` made a recording the first time it is asked for rather than ahead
-of a build. What is left is hiding the wait, and clearing up what the old build
-left behind. Task numbers are the blocking graph's names, so a finished task
-leaves a gap rather than renumbering the ones after it.
-
-## 3. A topic-scoped build, a prune, and a lighter deploy
-
-Keep bulk generation for one topic, because the e2e suite needs a deterministic
-way to prepare a cache and the mobile client will need a topic downloaded before
-a journey. Add `speech:prune`, which deletes any recording no current script
-hashes to. Stop rsyncing the 400 MB cache in `scripts/deploy.sh`, since the
-server now makes its own.
-
-Done when a deploy no longer carries the cache and the suite still passes.
 
 ---
 

@@ -25,7 +25,8 @@
     "db:seed": "tsx src/db/seed.ts",
     "prepare": "husky",
     "content:check": "tsx scripts/check-content.ts",
-    "narration:build": "./scripts/with-services.sh tsx scripts/build-narration.ts"
+    "narration:build": "./scripts/with-services.sh tsx scripts/build-narration.ts",
+    "speech:prune": "tsx scripts/prune-narration.ts"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",

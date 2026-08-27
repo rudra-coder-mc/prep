@@ -269,6 +269,15 @@ file's name is a hash of the script, so a script is synthesised once and read
 from disk every time after. Editing a script is therefore a new recording rather
 than a stale one, and the old entry is orphaned rather than served.
 
+Two commands act on the cache from outside, and nothing in the application
+depends on either. `npm run narration:build -- javascript/closures` records one
+topic before anybody asks, which is what the e2e suite needs to prepare a cache
+and what the mobile client will need before a journey. `npm run speech:prune`
+deletes every recording no current script hashes to, which is what stops the
+orphans accumulating. Neither is a build step, and a deploy carries no
+recordings: the cache is a cache, so losing it costs latency rather than
+correctness.
+
 **`GET /api/speech/<key>` plays a recording, and makes it first if nobody has
 asked for those words before.** A key with a file behind it is a read. A key with
 nothing behind it is resolved against `content/` by
