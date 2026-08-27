@@ -7,6 +7,7 @@ import {
   type SpokenSection,
 } from './narration-audio'
 import { useNarrationSpeed, type NarrationSpeed } from './playback-speed'
+import { warmNarration } from './warm'
 
 export type NarrationPlayer = {
   sections: SpokenSection[]
@@ -182,6 +183,21 @@ export function NarrationProvider({
   useEffect(() => {
     if (audio.current) audio.current.playbackRate = speed
   }, [speed])
+
+  const first = sections[0]?.key
+
+  /**
+   * The first section is made when the topic is opened rather than when play is
+   * pressed, so the wait a listener meets is whatever is left of it.
+   *
+   * It asks for the recording to exist rather than for it to be sent. Most of
+   * the cost is synthesis, a section is a few megabytes, and most topic pages
+   * are read rather than listened to: a reader who never presses play should
+   * cost one recording on the server and no download.
+   */
+  useEffect(() => {
+    if (first) warmNarration(first)
+  }, [first])
 
   useEffect(() => {
     const inFlight = requests.current

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Audio } from './audio'
 import { normaliseScript } from './script'
@@ -32,6 +32,23 @@ export function scriptKey(text: string): string {
 
 function audioPath(directory: string, key: string): string {
   return join(directory, `${key}.wav`)
+}
+
+/**
+ * Whether a key already has a recording, without reading it.
+ *
+ * Warming asks this rather than reading, because the answer it wants is "does
+ * this exist" and a section is a few megabytes. Loading one into memory to find
+ * out is most of the cost of warming a topic nobody listens to.
+ */
+export async function hasCachedAudio(key: string, directory = cacheDirectory()): Promise<boolean> {
+  try {
+    await access(audioPath(directory, key))
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
 }
 
 /** The cached audio for a key, or null when nothing has been synthesised yet. */

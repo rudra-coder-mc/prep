@@ -1,4 +1,4 @@
-import { getAllTopics } from '@/content/loader'
+import { getAllTopics, getTopic } from '@/content/loader'
 import { scriptKey } from './cache'
 import { answerScript, questionScript } from './spoken-question'
 
@@ -48,4 +48,25 @@ export async function scriptFor(key: string): Promise<string | null> {
   // nothing in normal use.
   const rebuilt = await (index = build())
   return rebuilt.get(key) ?? null
+}
+
+/**
+ * A question's answer script, addressed by the question rather than by a key.
+ *
+ * Warming needs this because the answer is the one recording the browser cannot
+ * name. Its key travels with the reveal, so a page that wants the answer ready
+ * before it has been given has to ask for it by the question it belongs to, and
+ * the server does the resolving. Null when there is no such topic or question.
+ */
+export async function answerScriptFor(
+  topicSlug: string,
+  questionId: string,
+): Promise<string | null> {
+  const [technology, directory] = topicSlug.split('/')
+  if (!technology || !directory) return null
+
+  const topic = await getTopic(technology, directory)
+  const question = topic?.questions.find((candidate) => candidate.id === questionId)
+
+  return question ? answerScript(question) : null
 }

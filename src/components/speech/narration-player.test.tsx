@@ -58,12 +58,27 @@ afterEach(() => {
 })
 
 /**
- * Which sections were asked for, in order. Playback goes for the recording that
- * was built for a section, so a section is named by its key rather than by the
- * script that would have to be synthesised without one.
+ * Which sections were fetched to be played, in order. A section is named by its
+ * key rather than by the script that would have to be synthesised without one.
+ *
+ * Warming goes to a different address and carries no audio, so it is not one of
+ * these: what these assert on is the player asking for bytes it means to play.
  */
 const requestedSections = () =>
-  vi.mocked(fetch).mock.calls.map(([url]) => String(url).replace('/api/speech/', ''))
+  vi
+    .mocked(fetch)
+    .mock.calls.map(([url]) => String(url))
+    .filter((url) => url !== WARM)
+    .map((url) => url.replace('/api/speech/', ''))
+
+const WARM = '/api/speech/warm'
+
+/** What the page asked to have recorded ahead of anybody pressing play. */
+const warmed = () =>
+  vi
+    .mocked(fetch)
+    .mock.calls.filter(([url]) => String(url) === WARM)
+    .map(([, init]) => JSON.parse(String((init as RequestInit).body)))
 
 /**
  * The card is the player's face, so driving the player through it is what these
@@ -213,6 +228,28 @@ describe('the narration player', () => {
     await userEvent.click(screen.getByLabelText('Play narration'))
 
     await waitFor(() => expect(play).toHaveBeenCalled())
+  })
+
+  it('records the first section when the topic is opened, without downloading it', async () => {
+    renderPlayer(SECTIONS, 'Closures')
+
+    await waitFor(() => expect(warmed()).toEqual([{ narration: 'first' }]))
+    // A reader who never presses play costs a recording on the server and no
+    // audio over the wire.
+    expect(requestedSections()).toEqual([])
+  })
+
+  it('warms once, rather than again every time the page re-renders', async () => {
+    const { rerender } = renderPlayer(SECTIONS, 'Closures')
+
+    // A fresh array of the same sections is what a server re-render hands back.
+    rerender(
+      <NarrationProvider sections={[...SECTIONS]} title="Closures">
+        <TopicReader />
+      </NarrationProvider>,
+    )
+
+    await waitFor(() => expect(warmed()).toHaveLength(1))
   })
 
   it('renders nothing rather than an empty player when there are no sections', () => {

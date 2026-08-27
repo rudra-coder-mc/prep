@@ -29,16 +29,6 @@ of a build. What is left is hiding the wait, and clearing up what the old build
 left behind. Task numbers are the blocking graph's names, so a finished task
 leaves a gap rather than renumbering the ones after it.
 
-## 2. Warm ahead of the listener
-
-Synthesis is about 22 milliseconds per character, so a section costs 25 to 60
-seconds and nobody should ever wait that long. Opening a topic page warms its
-first section. While a section plays, the next one is made. A question's answer
-is made while the question is being answered.
-
-Done when playing a topic end to end never waits, except possibly on the first
-section if play is pressed immediately.
-
 ## 3. A topic-scoped build, a prune, and a lighter deploy
 
 Keep bulk generation for one topic, because the e2e suite needs a deterministic

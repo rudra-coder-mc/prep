@@ -42,11 +42,22 @@ function silentWav(): Buffer {
 
 const WAV = silentWav()
 
+/**
+ * Stands in for the engine, and records which recordings the page asked to play.
+ *
+ * Warming is answered and not counted. It goes to the same path and carries no
+ * audio, and what these specs are about is the recordings a reader asked to
+ * hear: counting the ones the page made ready ahead of them would say nothing.
+ */
 async function serveAudio(page: Page, asked: string[]) {
   await page.route('**/api/speech/*', async (route) => {
     asked.push(new URL(route.request().url()).pathname.split('/').pop() ?? '')
     await route.fulfill({ status: 200, contentType: 'audio/wav', body: WAV })
   })
+
+  // Added second on purpose: Playwright consults the handler added last first,
+  // so this is what takes the warm out of the one above.
+  await page.route('**/api/speech/warm', (route) => route.fulfill({ status: 204 }))
 }
 
 test('a question can be listened to before it is answered', async ({ page }) => {
@@ -110,4 +121,39 @@ test('a question nobody has recorded is made when it is asked for', async ({ pag
   await expect(page.getByRole('button', { name: 'Stop listening' })).toBeVisible({
     timeout: 60_000,
   })
+})
+
+test('a question answer is recorded while the question is being answered', async ({ page }) => {
+  // No route again, so the recording is really made. Every warm on the way to an
+  // open question is real work, and the cache starts empty.
+  test.setTimeout(300_000)
+
+  const WARM = '/api/speech/warm'
+  let pending = 0
+
+  page.on('request', (request) => {
+    if (request.url().endsWith(WARM)) pending += 1
+  })
+  const settle = (request: { url: () => string }) => {
+    if (request.url().endsWith(WARM)) pending -= 1
+  }
+  page.on('requestfinished', settle)
+  page.on('requestfailed', settle)
+
+  await page.goto('/topics/javascript/closures/practice')
+  await walkToForm(page, 'open')
+
+  // Reading a question and answering it is the wait, so this stands in for a
+  // reader taking their time over it.
+  await expect.poll(() => pending, { timeout: 240_000 }).toBe(0)
+
+  await revealButton(page).click()
+  await page.getByRole('button', { name: 'Listen to the answer' }).click()
+
+  // An answer is about forty seconds of synthesis, so playing this quickly is
+  // only possible because it was recorded while the question was on screen.
+  await expect(page.getByRole('button', { name: 'Stop listening' })).toBeVisible({
+    timeout: 10_000,
+  })
+  await expect(page.getByRole('status')).toHaveCount(0)
 })

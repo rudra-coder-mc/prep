@@ -1,7 +1,7 @@
 'use client'
 
 import { AnimatePresence, motion } from 'motion/react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   answerChoiceAction,
@@ -18,6 +18,7 @@ import { Button, buttonClass } from '@/components/ui/button'
 import { Card, SectionLabel } from '@/components/ui/card'
 import { CheckIcon, LightbulbIcon } from '@/components/ui/icons'
 import { SpeakButton } from '@/components/speech/speak-button'
+import { warmAnswer } from '@/components/speech/warm'
 import { RESULT_LABELS, type Result } from '@/lib/interval-ladder'
 import type { AnswerForm } from '@/content/schema'
 import { cx } from '@/lib/cx'
@@ -587,6 +588,21 @@ export function QuestionSession({
   const [tally, setTally] = useState<Tally>({ passed: 0, weak: 0, failed: 0 })
 
   const question = questions[position]
+  const topicSlug = question?.topicSlug
+  const questionId = question?.id
+
+  /**
+   * The answer is recorded while the question is being answered, which is the
+   * one moment the reader is guaranteed to be busy, so the listen button on the
+   * reveal has something behind it the moment it appears.
+   *
+   * It asks by question rather than by key. The answer's key is not allowed on
+   * the page until the answer has been given, so the server is the only side
+   * that can turn a question into the words its answer is read from.
+   */
+  useEffect(() => {
+    if (!done && topicSlug && questionId) warmAnswer(topicSlug, questionId)
+  }, [done, topicSlug, questionId])
 
   if (done || !question) {
     return (

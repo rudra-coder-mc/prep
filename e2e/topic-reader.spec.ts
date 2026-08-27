@@ -148,7 +148,38 @@ test('a section that has been built is played rather than synthesised again', as
   await waitUntilPlaying(page)
 
   // A recording that exists is a file to fetch, not work to do again, and the
-  // player asks for it by key alone.
-  expect(asked[0]).toMatch(/^GET \/api\/speech\/[0-9a-f]{64}$/)
-  expect(asked.every((call) => call.startsWith('GET '))).toBe(true)
+  // player asks for it by key alone. Opening the page also asks for the first
+  // section to be recorded, which is the one request here that is not a play.
+  const played = asked.filter((call) => call.startsWith('GET '))
+  expect(played[0]).toMatch(/^GET \/api\/speech\/[0-9a-f]{64}$/)
+  expect(asked.filter((call) => !call.startsWith('GET '))).toEqual(['POST /api/speech/warm'])
+})
+
+test('opening a topic records its first section before anybody presses play', async ({ page }) => {
+  const downloaded: string[] = []
+  page.on('request', (request) => {
+    if (/\/api\/speech\/[0-9a-f]{64}$/.test(request.url())) downloaded.push(request.url())
+  })
+
+  const warm = page.waitForResponse((response) => response.url().endsWith('/api/speech/warm'), {
+    timeout: 110_000,
+  })
+  await page.goto('/topics/javascript/closures')
+
+  // Nothing comes back but the fact that it is done. A topic that is read rather
+  // than listened to costs one recording on the server and no audio on the wire.
+  const response = await warm
+  expect(response.status()).toBe(204)
+  expect(response.headers()['content-type']).toBeUndefined()
+  expect(downloaded).toEqual([])
+
+  const play = page.waitForResponse((candidate) =>
+    /\/api\/speech\/[0-9a-f]{64}$/.test(candidate.url()),
+  )
+  await page.getByRole('group', { name: READER }).getByLabel('Play narration').click()
+
+  // The wait was spent before the button was pressed, which is the whole point:
+  // the play finds a file rather than starting the engine.
+  expect((await play).headers()['x-speech-cache']).toBe('hit')
+  await waitUntilPlaying(page)
 })
