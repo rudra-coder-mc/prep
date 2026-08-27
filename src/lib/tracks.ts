@@ -1,11 +1,11 @@
 import { technologyLabel } from '@/content/technologies'
+import type { Readiness } from './readiness'
 import type { TopicStatus } from './topic-status'
 
 /** The part of a topic overview a track summary actually needs. */
 export type TrackTopic = {
   technology: string
   status: TopicStatus
-  progress: number
 }
 
 export type TrackSummary = {
@@ -13,16 +13,22 @@ export type TrackSummary = {
   label: string
   total: number
   started: number
-  /** Mean progress across every topic in the track, including untouched ones. */
-  progress: number
+  /** How ready the track is for the tier picked on it. */
+  readiness: Readiness
 }
 
 /**
  * Rolls topics up into the tracks they belong to. Nothing here knows which
  * technologies exist; the list is whatever the content directory contains, so a
  * new track appears on the dashboard without a code change.
+ *
+ * A track with no readiness of its own is dropped rather than shown at zero: it
+ * has no topics the picked tier covers, so there is nothing to be ready for.
  */
-export function summariseTracks(topics: TrackTopic[]): TrackSummary[] {
+export function summariseTracks(
+  topics: TrackTopic[],
+  readiness: Map<string, Readiness>,
+): TrackSummary[] {
   const grouped = new Map<string, TrackTopic[]>()
 
   for (const topic of topics) {
@@ -32,14 +38,19 @@ export function summariseTracks(topics: TrackTopic[]): TrackSummary[] {
   }
 
   return [...grouped.entries()]
-    .map(([id, group]) => ({
-      id,
-      label: technologyLabel(id),
-      total: group.length,
-      started: group.filter((topic) => topic.status !== 'not_started').length,
-      progress: Math.round(
-        group.reduce((total, topic) => total + topic.progress, 0) / group.length,
-      ),
-    }))
+    .flatMap(([id, group]) => {
+      const ready = readiness.get(id)
+      if (!ready) return []
+
+      return [
+        {
+          id,
+          label: technologyLabel(id),
+          total: group.length,
+          started: group.filter((topic) => topic.status !== 'not_started').length,
+          readiness: ready,
+        },
+      ]
+    })
     .sort((a, b) => a.label.localeCompare(b.label))
 }

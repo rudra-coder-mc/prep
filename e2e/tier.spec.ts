@@ -75,6 +75,25 @@ test('the pick decides how much of a topic marking it learned enrols', async ({ 
   expect(await questionsEnrolling(page)).toBe(atSweOne)
 })
 
+async function questionsBehindReadiness(page: Page): Promise<number> {
+  await page.goto('/')
+  const line = page.locator(TRACK).getByText(/questions retained/)
+  const text = (await line.textContent()) ?? ''
+  return Number(text.match(/of (\d+) questions retained/)?.[1])
+}
+
+test('readiness is measured against the tier that was picked', async ({ page }) => {
+  await pick(page, 'SWE-1')
+  const atSweOne = await questionsBehindReadiness(page)
+
+  await pick(page, 'Senior')
+  expect(await questionsBehindReadiness(page)).toBeGreaterThan(atSweOne)
+  await expect(page.locator(TRACK).getByText('Preparing for Senior')).toBeVisible()
+
+  await pick(page, 'SWE-1')
+  expect(await questionsBehindReadiness(page)).toBe(atSweOne)
+})
+
 test('the pick is per track, so one track does not move another', async ({ page }) => {
   await pick(page, 'Staff')
 

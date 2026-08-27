@@ -189,5 +189,9 @@ that they are prepared for that level of interview. A question counts toward
 readiness once its place on the interval ladder reaches step 3, which takes three
 correct answers spread over at least four days.
 
+It is measured per track, over every question the tier covers rather than over
+the ones enrolled so far, because an interview does not restrict itself to the
+topics somebody chose to open.
+
 Not to be confused with: a topic's status, which describes one topic, or the
 streak, which describes attendance rather than knowledge.
