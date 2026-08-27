@@ -283,6 +283,19 @@ so it cannot travel with the question and cannot be posted back to be
 synthesised. The page computes the key, the browser plays it, and the words stay
 here.
 
+**`POST /api/speech/warm` makes a recording ahead of the listener and sends none
+of it back.** Synthesis is 25 to 60 seconds for a section, so the wait is spent
+where nobody is watching a button: opening a topic warms its first section, and
+showing a question warms its answer. The reply is a 204. A section is named by
+its key, `{ "narration": "<key>" }`, and an answer by its question,
+`{ "answer": { "topic": "...", "question": "..." } }`, because the answer's key
+is not allowed on the page until the answer has been given. Both are fire and
+forget: a warm that fails costs a recording made later, and whoever presses play
+is told properly. One recording is warmed at a time and only the newest request
+waits for a turn, because Piper saturates the machine and speculative work must
+never be in a reader's way. See
+`docs/decisions/0030-warming-makes-a-recording-without-sending-it.md`.
+
 **`POST /api/speech` is the engine's own door**, a script in and a WAV out. No
 page uses it. It exists so the speech specs can put arbitrary words through the
 engine without borrowing a lesson's, and so a script that `content/` does not own
@@ -317,7 +330,9 @@ content check names the topics that have no script.
 swapped per section, because playback permission belongs to the element and a
 new one created mid-narration would be refused. It plays a topic end to end from
 one press, fetches the next section while the current one plays, and remembers
-the chosen speed across topics.
+the chosen speed across topics. Fetching ahead is only for the section after the
+one playing, where the listener is known to be listening; everything else is
+warmed rather than downloaded.
 
 **The lesson follows it.** Every narration section names the lesson heading it
 covers, so while a topic is being listened to the page lights up that part of the

@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { getTopic } from '@/content/loader'
 import type { NarrationSection, Question } from '@/content/schema'
 import { scriptKey } from './cache'
-import { scriptFor } from './spoken-content'
+import { answerScriptFor, scriptFor } from './spoken-content'
 import { answerAudioKey, answerScript, questionAudioKey, questionScript } from './spoken-question'
 
 /**
@@ -40,5 +40,20 @@ describe('scriptFor', () => {
 
   it('has nothing for a key no script in content hashes to', async () => {
     expect(await scriptFor('f'.repeat(64))).toBeNull()
+  })
+})
+
+describe('answerScriptFor', () => {
+  it('resolves the answer from the question it belongs to, since its key cannot travel', async () => {
+    expect(await answerScriptFor('javascript/closures', question.id)).toBe(answerScript(question))
+  })
+
+  it('has nothing for a question that is not in the topic', async () => {
+    expect(await answerScriptFor('javascript/closures', 'no-such-question')).toBeNull()
+  })
+
+  it('has nothing for a slug that names no topic, malformed or not', async () => {
+    expect(await answerScriptFor('javascript/no-such-topic', question.id)).toBeNull()
+    expect(await answerScriptFor('closures', question.id)).toBeNull()
   })
 })

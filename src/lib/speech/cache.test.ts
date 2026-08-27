@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { cacheDirectory, readCachedAudio, scriptKey, writeCachedAudio } from './cache'
+import {
+  cacheDirectory,
+  hasCachedAudio,
+  readCachedAudio,
+  scriptKey,
+  writeCachedAudio,
+} from './cache'
 
 const KEY = 'a'.repeat(64)
 const AUDIO = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 1, 2, 3])
@@ -24,6 +30,22 @@ describe('readCachedAudio', () => {
 
   it('returns null when the directory does not exist at all', async () => {
     expect(await readCachedAudio(KEY, join(directory, 'never-written'))).toBeNull()
+  })
+})
+
+describe('hasCachedAudio', () => {
+  it('says a written key is there, without reading it', async () => {
+    await writeCachedAudio(KEY, AUDIO, directory)
+
+    expect(await hasCachedAudio(KEY, directory)).toBe(true)
+  })
+
+  it('says no for a key nothing has been written for', async () => {
+    expect(await hasCachedAudio(KEY, directory)).toBe(false)
+  })
+
+  it('says no when the directory does not exist at all', async () => {
+    expect(await hasCachedAudio(KEY, join(directory, 'never-written'))).toBe(false)
   })
 })
 
