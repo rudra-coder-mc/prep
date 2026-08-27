@@ -326,4 +326,122 @@ The honest short version is that private fields are the better default in modern
     hints: [],
     tags: ['closure', 'objects'],
   },
+  {
+    id: 'closure-sees-later-value-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `let message = 'first'
+const show = () => console.log(message)
+
+message = 'second'
+show()
+
+message = 'third'
+show()`,
+    options: [
+      'first, then first',
+      'second, then second',
+      'second, then third',
+      'first, then second',
+    ],
+    correctOption: 2,
+    answerInFull: `second
+third
+
+show does not hold a copy of message. It holds the variable, and it reads it at the moment it runs, so each call sees whatever the last assignment left there.
+
+This is the loop puzzle with the loop taken out. Three callbacks over one var i all print 3 for exactly this reason: they read the binding when they run, and by then the loop has finished writing to it.
+
+The sentence to carry: a closure is a live view of a scope, not a snapshot of it. If you want a snapshot, you have to create a binding to hold it, which is what a parameter, or a per-iteration let, does.`,
+    explanation: `first, then first is the snapshot model, capturing the value at the moment the arrow was written. If that were true, closures could not hold shared state at all, and a counter and a reader from the same factory would disagree from the first call.
+
+second, then second is the snapshot taken at the first call instead. That is what caching the read would do, and nothing here caches anything.
+
+first, then second is that same snapshot one assignment behind: each call reporting what message held before the line immediately above it. It is the reading you get if an assignment is taken to apply from the call after next rather than straight away.`,
+    hints: ['Does show hold the value of message, or the variable?'],
+    tags: ['closure', 'scope'],
+  },
+  {
+    id: 'scope-outlives-the-call-choice',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `function setup() {
+  const config = { retries: 3 }
+  return () => config.retries
+}
+
+const getRetries = setup()
+console.log(getRetries())`,
+    options: [
+      'undefined, because config was local to setup and setup has already returned',
+      'ReferenceError: config is not defined',
+      '3',
+      'It prints 3 the first time and undefined on every call after that, because the captured scope is released once it has been read',
+    ],
+    correctOption: 2,
+    answerInFull: `3. setup has returned and its scope is still there.
+
+A local variable is normally unreachable once its function returns, and the engine is free to release it. What changes that is a function defined inside it surviving the return: the arrow holds a reference to the scope it was defined in, so for as long as getRetries exists, config does too.
+
+That is the mechanism under every factory, every module pattern and every callback that "remembers" something. It is also the cost, and the two are the same fact: the scope stays alive as long as the closure does, which is why a small handler defined beside a large array keeps that array in memory.
+
+Nothing here depends on the function being returned. A function passed to addEventListener, pushed onto an array or stored on an object keeps its scope alive the same way.`,
+    explanation: `undefined is the stack frame model, where a function's locals vanish the moment it returns. That is true of a frame nothing captured, and this one was captured before the return.
+
+The ReferenceError is the same belief stated harder. Names in the arrow resolve against the scope chain it captured, and that chain still has config in it. A ReferenceError needs a name no scope on the chain has.
+
+The last option is an invented rule, and it is worth naming because it would make closures useless for anything called twice. A scope is released when nothing references it any more, which is what garbage collection means, and getRetries is a reference.`,
+    hints: [],
+    tags: ['closure', 'scope'],
+  },
+  {
+    id: 'let-outside-the-loop-bug',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-2',
+    prompt:
+      'Every handler this returns gives the last row id. The loop uses let, which is meant to be the fix for exactly this. What is wrong?',
+    code: `function makeHandlers(rows) {
+  const handlers = []
+  let row
+
+  for (row of rows) {
+    handlers.push(() => row.id)
+  }
+
+  return handlers
+}`,
+    options: [
+      'The arrows are all created from one line, so they share a single closure. Declaring a named function inside the loop body would give each handler its own',
+      'for...of assigns rather than declares, so row is only bound once the loop has finished. Reading it inside the body gives the last value even while the loop is running',
+      'row is declared above the loop, so there is one binding and every handler closes over it. The per-iteration binding is something the for header creates when it declares the variable, so move the declaration into the header: for (const row of rows)',
+      'let is block scoped and the loop body is a block, so each handler already has its own row. The bug is in the caller, which is passing the same object several times',
+    ],
+    correctOption: 2,
+    answerInFull: `let is not the fix. A binding per iteration is, and only a declaration in the for header creates one.
+
+Here row is declared once, above the loop, and the header assigns to that single binding on each pass. All the handlers close over the same variable, and by the time any of them runs it is holding the last row.
+
+  for (const row of rows) {
+    handlers.push(() => row.id)
+  }
+
+Moving the declaration into the header gives each iteration its own row. const works because nothing reassigns it after the header has.
+
+The rule worth carrying out of every version of this bug: the fix is always to arrange for there to be more than one variable. Which keyword you write is only how you ask for that.`,
+    explanation: `Sharing a line is not sharing a scope. Each pass through the loop creates a new function object from that line, and a named function declared in the body would be a new one per pass too. What the handlers share is not the function, it is the variable.
+
+The for...of option opens with something true, that the header assigns here rather than declaring, and then invents the rest. row holds each value in turn while the body runs, which is why the loop works at all. The values are right during the loop and wrong afterwards, and every handler runs afterwards.
+
+The last option is the move to watch for in yourself: blaming the input. The loop body is a block, and a block is not where a per-iteration binding comes from. Run the same rows through the fixed version and the handlers give three different ids.`,
+    hints: [
+      'How many row variables does this function create?',
+      'Which part of the loop makes a binding per iteration?',
+    ],
+    tags: ['closure', 'scope'],
+  },
 ]

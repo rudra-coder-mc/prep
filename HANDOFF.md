@@ -18,9 +18,11 @@ speech engine, the production build, and all 61 Playwright tests. That run
 included `e2e/spoken-questions.spec.ts:63`, which is flaky rather than broken and
 passed this time; the open item on it below carries the tally and is still the
 most urgent thing in this file, because a spec that fails half the time makes the
-merge rule mean nothing. The content check reports 43 topics, 466 questions, 86
-exercises, 269 narration sections and 932 question scripts, tiered as SWE-1 80,
-SWE-2 254, Senior 73 and Staff 59. Re-run `verify` rather than trusting any
+merge rule mean nothing. That run also included
+`spoken-questions.spec.ts:75`, which has now failed alongside it once. The
+content check reports 43 topics, 481 questions, 86 exercises, 269 narration
+sections and 962 question scripts, tiered as SWE-1 91, SWE-2 258, Senior 73 and
+Staff 59. Re-run `verify` rather than trusting any
 figure you read anywhere, including here, and read the section on piping it
 before you do.
 
@@ -101,9 +103,16 @@ among them.
 **Phase 4 in `TASKS.md`: fill SWE-1 and SWE-2.** Everything left in the file is
 content. Four tiers over 43 topics is roughly two questions per tier per topic,
 which carries no promise at all, so the tiers being prepared for have to reach
-five or six per topic before readiness means anything. Tasks 15 to 18 are four
+five or six per topic before readiness means anything. Tasks 16 to 18 are four
 topics each and nothing blocks any of them, so pick by which subject is worth
 knowing soonest rather than by the order they are listed in.
+
+Task 15 is done and set the shape they match. `types-and-coercion`,
+`scope-and-hoisting`, `closures` and `this-binding` each carry six SWE-1
+questions and six SWE-2 questions now, which took them from eleven questions to
+fourteen or fifteen. Everything added was a choice question, because each of
+those topics already had its one open question and its ordering question, and the
+caps in the brief did not move to make room.
 
 Author to `docs/tasks/converting-a-topic.md`, which carries the rule for tagging a
 new question with a tier. Read the section below on what the tagging taught

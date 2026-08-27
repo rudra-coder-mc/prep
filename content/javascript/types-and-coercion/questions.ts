@@ -277,4 +277,122 @@ indexOf is the trap for anyone who knows the NaN rule and not which comparison e
     hints: [],
     tags: ['equality', 'types'],
   },
+  {
+    id: 'array-type-check-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'How do you check that a value is an array?',
+    options: [
+      "typeof value === 'array'",
+      'Array.isArray(value)',
+      "typeof value === 'object' && value !== null",
+      'value.length !== undefined',
+    ],
+    correctOption: 1,
+    answerInFull: `Array.isArray(value).
+
+typeof reports 'object' for every object, so it cannot tell an array from a plain object, from a Date or from null. There is no 'array' for it to return.
+
+Array.isArray is also the only check that survives a value crossing a realm. An array from an iframe, a worker or Node's vm module was built by a different Array constructor, so value instanceof Array is false for it while Array.isArray is true.`,
+    explanation: `typeof value === 'array' is the check people write first, and it is false for every value in the language. typeof returns one of eight strings and 'array' is not among them.
+
+The object check is the same reader one step further on, remembering that typeof null is 'object' and stopping there. It is true for {}, for a Date and for a Map as well as for an array.
+
+The length check is duck typing, and it is true for every string and every function, both of which have a length. It is also true for anything somebody put a length property on, which includes the arguments object and a DOM node list.`,
+    hints: [],
+    tags: ['types'],
+  },
+  {
+    id: 'sort-without-comparator-choice',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `const scores = [10, 9, 1]
+console.log(scores.sort())`,
+    options: ['[1, 9, 10]', '[1, 10, 9]', "['1', '10', '9']", '[10, 9, 1]'],
+    correctOption: 1,
+    answerInFull: `[1, 10, 9]
+
+sort with no comparator converts every element to a string and compares those, character by character. '10' sorts before '9' because '1' comes before '9'. Numbers need a comparator:
+
+  scores.sort((a, b) => a - b)
+
+Two things worth saying alongside it. sort mutates the array and returns that same array, so the original order is gone rather than copied, and toSorted returns a new array if you need to keep it. And undefined is the one value the string rule skips: undefined always sorts to the end, whatever the comparator says.`,
+    explanation: `[1, 9, 10] is what everyone expects, and it is what the comparator is for. The default is not "no ordering", it is a specific ordering that happens to be the wrong one for numbers.
+
+The array of strings is the conversion taken too far. Elements are converted for the comparison only. Nothing is written back, so the array still holds numbers afterwards.
+
+[10, 9, 1] unchanged is sort read as a no-op without a comparator. It always sorts. That is why a number list quietly comes back in an order nobody chose.`,
+    hints: [],
+    tags: ['coercion', 'arrays'],
+  },
+  {
+    id: 'number-and-parseint-choice',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `console.log(Number('12px'))
+console.log(parseInt('12px'))
+console.log(Number('  42  '))
+console.log(parseInt('px12'))`,
+    options: ['12, 12, 42, 12', 'NaN, 12, NaN, NaN', 'NaN, 12, 42, NaN', 'NaN, NaN, 42, NaN'],
+    correctOption: 2,
+    answerInFull: `NaN
+12
+42
+NaN
+
+Number is all or nothing. It converts the whole string or gives NaN, and surrounding whitespace is the one thing it forgives, which is also why Number('') and Number('   ') are both 0.
+
+parseInt is lenient in one direction. It reads digits from the front and stops at the first character that is not one, so '12px' gives 12 and 'px12' gives NaN, because there was nothing to read before the p.
+
+Which to reach for: Number when the whole string is meant to be a number, which is what a form field and an API field almost always mean. parseInt when you are deliberately pulling a number off the front of something, such as the 12 in a CSS '12px'. Pass the radix, parseInt(value, 10), out of habit.`,
+    explanation: `12, 12, 42, 12 is parseInt's leniency applied to both functions. Number has none: one stray character and the answer is NaN.
+
+NaN, 12, NaN, NaN is Number treated as strict about whitespace too. Whitespace is trimmed before the conversion, which is what makes Number safe on a value that came from an input field and unsafe on one that is empty.
+
+NaN, NaN, 42, NaN is parseInt held to Number's standard, which would leave it with no reason to exist.`,
+    hints: [],
+    tags: ['coercion', 'types'],
+  },
+  {
+    id: 'empty-field-passes-validation',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-2',
+    prompt:
+      'A required quantity field is submitted empty and this validator accepts it, so the order is created with a quantity of 0. What is wrong?',
+    code: `function validQuantity(input) {
+  if (isNaN(input)) return false
+  return Number(input) <= 100
+}`,
+    options: [
+      "isNaN converts its argument before testing it, so isNaN('') asks whether Number('') is NaN, and Number('') is 0. The empty string is reported as a perfectly good number. Reject empty and whitespace-only input before converting anything",
+      'isNaN is the wrong function. Number.isNaN is the one that does not convert, so swapping to it rejects the empty string',
+      'input arrives as a string and isNaN cannot judge one. Converting first, isNaN(Number(input)), gives the check a real number to look at and the empty field is rejected',
+      'The empty string gets past isNaN because it is a string rather than a value. Trimming it, isNaN(input.trim()), gives isNaN something it can reject',
+    ],
+    correctOption: 0,
+    answerInFull: `isNaN converts before it tests. Number('') is 0, so isNaN('') is false and the empty field is reported as a number. Number('   ') is 0 as well, so a field holding only spaces passes too.
+
+  function validQuantity(input) {
+    const text = String(input).trim()
+    if (text === '') return false
+
+    const quantity = Number(text)
+    return Number.isInteger(quantity) && quantity > 0 && quantity <= 100
+  }
+
+Two rules come out of it. Presence and validity are separate questions, and no conversion can answer the first one: every conversion has an answer for the empty string, and none of them is "missing". And once you are holding a number, use Number.isNaN, because isNaN's answer about a string says nothing you asked about.`,
+    explanation: `Number.isNaN is the better function and it is not this fix. It is false for every value that is not a number, the empty string included, so the same submission is accepted and nothing new is rejected.
+
+Converting first changes nothing, because isNaN already converts. isNaN(Number('')) is isNaN(0), which is false, exactly as before.
+
+Trimming an empty string gives an empty string. It fixes the whitespace-only field only once something else is already rejecting the empty one, which is the check the validator does not have.`,
+    hints: ['What is Number of the empty string?'],
+    tags: ['coercion', 'types'],
+  },
 ]

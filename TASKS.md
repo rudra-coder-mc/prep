@@ -44,9 +44,10 @@ Each task below is four topics, one branch, authored to
 `docs/tasks/converting-a-topic.md`, which carries the rule for tagging a new
 question with a tier. Nothing blocks them, so they can be taken in any order.
 
-## 15. Fill the language fundamentals
-
-`types-and-coercion`, `scope-and-hoisting`, `closures`, `this-binding`.
+Task 15 set the shape the rest match: six questions at SWE-1 and six at SWE-2 in
+every topic it touched, which takes a topic from eleven questions to fourteen or
+fifteen. Everything added was a choice question, since each of these topics
+already has its one open question and its ordering question.
 
 ## 16. Fill values, functions and objects
 
@@ -76,6 +77,27 @@ normalisation.
 Nothing blocks them, and they are written tier-aware from the start, so the
 schema will refuse a question with no tier. Done when the three
 pass the content check and read as lessons rather than lists of facts.
+
+---
+
+# Loose ends
+
+Small, ready to take, and blocked by nothing. They sit outside the phases because
+they are not content, so they do not have to wait for the bank.
+
+## 20. The architecture doc still describes typed answers
+
+`docs/architecture.md` has an "Evaluation" section written before decision
+`0023`. It describes typing an answer and self grading it, an `expectedOutput`
+compared against what you typed, and "all three forms" meaning written, multiple
+choice and output. None of that exists: no question takes typed input, the forms
+are `choice`, `ordering` and `open`, and neither `expectedOutput` nor
+`expectedAnswer` appears anywhere in `src/` or `content/`.
+
+Rewrite the section against what the code does now, which is the three forms in
+`src/content/schema.ts` and how each one is graded. Say what an open question's
+self grade is for, since that is the only place a grade is still a judgement.
+Done when nothing in the doc names a field the schema does not have.
 
 ---
 

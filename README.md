@@ -29,8 +29,8 @@ the browser rather than from any JavaScript engine, and they belong equally to a
 future React track. Preparing for a front end interview means both tracks. See
 `docs/decisions/0027-the-browser-is-its-own-track.md`.
 
-Every topic in both has an animated lesson, ten or eleven questions in the forms
-interviews actually use, and two practical exercises.
+Every topic in both has an animated lesson, eleven to fifteen questions in the
+forms interviews actually use, and two practical exercises.
 
 The architecture supports adding TypeScript, React, Next.js, Node, Express,
 NestJS, MongoDB and PostgreSQL later without schema changes. Adding a topic is
