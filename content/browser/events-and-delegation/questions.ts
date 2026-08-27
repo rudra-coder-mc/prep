@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'What is the main reason to put one click listener on a list instead of one on every row?',
     options: [
@@ -43,6 +44,7 @@ The last option has it backwards: a listener on a row fires for clicks anywhere 
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What is the difference between event.target and event.currentTarget?',
     options: [
       'target is the element whose listener is running, and currentTarget is the outermost element the event will reach',
@@ -79,6 +81,7 @@ Neither depends on who dispatched the event. A custom event dispatched from your
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'eventPhase is 1 during capture, 2 at the target and 3 during bubbling. Put the lines this prints in the order it prints them.',
     code: `// <body><div id="card"><button id="buy">Buy</button></div></body>
@@ -115,6 +118,7 @@ Worth knowing for the follow-up: capture is genuinely useful in one situation, w
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'The button is inside a form and has no type attribute, so it is a submit button. What does clicking it do?',
     code: `form.addEventListener('submit', () => console.log('form submitted'))
@@ -155,6 +159,7 @@ And it applies to the event in hand, not to a later one. It is a flag on that ev
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What do the two listeners print when the button is clicked?',
     code: `class Panel {
   name = 'panel'
@@ -206,6 +211,7 @@ Nothing throws. this is the button, which is a real object, and a missing proper
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'Each delete button contains an SVG icon and a span of text. The delegated handler works when you click the very edge of the button and does nothing when you click the icon or the label. Why?',
     code: `list.addEventListener('click', (event) => {
@@ -249,6 +255,7 @@ target is never reassigned. It is fixed for the whole journey, which is the prop
     type: 'debugging',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'This component is mounted and unmounted as the user navigates. Memory grows on every navigation and the old handlers keep running. Why does the cleanup not work?',
     code: `mount() {
@@ -302,6 +309,7 @@ Ordering is not the issue either. The removal would work at any point if it name
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A quantity stepper deep inside a page should tell an ancestor cart component that an item was added, without the two knowing about each other. Which dispatch is right?',
     options: [
@@ -337,6 +345,7 @@ Dispatching on window works, in the sense that a window listener hears it. It al
     type: 'coding',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'A parallax effect reads scroll position in a scroll listener and writes transforms. Scrolling is visibly janky on a phone. Which change addresses the cause?',
     options: [
@@ -382,6 +391,7 @@ Scroll and resize are different events reporting different things, and a scrolli
     type: 'scenario',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt:
       'A dropdown closes when you click anywhere outside it, via a click listener on the document. It works everywhere except inside one modal, where the dropdown will not close at all. Nothing in the dropdown or the document handler mentions the modal. What is the most likely cause, and what would you change?',
     options: [
@@ -423,6 +433,7 @@ Bubbling always reaches the document from any element in it. There is no branch 
     type: 'interview',
     form: 'open',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'You have argued for event delegation. Your interviewer asks when it is the wrong choice. What do you say?',
     answerInFull: `The answer should name real limits rather than hedge, and there are four worth having.
