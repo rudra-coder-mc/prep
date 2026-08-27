@@ -7,12 +7,19 @@ This file carries the whole task, not a link to one. There is no ticket tracker:
 `CLAUDE.md` explains why. Everything a person needs to pick a task up cold is
 written here, or in the brief a task points at under `docs/tasks/`.
 
-The work below turns a bank of questions into a path with a promise at the end of
-it: finish a tier and you are prepared for that level of interview. The two
-decisions behind it are `docs/decisions/0028-tiers-are-interview-levels.md` and
-`docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md`. Read them
-first. The terms are in `docs/glossary.md`, and the content conventions are in
-`docs/tasks/converting-a-topic.md`.
+The plan behind this file turns a bank of questions into a path with a promise at
+the end of it: finish a tier and you are prepared for that level of interview.
+The platform side is built. A tier is picked per track, marking a topic learned
+enrols only what that tier covers, and the dashboard measures readiness against
+the whole tier. What is left is the bank, which is why every task below is
+content.
+
+Read `docs/decisions/0028-tiers-are-interview-levels.md` first, then `0031` and
+`0032` for how the pick and the promise behave. The terms are in
+`docs/glossary.md`, the content conventions are in
+`docs/tasks/converting-a-topic.md`, and
+`docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md` is what a new
+narration script needs to know.
 
 **Phases run in order.** Inside a phase, take the tasks top to bottom unless a
 task says what blocks it. One task is one branch and one merge, as always.
@@ -23,22 +30,6 @@ because the tasks before it are done.
 
 The focus is SWE-1 and SWE-2. Senior and Staff exist, they stay thin, and they
 show their real counts rather than pretending.
-
----
-
-# Phase 3: the tier becomes the path
-
-## 14. Readiness, and the offer to step up
-
-Readiness is the share of the tier's questions whose schedule has reached step 3,
-which is three correct answers spread over at least four days. Show the number,
-show the count it is based on, and when a tier is fully ready, offer the next one
-rather than advancing by itself.
-
-Nothing blocks it. The pick is stored and enrolment already respects it, so this
-is the number that says how much of what was enrolled has stuck. Done when the
-dashboard says how ready you are for the tier you picked, and a full tier offers
-the step up instead of taking it.
 
 ---
 

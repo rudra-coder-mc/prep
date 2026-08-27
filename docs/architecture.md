@@ -224,6 +224,22 @@ only place that enrols. See
 `docs/decisions/0028-tiers-are-interview-levels.md` and
 `docs/decisions/0031-a-track-remembers-the-tier-you-picked.md`.
 
+### Readiness
+
+Readiness is what makes the promise checkable, and it is the dashboard's headline
+for each track. A question counts once its schedule reaches step 3 of the
+interval ladder, which is three correct answers spread over at least four days
+for a graded form. The share is taken over every question the tier covers on that
+track, including the ones in topics nobody has opened, because an interview does
+not restrict itself to what somebody chose to enrol. The count is always shown
+beside the share, since senior and staff are thin on purpose.
+
+A track at full readiness offers the tier above it and says how many questions
+accepting enrols. Nothing advances by itself. `src/lib/readiness.ts` is the
+calculation, `getDashboard` feeds it the ladder, and `src/components/step-up.tsx`
+is the offer. See
+`docs/decisions/0032-readiness-is-measured-over-the-whole-tier.md`.
+
 ## Recall scheduling
 
 Confidence drives the next interval:

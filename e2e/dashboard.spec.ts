@@ -8,7 +8,7 @@ test('the dashboard summarises topics, questions and exercises', async ({ page }
   await expect(page.getByRole('heading', { name: 'Dashboard', level: 1 })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'JavaScript', level: 1 })).toHaveCount(0)
 
-  for (const panel of ['Tracks', 'Topics', 'Questions', 'Practical']) {
+  for (const panel of ['Readiness', 'Topics', 'Questions', 'Practical']) {
     await expect(page.getByRole('heading', { name: panel })).toBeVisible()
   }
 
@@ -18,6 +18,20 @@ test('the dashboard summarises topics, questions and exercises', async ({ page }
   for (const status of ['Mastered', 'Understood', 'Learning', 'Weak', 'Not started']) {
     await expect(topics.getByText(status, { exact: true })).toBeVisible()
   }
+})
+
+test('the dashboard says how ready you are for the tier you picked', async ({ page }) => {
+  await page.goto('/')
+  const track = page.locator('[data-track="javascript"]')
+
+  await expect(track.getByText('Preparing for SWE-1')).toBeVisible()
+  // The share and the count it is based on, because a percentage of a tier this
+  // thin says nothing on its own.
+  await expect(track.getByText(/\d+% ready · \d+ of \d+ questions retained/)).toBeVisible()
+
+  // A tier this unfinished offers nothing, and the offer is never taken by the
+  // platform anyway.
+  await expect(track.getByRole('button', { name: /Step up/ })).toHaveCount(0)
 })
 
 test('the actions lead to review and to the topic list', async ({ page }) => {

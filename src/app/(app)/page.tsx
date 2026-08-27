@@ -7,6 +7,8 @@ import { ChevronRightIcon } from '@/components/ui/icons'
 import { PageHeader, PageShell } from '@/components/ui/page'
 import { ProgressBar } from '@/components/ui/progress-bar'
 import { StatusBadge } from '@/components/ui/status-badge'
+import { StepUp } from '@/components/step-up'
+import { TIER_LABELS } from '@/content/schema'
 import { getDashboard } from '@/lib/dashboard'
 import { requireSession } from '@/lib/session'
 import { STATUS_LABELS, type TopicStatus } from '@/lib/topic-status'
@@ -97,28 +99,48 @@ export default async function Dashboard() {
 
       <Rise delay={0.08}>
         <section className="mt-8">
-          <SectionLabel>Tracks</SectionLabel>
+          <SectionLabel>Readiness</SectionLabel>
           <ul className="mt-3 grid gap-2.5 sm:grid-cols-2">
-            {dashboard.tracks.map((track) => (
-              <li key={track.id}>
-                <AppLink
-                  href="/topics"
-                  className="group block rounded-card border border-border bg-surface p-4 transition-colors hover:border-edge hover:bg-raised"
+            {dashboard.tracks.map((track) => {
+              const { tier, retained, total, percent, stepUpTo, stepUpAdds } = track.readiness
+
+              return (
+                <li
+                  key={track.id}
+                  className="rounded-card border border-border bg-surface p-4"
+                  data-track={track.id}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-medium">{track.label}</span>
-                    <span className="text-xs text-faint tabular-nums">
-                      {track.started} of {track.total} started
-                    </span>
+                    <AppLink href="/topics" className="font-medium hover:text-accent">
+                      {track.label}
+                    </AppLink>
+                    <span className="text-xs text-faint">Preparing for {TIER_LABELS[tier]}</span>
                   </div>
                   <ProgressBar
-                    value={track.progress}
+                    value={percent}
+                    tone="pass"
                     className="mt-2.5"
-                    label={`${track.label} progress`}
+                    label={`${track.label} readiness for ${TIER_LABELS[tier]}`}
                   />
-                </AppLink>
-              </li>
-            ))}
+                  {/* The count carries the share, because a tier this bank is
+                      thin at would otherwise read as a confident percentage of
+                      almost nothing. */}
+                  <p className="mt-1.5 text-xs text-faint tabular-nums">
+                    {percent}% ready · {retained} of {total} questions retained · {track.started} of{' '}
+                    {track.total} topics started
+                  </p>
+                  {stepUpTo ? (
+                    <StepUp
+                      technology={track.id}
+                      label={track.label}
+                      from={tier}
+                      to={stepUpTo}
+                      adds={stepUpAdds}
+                    />
+                  ) : null}
+                </li>
+              )
+            })}
           </ul>
         </section>
       </Rise>
