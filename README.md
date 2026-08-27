@@ -60,6 +60,13 @@ Without it, a topic plays whatever is already in `.speech-cache` and says the
 voice is unavailable for the rest. To listen while you write, start it:
 `docker compose up -d tts`.
 
+Two commands act on that cache directly, and nothing depends on either:
+
+```bash
+npm run narration:build -- javascript/closures   # record one topic ahead of time
+npm run speech:prune                             # delete what no script says any more
+```
+
 ## Running it on the machine that serves it
 
 The platform also runs on a spare Ubuntu machine, `work`, published at
@@ -70,9 +77,9 @@ npm run deploy
 ```
 
 That rsyncs the tree over Tailscale, rebuilds the image with the speech profile
-on, and waits until both the app and the voice answer again. Recordings already
-made ship with it, `.env` does not: the server keeps its own, holding the public
-URL, its auth secret and the login password.
+on, and waits until both the app and the voice answer again. `.speech-cache` and
+`.env` stay here. The server records what it is asked for, and keeps its own
+`.env`, holding the public URL, its auth secret and the login password.
 
 The URL is fixed. It comes from the machine name and the tailnet name, so it
 survives reboots and deploys, and the certificate is Tailscale's to renew.

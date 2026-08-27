@@ -51,6 +51,17 @@ export async function scriptFor(key: string): Promise<string | null> {
 }
 
 /**
+ * Every key `content/` currently hashes to.
+ *
+ * Prune's keep list. It is the same walk `scriptFor` does, read the other way
+ * round: that asks whether one key is still spoken, and this asks which ones
+ * are.
+ */
+export async function spokenScriptKeys(): Promise<Set<string>> {
+  return new Set((await (index ??= build())).keys())
+}
+
+/**
  * A question's answer script, addressed by the question rather than by a key.
  *
  * Warming needs this because the answer is the one recording the browser cannot

@@ -6,10 +6,11 @@
 # so there is nothing on the other side to pull from. The transfer goes over
 # Tailscale, so the two machines need no open ports and no key management.
 #
-# The narration cache is gitignored and around 400 MB. It ships anyway, so the
-# server starts with everything that has already been recorded rather than
-# making it all again. rsync sends only what changed, so it costs nothing after
-# the first run.
+# The narration cache stays here. It is gitignored, around 400 MB, and no longer
+# something the server needs handed to it: audio is made the first time it is
+# asked for, so the server records what it is asked for and nothing else. What
+# this used to ship was mostly recordings of text nobody had played. See
+# docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md.
 #
 # .env is excluded in both directions. The server's copy holds the public URL,
 # its own auth secret and the shared password, and none of that belongs in this
@@ -30,6 +31,7 @@ rsync -a --delete \
   --exclude test-results \
   --exclude playwright-report \
   --exclude e2e/.auth \
+  --exclude .speech-cache \
   --exclude .speech-cache-e2e \
   --exclude .DS_Store \
   ./ "$HOST:$DIR/"
