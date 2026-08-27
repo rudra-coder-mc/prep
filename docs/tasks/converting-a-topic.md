@@ -19,6 +19,11 @@ Ten or eleven questions covering all six subjects: `concept`, `output`,
 
 Roughly eight or nine choice questions, one ordering, one open.
 
+A topic Phase 4 has filled runs to fourteen or fifteen, six questions at SWE-1
+and six at SWE-2, and everything added to reach that is a choice question. The
+caps do not move: the topic still has at most one open question, and it already
+had its ordering question before the fill.
+
 Every question carries `answerInFull` whatever its form.
 
 ## Tagging a question with a tier

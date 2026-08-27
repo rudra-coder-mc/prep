@@ -337,4 +337,135 @@ The last option has the two reversed, which is the wrong guess of someone who re
     hints: [],
     tags: ['scope', 'declarations'],
   },
+  {
+    id: 'what-creates-a-scope-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'Which of these creates a new scope for a let declaration?',
+    options: [
+      'Every function, and the script or module itself',
+      'Only a function. Braces on their own are punctuation, so a let inside them belongs to the function around them',
+      'Every function, every block including the body of an if, a for or a try, and the script or module itself',
+      'Every function, every block, and every object literal, since a literal is written in braces too',
+    ],
+    correctOption: 2,
+    answerInFull: `Every function, every block, and the script or module at the top.
+
+A block is any pair of braces used as a statement: the body of an if, an else, a for, a while, a try, a catch, and a bare block written for no reason except to make a scope. A let or a const inside one belongs to it and cannot be named from outside.
+
+That list is exactly what var ignores. var is function scoped, so it skips every block and lands in the nearest function, or at the top of the script.
+
+Worth knowing that a function's parameters live in a scope of their own, between the function and its body. It is why a let in the body with a parameter's name is a SyntaxError rather than a shadow, and why a default value can refer to a parameter declared before it.`,
+    explanation: `"Every function and the script" is the pre-2015 answer, and it was the complete answer when var was the only declaration there was. Blocks were added to the list by let and const, not to var.
+
+"Only a function" is the same answer stated more forcefully, and it is still exactly right about var. The reason the two declarations exist side by side is that this stopped being true for the new ones.
+
+The object literal is the tempting one, because the braces are identical on the page. A literal is an expression that builds a value, and what is inside it is properties rather than declarations, so there is nothing there to scope.`,
+    hints: [],
+    tags: ['scope', 'declarations'],
+  },
+  {
+    id: 'loop-variable-after-the-loop-choice',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `for (var i = 0; i < 3; i++) {}
+console.log(i)
+
+for (let j = 0; j < 3; j++) {}
+console.log(j)`,
+    options: [
+      '3, then a ReferenceError',
+      '3, then 3',
+      '2, then a ReferenceError',
+      'A ReferenceError on the first log',
+    ],
+    correctOption: 0,
+    answerInFull: `3, then a ReferenceError: j is not defined.
+
+var is function scoped, so i is declared in the scope around the loop and outlives it. The loop ends when the condition fails, which is after the increment has taken i to 3, so 3 is the value it is left holding.
+
+let is block scoped, and a declaration in a for header belongs to the loop. Nothing outside can name j, so the second log throws.
+
+The leak is the point rather than a curiosity. A var counter is visible to every line after the loop and to every other loop in the same function, which is how two loops in one function end up quietly sharing one counter.`,
+    explanation: `3, then 3 is var's behaviour applied to both loops. If it were right, the loop puzzle with setTimeout would have nothing to fix.
+
+2, then a ReferenceError is off by one, reading the last value the body saw rather than the value that ended the loop. The increment runs before the condition is tested, so the loop exits one past the last iteration.
+
+The ReferenceError on the first log is let's behaviour applied to var. var never has a temporal dead zone and never respects a block, so it fails in neither of the two ways let can.`,
+    hints: [],
+    tags: ['scope', 'declarations'],
+  },
+  {
+    id: 'const-object-mutation-choice',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this do?',
+    code: `const user = { name: 'Ada' }
+user.name = 'Grace'
+console.log(user.name)
+user = { name: 'Alan' }`,
+    options: [
+      'It throws TypeError: Assignment to constant variable on the second line, before anything prints',
+      'It prints Ada, then throws. const froze the object, so the write on the second line was ignored',
+      'It prints Grace, then throws TypeError: Assignment to constant variable',
+      'It prints Grace and nothing else. The last line silently replaces the object, because const is a lint rule rather than a runtime one',
+    ],
+    correctOption: 2,
+    answerInFull: `Grace, then a TypeError on the last line.
+
+const stops the binding being reassigned. It says nothing about the value the binding points at, so user.name = 'Grace' is an ordinary property write and it succeeds.
+
+Protecting the object is a separate request, Object.freeze, and it is shallow: freezing user does not freeze anything user holds. In strict code a write to a frozen object throws; in sloppy code it fails silently, which is worse than either outcome.
+
+The distinction is binding against value, and it is the same one closures rest on. const is a statement about the name.`,
+    explanation: `Throwing on the second line is const read as "nothing about this can change". If that were the rule, const would be unusable for objects and arrays, which is most of what it holds.
+
+"const froze the object" names the right tool for the wrong job. Freezing is something you ask for by calling Object.freeze, and even then it stops one level down.
+
+The silent last line is const read as a lint rule. Reassigning a const throws at runtime, in every mode, because the binding has no way to fail quietly.`,
+    hints: [],
+    tags: ['declarations', 'objects'],
+  },
+  {
+    id: 'accidental-global-bug',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-2',
+    prompt:
+      'This function has worked for years in a file loaded with a script tag. Moved into an ES module and imported, it throws "ReferenceError: total is not defined". Why?',
+    code: `function tally(items) {
+  total = 0
+  for (const item of items) total += item
+  return total
+}`,
+    options: [
+      'A module has its own top-level scope, so total is now local to this file rather than global. Declaring it at the top of the module, or exporting it, restores what the script did',
+      'total is never declared. In sloppy code an assignment to an undeclared name creates a global instead of failing, so the script version silently made one. A module is always strict, and strict code throws. Declare it with let inside the function',
+      "The loop reassigns total from inside a block, and a module's strict mode forbids writing to an outer name from a block. Accumulate into a local and assign once, after the loop",
+      'total is in the temporal dead zone. The assignment on the first line runs before the declaration the engine registered for it, and in a module that throws rather than giving undefined',
+    ],
+    correctOption: 1,
+    answerInFull: `Nothing declares total. In sloppy code, assigning to a name no scope has creates a property on the global object rather than failing, so the script version worked and left a global called total behind after every call. ES modules are always strict, and strict code throws a ReferenceError instead of inventing the variable.
+
+  function tally(items) {
+    let total = 0
+    for (const item of items) total += item
+    return total
+  }
+
+The error is the good outcome. In the script version, any other file that also assigned to an undeclared total was writing to the same variable, and the bug that produces looks nothing like the line that caused it.
+
+This is most of what strict mode is for, and it is why moving a codebase onto modules turns up errors in code that "already worked". Read them as bugs that were there the whole time.`,
+    explanation: `The module scope option is right about modules and wrong about this line. A module's own scope is about declarations, and there is no declaration here to become local. An assignment to an undeclared name is not scoped anywhere, it is refused.
+
+The block-writing rule is invented. A block can assign to any binding it can see, in every mode, which is how a counter in a loop works at all.
+
+The temporal dead zone option is the one worth being able to rule out by the message alone. A TDZ error reads "Cannot access 'total' before initialization" and names a variable the engine knows about. "is not defined" means no scope declares it anywhere. Telling the two messages apart points at two different mistakes.`,
+    hints: ['What declares total?'],
+    tags: ['scope', 'declarations'],
+  },
 ]

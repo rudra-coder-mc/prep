@@ -370,4 +370,139 @@ The last option has the write landing on the object passed to bind, and then rea
     hints: ['Which comes first in the order of precedence, new or bind?'],
     tags: ['this', 'binding'],
   },
+  {
+    id: 'two-receivers-one-function-choice',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `const user = {
+  name: 'Ada',
+  greet() {
+    return \`Hi, \${this.name}\`
+  },
+}
+
+const other = { name: 'Grace', greet: user.greet }
+
+console.log(user.greet(), other.greet())`,
+    options: [
+      "'Hi, Ada' and 'Hi, Ada'",
+      "'Hi, Ada' and 'Hi, Grace'",
+      "'Hi, Ada' and 'Hi, undefined'",
+      "'Hi, Ada' and then a TypeError",
+    ],
+    correctOption: 1,
+    answerInFull: `Hi, Ada and Hi, Grace.
+
+There is one function here, not two. user.greet and other.greet are the same function object, because assigning it to another property copies a reference and nothing else.
+
+this is decided by the call, and both of these are method calls, so each one gets the object left of the dot. The function has no memory of the literal it was written inside.
+
+That is the rule stated the way round that makes it useful. The famous version is the one where it goes wrong, a method pulled into a bare variable and called with nothing left of the dot, and it is the same rule: no dot, no receiver.`,
+    explanation: `Hi, Ada twice is the belief that a function remembers where it was written. If that were so, borrowing a method would be impossible, and borrowing is what call and apply exist for.
+
+Hi, undefined is the reader expecting the copy to lose its receiver. Assigning the function to a property keeps a dot at the call site. It is assigning it to a bare variable that takes the dot away.
+
+The TypeError is that same expectation carried one step further, to this being undefined and the property read off it throwing. That is what would happen to a bare const greet = user.greet, called as greet().`,
+    hints: ['How many functions are there, and what is left of the dot in each call?'],
+    tags: ['this', 'functions'],
+  },
+  {
+    id: 'plain-call-this-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A regular function is called on its own as fn(), with nothing left of the dot. What is this inside it?',
+    options: [
+      'globalThis, in every mode. A plain call has no receiver, so the global object stands in for one',
+      'undefined, in every mode. A function called with no receiver has no this at all, which is what arrow functions were introduced to fix',
+      'The function itself, since that is the only object involved in the call',
+      'undefined in a module or in strict mode, and globalThis otherwise',
+    ],
+    correctOption: 3,
+    answerInFull: `undefined in strict code, which includes every ES module and every class body, and globalThis in a sloppy script.
+
+The precision matters because the two modes fail differently. In strict code the first property read off this throws a TypeError that names the line. In sloppy code the same mistake silently reads or writes a property on the global object, so a method that has lost its receiver does not crash, it corrupts a global and surfaces somewhere else entirely.
+
+It is the same bug either way, and the reason the lost this bug was so hard to find in old browser code and is loud in modern code. That is a decent argument for modules on its own.`,
+    explanation: `globalThis in every mode is the pre-2015 answer, and substituting the global object is exactly what strict mode was changed to stop. It hid the mistake.
+
+undefined in every mode is half right and gets the reason wrong. A plain call in a sloppy script does have a this, and arrow functions were introduced for the callback case, where you want the surrounding this rather than none.
+
+"The function itself" is a guess borrowed from other languages. No call form sets this to the function being called; the closest thing is a named function expression, which binds its own name, not this.`,
+    hints: [],
+    tags: ['this', 'functions'],
+  },
+  {
+    id: 'forgot-new-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this do, run as a module?',
+    code: `function Point(x) {
+  this.x = x
+}
+
+const a = new Point(3)
+const b = Point(5)
+
+console.log(a.x, b)`,
+    options: [
+      'It prints 3 and undefined',
+      'It prints 3 and 5',
+      "It throws TypeError: Cannot set properties of undefined (setting 'x')",
+      'It prints 3 and undefined, and leaves a global x set to 5',
+    ],
+    correctOption: 2,
+    answerInFull: `It throws: "Cannot set properties of undefined (setting 'x')", on the line that calls Point without new.
+
+new is the first of the four call forms. It creates a fresh object, sets this to it, runs the body and returns that object unless the body returns an object of its own. Take new away and the call is an ordinary plain call, so this is undefined in a module and the first line of the body writes to it.
+
+The same code in a sloppy script prints 3 and undefined, and quietly sets a global x to 5, because there a plain call gets globalThis. Same mistake, no error, and a global nobody meant to create.
+
+A class is the protection worth knowing about: calling one without new is always a TypeError that says so, in every mode. It is one of the smaller reasons to prefer class over a constructor function.`,
+    explanation: `3 and 5 is new read as decoration. Even in the mode where the call succeeds, b would be undefined, because a plain call returns what the body returns and this body returns nothing.
+
+3 and undefined is the sloppy script answer with its side effect left out, which is the half of that behaviour people remember.
+
+The last option is the sloppy script answer in full, and it is exactly right for a file loaded with a script tag. A module is strict, and strict code leaves this undefined rather than substituting the global object, so the write throws instead of landing somewhere.`,
+    hints: ['What is this in a plain call, run as a module?'],
+    tags: ['this', 'functions'],
+  },
+  {
+    id: 'bind-partial-application-choice',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-2',
+    prompt: 'What does this print?',
+    code: `function log(level, message) {
+  return \`[\${level}] \${message}\`
+}
+
+const warn = log.bind(null, 'WARN')
+
+console.log(warn('disk full'))`,
+    options: ['[disk full] WARN', '[WARN] disk full', '[disk full] undefined', '[WARN] undefined'],
+    correctOption: 1,
+    answerInFull: `[WARN] disk full
+
+bind does two things, and the second is the one people forget. It fixes this, and it prepends any arguments given at bind time to whatever the caller passes later. So warn('disk full') calls log('WARN', 'disk full').
+
+That is partial application, and it is most of what bind is used for in code with no this to worry about. null is the conventional first argument when the function never reads this, and it reads as "no receiver, I am here for the arguments".
+
+An arrow says the same thing more plainly:
+
+  const warn = (message) => log('WARN', message)
+
+Reach for bind when the function is being handed to something that will call it later, and for the arrow when you are writing the wrapper anyway.`,
+    explanation: `[disk full] WARN is the bound argument appended rather than prepended. Prepending is what makes bind useful, because it fixes the front of a signature and leaves the rest open.
+
+[disk full] undefined is bind read as setting this and nothing else, with the extra argument dropped on the floor. bind never discards an argument.
+
+[WARN] undefined is the opposite reading: bind freezes the whole argument list at bind time, so the caller's argument is the one thrown away. The bound function passes both along, in that order.`,
+    hints: ['Where does the argument given to bind end up in the call?'],
+    tags: ['this', 'functions'],
+  },
 ]
