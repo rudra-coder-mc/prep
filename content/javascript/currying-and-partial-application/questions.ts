@@ -6,6 +6,7 @@ export const questions: Question[] = [
     type: 'concept',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'What is the difference between currying and partial application?',
     options: [
       'Currying fixes some of the arguments now and takes the rest later, and partial application is the one that splits a function into single-argument steps',
@@ -34,6 +35,7 @@ The last option is the position most blog posts take by accident. The two words 
     type: 'output',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const add = (a) => (b) => a + b
 
@@ -67,6 +69,7 @@ The TypeError is what you would predict from reading (a) => (b) => a + b as one 
     type: 'debugging',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'staff',
     prompt:
       'This throws "curried(...) is not a function" on the second call, and the curry implementation is the standard one. Which change fixes it, for the right reason?',
     code: `function curry(fn) {
@@ -120,6 +123,7 @@ The same reasoning kills currying for variadic functions: there is no argument c
     type: 'coding',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt:
       'You are writing curry(fn) so that curried(1)(2)(3), curried(1, 2)(3) and curried(1, 2, 3) all call fn with the same three arguments, and so a partial can be reused. Which design does that?',
     options: [
@@ -169,6 +173,7 @@ Counting calls fails from the other end. curried(1, 2)(3) reaches fn on its seco
     type: 'output',
     form: 'ordering',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function greet(greeting, name) {
   return greeting + ', ' + name
@@ -205,6 +210,7 @@ true is the interesting one, because the two bound functions really do behave id
     type: 'scenario',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'senior',
     prompt:
       'A table of a few thousand rows builds a click handler per row with handleClick.bind(null, row.id). Memory grows and every re-render churns listeners. Which change addresses the cause?',
     options: [
@@ -238,6 +244,7 @@ Removing every listener before each pass is bookkeeping wrapped around the count
     type: 'interview',
     form: 'open',
     difficulty: 'medium',
+    tier: 'senior',
     prompt: 'When is currying actually worth using in a JavaScript codebase?',
     answerInFull: `The honest answer is that full currying is rarely the right tool in JavaScript, and partial application often is.
 
@@ -261,6 +268,7 @@ JavaScript is not a language where currying is the default, because functions he
     type: 'output',
     form: 'choice',
     difficulty: 'hard',
+    tier: 'swe-2',
     prompt: 'What does this print?',
     code: `function curry(fn) {
   return function curried(...args) {
@@ -296,6 +304,7 @@ The TypeError is the single-use reading, where a partial is consumed by its firs
     type: 'concept',
     form: 'choice',
     difficulty: 'easy',
+    tier: 'swe-1',
     prompt: 'Which of these is partial application rather than currying?',
     options: [
       'const g = (a) => (b) => (c) => f(a, b, c)',
@@ -324,6 +333,7 @@ The last option fixes nothing at all. It is a pass-through wrapper with the same
     type: 'output',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'staff',
     prompt: 'Given function f(a, b, c) {}, what is f.bind(null, 1, 2).length?',
     options: ['3', '2', '0', '1'],
     correctOption: 3,
@@ -347,6 +357,7 @@ It is also a reminder of what length is. It describes the parameter list, not wh
     type: 'coding',
     form: 'choice',
     difficulty: 'medium',
+    tier: 'swe-2',
     prompt: 'How does a typical curry implementation know it has collected enough arguments?',
     options: [
       'It counts the parameters by parsing fn.toString()',
