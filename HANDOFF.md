@@ -119,12 +119,12 @@ wanted, and the rule is below twice: in the notes on authoring a group, and agai
 under the narration player.
 
 **Merged branches are piling up undeleted**, which the conventions below say
-should not happen. `git branch --merged main` is the list; eighteen of its
+should not happen. `git branch --merged main` is the list; seventeen of its
 entries are branches other than `main`, and the newest is
-`feature/fill-the-browser`. All of them are merged, so deleting them
+`feature/fill-language-fundamentals`. All of them are merged, so deleting them
 loses nothing, and nobody has done it because permission was never asked for. The
-tagging branches from Phase 2 were deleted on merge, which is why they are not
-among them.
+tagging branches from Phase 2 were deleted on merge, and so were the branches for
+tasks 16, 17 and 18, which is why none of those are among them.
 
 Read that list before acting on it. A branch with no commits of its own also
 shows as merged, so a session that is holding work on a fresh branch has that
