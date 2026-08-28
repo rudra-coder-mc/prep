@@ -409,4 +409,182 @@ The dual package hazard is the senior-shaped part. Anyone can say ship both; not
     hints: [],
     tags: ['modules', 'design'],
   },
+  {
+    id: 'default-vs-named-import-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'Node refuses to start: SyntaxError, the requested module ./api.js does not provide an export named fetchUser. The function is right there. Why?',
+    code: `// api.js
+export default function fetchUser(id) {
+  return fetch('/users/' + id)
+}
+
+// app.js
+import { fetchUser } from './api.js'`,
+    options: [
+      'A default export cannot be a function declaration, so nothing is exported at all',
+      'The importing file has to use the same name the module used, and this module exported anonymously',
+      'The braces ask for a named export called fetchUser, and this module has a default export instead',
+      'The module has to be imported before it can be destructured, so this needs an import line and then a const',
+    ],
+    correctOption: 2,
+    answerInFull: `The braces are the problem. Asking for a name in braces asks for a named export, and this module has exactly one export, the default one. The name after the function keyword is local to api.js and is not part of what it exports.
+
+    import fetchUser from './api.js'
+
+Without braces you are asking for the default, and the name is yours to pick. Importing it as getUser works identically, which is also why a default export gives you no help keeping a name consistent across a codebase.
+
+Two things make the error easier to read next time. It is a SyntaxError raised while linking, before a line of either file has run, which is why a typo in a named import fails immediately rather than turning up as undefined later. And it names both the module and the export, so it is telling you exactly which of the two files to open.
+
+Mixing the forms on one line is allowed, and is what you see from a library with one main thing and some extras:
+
+    import fetchUser, { BASE_URL } from './api.js'`,
+    explanation: `A default export takes any expression after it, including a function declaration, a class or an object literal. This module exports perfectly well. The importer is asking it for something else.
+
+The name-matching option has the right instinct pointed at the wrong export. A named import really does have to match the exported name exactly, which is what the braces mean, and a default export has no name to match.
+
+Reading the braces as destructuring is the most understandable answer, because the two look identical. Destructuring reads properties off a value while the program runs; an import list is checked against the module's exports before anything runs at all.`,
+    hints: ['What do the braces in an import actually ask for?'],
+    tags: ['modules', 'esm', 'debugging'],
+  },
+  {
+    id: 'what-makes-a-file-a-module-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'Node has to decide whether a .js file is an ES module or CommonJS. What decides it?',
+    options: [
+      'Whether the file uses import and export, or require and module.exports',
+      'The type field of the nearest package.json, with a .mjs or .cjs extension overriding it per file',
+      'Whether the file was loaded by import() or by require()',
+      'Every file is an ES module now, unless it sits inside node_modules',
+    ],
+    correctOption: 1,
+    answerInFull: `The nearest package.json. A type of module makes every .js file under it an ES module, a type of commonjs or no field at all leaves them as CommonJS, and the .mjs and .cjs extensions state it per file and win over the field.
+
+The decision is made before the file is parsed, which is why getting it wrong is a syntax error rather than anything that mentions modules:
+
+    SyntaxError: Cannot use import statement outside a module
+
+That message means Node parsed the file as CommonJS, where import is not valid syntax. The fix is to change the classification, by adding the type field or renaming the file, rather than to change the import.
+
+Recent versions of Node soften this. A file with no classification either way that fails to parse as CommonJS is reparsed as an ES module, with a warning. That is a fallback for packages that never declared themselves, not something to rely on: a file under a type of commonjs, or named .cjs, still fails.
+
+The same field is what your bundler and your editor read, which is why a half converted project produces confusing errors in the tooling as well as at run time.`,
+    explanation: `Deciding from the contents is the intuitive rule and the one Node deliberately did not adopt, because the file would have to be parsed to know how to parse it. The syntax detection fallback above is as close as it gets, and it exists to rescue old packages rather than to be the rule.
+
+How a file is loaded does not change what it is. require of an ES module and import of a CommonJS module both work now, and each file keeps the semantics its own classification gave it.
+
+Modules everywhere describes a world several tools have tried to reach and Node has not, because it would break every package published before 2019.`,
+    hints: [],
+    tags: ['modules', 'esm', 'commonjs'],
+  },
+  {
+    id: 'missing-extension-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'This line works in the bundled front end and fails when Node runs it: ERR_MODULE_NOT_FOUND, cannot find module utils, did you mean ./utils.js. Why?',
+    code: `import { formatDate } from './utils'`,
+    options: [
+      'Node takes a relative specifier literally and does not try adding extensions. A bundler does, which is why the same line worked there',
+      'The file has to be listed in the exports field of package.json before a relative import can reach it',
+      'Relative specifiers only work inside node_modules, and elsewhere the path has to be absolute',
+      'utils.js has no default export, and a specifier with no extension asks for one',
+    ],
+    correctOption: 0,
+    answerInFull: `Node takes the string literally. It names a file called utils, there is no such file, and Node stops. It does not go on to try ./utils.js, or ./utils/index.js, or anything else.
+
+    import { formatDate } from './utils.js'
+
+Bundlers do try, which is the only reason the line ever worked. Webpack and Vite resolve extensionless paths and directory index files because CommonJS did, so code written against that habit breaks the first time Node runs it directly. Two tools, two resolution algorithms, one import line.
+
+The extension names the file as it exists at run time. In a TypeScript project compiled to ES modules that means writing ./utils.js inside a file called utils.ts, which looks wrong and is right.
+
+Bare specifiers are a separate rule and need no extension, because importing from zod is resolved through that package's package.json rather than as a path on disk.`,
+    explanation: `The exports field controls what other packages may import from yours, by mapping public names onto files. It has nothing to say about a relative import between two files in the same project.
+
+Relative specifiers work anywhere and are the ordinary way to import your own files. Bare specifiers are the ones that go looking in node_modules.
+
+The last option is about what is inside the file, and Node never opened one. Resolution failed first, which is the useful thing the error code tells you.`,
+    hints: ['What does Node do with that string, exactly?'],
+    tags: ['modules', 'esm', 'debugging'],
+  },
+  {
+    id: 'modules-evaluate-once-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'Three modules import ./config.js, which logs a line while it evaluates and exports an object. How many times does that line print, and how many objects are there?',
+    options: [
+      'Three times and three objects, one for each importer',
+      'Once and one object, shared by all three importers',
+      'Once and three objects, since each importer gets its own copy of the exports',
+      'Three times and one object, because evaluation repeats but the exports are cached',
+    ],
+    correctOption: 1,
+    answerInFull: `Once, and one object.
+
+A module is evaluated the first time it is imported, and the result is kept in the loader's registry under its resolved path. Every later import of that path, from anywhere in the program, gets what is already there. require has the same behaviour through its own cache.
+
+That single fact explains a lot of module behaviour that otherwise looks arbitrary. A module body is the right place for setup that must happen exactly once. Exported mutable state is shared state, so a module exporting a counter exports one counter to the whole program. And a slow module body is paid for once, by whoever imports it first.
+
+It is also why a singleton in JavaScript needs no pattern:
+
+    // db.js
+    export const pool = createPool()
+
+Everything that imports that gets the same pool.
+
+The registry is keyed by resolved path, which is where the surprises live. One file reached by two different paths, or a package installed twice at different versions, evaluates twice and gives you two of everything.`,
+    explanation: `Three evaluations treats an import as a call that runs the file. It is a reference to something that has already been built, and rebuilding it would make shared state impossible.
+
+One evaluation and three objects is CommonJS destructuring described as though it were the module system. Copies happen when you destructure the exports yourself. The module and its exports object are still made once.
+
+The last option separates evaluation from caching in a way nothing does. Caching the exports is caching the result of the evaluation, so there is nothing left over to repeat.`,
+    hints: [],
+    tags: ['modules', 'esm', 'commonjs'],
+  },
+  {
+    id: 'module-directory-path-coding',
+    type: 'coding',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'An ES module needs the directory it is in, to read a file sitting next to it. __dirname throws a ReferenceError. Which of these is right?',
+    options: [
+      'process.cwd(), which is the directory the module is in',
+      'path.dirname(import.meta.url), which gives the string __dirname would have held',
+      'new URL(".", import.meta).pathname, since import.meta is already a URL',
+      'import.meta.dirname, or path.dirname(fileURLToPath(import.meta.url)) on older Node',
+    ],
+    correctOption: 3,
+    answerInFull: `    import { readFile } from 'node:fs/promises'
+
+    const config = await readFile(import.meta.dirname + '/config.json', 'utf8')
+
+__dirname and __filename are variables Node injects into the function it wraps every CommonJS file in. An ES module is not wrapped in anything, so they do not exist, and the error says exactly that: __dirname is not defined in ES module scope.
+
+The replacement is import.meta, an object the runtime fills in per module. import.meta.dirname and import.meta.filename are the direct equivalents, added in Node 20.11. Before that, and in code that still has to run on older versions, the same thing is spelled:
+
+    import { fileURLToPath } from 'node:url'
+    import path from 'node:path'
+
+    const here = path.dirname(fileURLToPath(import.meta.url))
+
+The step people leave out is fileURLToPath. import.meta.url is a URL, not a path, and slicing the prefix off it works until a directory name contains a space or a character outside ASCII, which arrive percent encoded.
+
+For reading a file next to your source, new URL('./config.json', import.meta.url) is tidier still, since the fs functions accept a file URL directly and nothing needs converting.`,
+    explanation: `process.cwd() is where the process was started, usually the project root, and has nothing to do with where any particular file is. It is the answer that works on your machine and breaks the moment someone runs the command from another directory.
+
+Calling path.dirname on the URL treats a URL as a path. It returns something rather than failing, a string still beginning with file://, and that stays quietly wrong until it reaches the filesystem.
+
+The last option is one character away from a real idiom. new URL('.', import.meta.url) is the one that works; import.meta is an object rather than a URL, and reading .pathname off the result is the step that loses the percent encoding.`,
+    hints: [],
+    tags: ['modules', 'esm', 'node'],
+  },
 ]

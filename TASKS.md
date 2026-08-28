@@ -44,21 +44,20 @@ Each task below is four topics, one branch, authored to
 `docs/tasks/converting-a-topic.md`, which carries the rule for tagging a new
 question with a tier. Nothing blocks them, so they can be taken in any order.
 
-Tasks 15 and 16 set the shape the rest match: six questions at SWE-1 and six at
-SWE-2 in every topic they touched, which takes a topic from ten or eleven
-questions to thirteen, fourteen or fifteen. Everything added was a choice
-question, since each of these topics already has its one open question and its
-ordering question.
+Tasks 15, 16 and 17 set the shape the rest match: six questions at SWE-1 and six
+at SWE-2 in every topic they touched. Everything added was a choice question,
+since each of these topics already has its one open question and its ordering
+question.
 
-Task 16 was almost entirely SWE-1, because its topics were already at six or
-seven SWE-2 questions. Check what a topic actually has before planning the work.
-The bank was authored before tiers existed and tagged afterwards, and tagging it
-honestly produced few SWE-1 questions, so what is being filled is a thin bottom
-rather than a thin middle.
+The total is whatever that leaves, rather than a number to hit. Twelve topics
+have finished anywhere from thirteen to sixteen questions, because a topic
+already carrying eight SWE-2 questions keeps them.
 
-## 17. Fill async
-
-`event-loop`, `promises`, `async-error-handling`, `es-modules-and-commonjs`.
+Check what a topic actually has before planning the work. Task 16 was fifteen
+SWE-1 questions out of sixteen and task 17 was sixteen out of sixteen, because
+their topics were already at six or more SWE-2. The bank was authored before
+tiers existed and tagged afterwards, and tagging it honestly produced few SWE-1
+questions, so what is being filled is a thin bottom rather than a thin middle.
 
 ## 18. Fill the browser
 
