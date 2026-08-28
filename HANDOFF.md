@@ -219,10 +219,12 @@ it because the original already printed several lines.
   the group across the track and renumbering everything below it. The memory
   group put its four topics in three different places and renumbered fourteen.
   See `docs/decisions/0019-a-group-is-a-branch-not-a-block-of-the-track.md`.
-- **Build the audio last.** A recording is keyed by the hash of its spoken text,
-  so a question edited after `npm run narration:build` was started is simply not
-  recorded, and catching up costs another pass over the whole bank. Finish the
-  content, run `content:check`, then build the audio, then `verify`.
+- **Do not build the audio as part of the task.** Finish the content, run
+  `content:check`, then `verify`, then commit and merge. Recording is a separate
+  step Atul decides on, so ask once the work is done rather than folding it in.
+  It is also why the order matters when he says yes: a recording is keyed by the
+  hash of its spoken text, so anything built before the content settled is not
+  recorded, and catching up costs another pass over the whole bank.
 
 Do not start by reading the schema. The schema is finished and the work is
 authoring: three wrong options that are wrong for interesting reasons is the part
@@ -548,7 +550,10 @@ fallback any more, so every listen button says to run the build until it does.
 **Question audio is generated, so a prompt or an explanation edited without a
 rebuild goes silent.** The key is the hash of the spoken form, so changing a
 single word in an explanation orphans that recording. The 502 names the command.
-Running `narration:build` after content work is now part of finishing it.
+**Do not run `narration:build` in the middle of a task.** Finish the content,
+merge it, and then ask Atul whether to record. It is his call, and he may say
+no. Nothing breaks by waiting: an unrecorded question is silent until somebody
+builds it, and the build is incremental when they do.
 
 **Node 26 ships a `localStorage` global that shadows jsdom's and is unavailable
 without `--localstorage-file`.** `vitest.setup.ts` puts a working one back, the
