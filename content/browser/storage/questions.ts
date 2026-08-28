@@ -441,4 +441,147 @@ Two things worth adding if there is room. Any check the page makes about its own
     ],
     tags: ['storage', 'cookies', 'security'],
   },
+  {
+    id: 'session-against-local-concept',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A half-written form is saved to sessionStorage as the user types. They reload the page, then open the same page again in a new tab. What do they find?',
+    options: [
+      'The draft in both tabs, because storage belongs to the origin and every tab on it reads the same thing',
+      'Nothing in either. A reload unloads the page, and the session goes with it',
+      'The draft after the reload, and nothing in the new tab. sessionStorage survives a reload and belongs to one tab',
+      'Nothing after the reload, and the draft in the new tab, because the value is written out on unload and read back on load',
+    ],
+    correctOption: 2,
+    answerInFull: `The draft is still there after the reload, and the new tab is empty.
+
+sessionStorage and localStorage are the same API, the same string-only values and the same few megabytes. The only difference is how long the data lives and who can see it.
+
+sessionStorage belongs to one tab. It survives reloads and navigations within that tab, and it is discarded when the tab closes. Two tabs on the same site have two separate ones, which is exactly what you want for a draft, a wizard step or a scroll position: two tabs are two pieces of work.
+
+localStorage belongs to the origin. Every tab reads and writes the same thing, and it stays until code or the user deletes it. That is what a theme or a feature flag wants.
+
+One wrinkle worth knowing, because it looks like a bug when you meet it: a tab opened from a link or a window.open in the first tab starts with a copy of that tab's sessionStorage. A copy, not a share, so the two diverge from that moment. A tab you opened yourself and typed the address into gets nothing.
+
+And the sentence neither name tells you: both are synchronous, and both hold only strings.`,
+    explanation: `Sharing across tabs is localStorage's behaviour, and it is the assumption to check first when a feature works alone and breaks with two tabs open.
+
+Losing the value on reload is the reading the word session invites, and it is wrong in the way that matters: a reload is the case sessionStorage exists to survive. What ends a session is the tab closing.
+
+Nothing here is written on unload. Both storages are written the moment setItem returns, synchronously, which is what makes them safe against a crash and slow enough to matter on the main thread.`,
+    hints: ['What ends a session, and what does the draft belong to?'],
+    tags: ['storage', 'lifetime'],
+  },
+  {
+    id: 'stored-false-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'Dark mode can be switched on and never off. Devtools shows the key holding exactly what the code wrote. What is happening?',
+    code: `localStorage.setItem('dark', isDark)
+
+// on the next load
+if (localStorage.getItem('dark')) enableDarkMode()`,
+    options: [
+      'setItem will not take a boolean, so the key keeps whatever was written before it',
+      'Every value is stored as a string, so false comes back as the string "false", and any non-empty string is truthy',
+      'getItem returns the string "false", and a loose comparison turns that back into the boolean, so the branch should work and the bug is elsewhere',
+      'The write runs after the read on every load, so the condition is always testing the previous value',
+    ],
+    correctOption: 1,
+    answerInFull: `The stored value is the string "false", and "false" is truthy.
+
+Nothing in web storage holds a type. setItem coerces whatever you give it to a string, so false becomes the five characters f, a, l, s, e, and every non-empty string is truthy. The condition has been true since the first time the toggle was turned off.
+
+    localStorage.setItem('dark', JSON.stringify(isDark))
+    if (JSON.parse(localStorage.getItem('dark') ?? 'false')) enableDarkMode()
+
+Or, for a flag, sidestep the round trip and store presence instead of a value: setItem when it is on, removeItem when it is off, and test against null.
+
+Two neighbours of this bug, from the same rule. The string "0" is truthy, which catches counters. And a stored null comes back as the string "null", which is not the same as an absent key, whose getItem gives you a real null.
+
+It is worth noticing why devtools was no help. The panel shows a key and a string, and it looks right, because the value really is what the code meant to say. What is missing is the type, and the panel has never had one to show.`,
+    explanation: `A refused write would at least be loud eventually. setItem takes anything and coerces it, which is why every one of these bugs is a value that looks correct.
+
+The loose comparison option is the most tempting, because coercion does rescue you elsewhere and people expect it here. It does not: "false" == false is false. The string goes to a number first, which gives NaN, and nothing equals NaN. Even if it did, an if does not compare against false. It asks whether the value is truthy, and a non-empty string always is.
+
+An ordering problem would break the first load rather than only the switching off, and it would break on for the same reason. This bug is asymmetric, which points straight at the value rather than at when it is read.`,
+    hints: ['What exactly is in the key after storing false, and is that truthy?'],
+    tags: ['storage', 'coercion'],
+  },
+  {
+    id: 'origin-includes-port-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'The dev server moved from port 3000 to port 5173. Everyone is now logged out and every saved preference is back to its default, in the same browser, on the same machine, with nothing cleared. Why?',
+    options: [
+      'Storage is per origin, and an origin is scheme, host and port. localhost:3000 and localhost:5173 are two origins with separate storage',
+      "The browser wipes an origin's storage when the port changes, so one dev server cannot read another one's data",
+      'Nothing was lost. Storage is keyed by host, and the app is reading under a key that includes the port',
+      'A new port is a new session, so sessionStorage was discarded and every read fell back to its default',
+    ],
+    correctOption: 0,
+    answerInFull: `An origin is all three of scheme, host and port. Change any one of them and you are a different site as far as storage is concerned.
+
+So localhost:3000 and localhost:5173 have separate localStorage, separate sessionStorage, separate IndexedDB and separate everything else, and neither can see the other. The old data is not deleted. It is sitting under the old origin, and it comes back the moment you serve on 3000 again.
+
+The same rule produces two other confusing afternoons. http://example.com and https://example.com are different origins, which is why data seems to vanish the day a site moves to HTTPS. And example.com and www.example.com are different hosts, so they are different too.
+
+Cookies are the exception worth knowing, because it makes the symptom stranger. A cookie is scoped by domain and path and ignores the port entirely, so a cookie set on port 3000 is sent to port 5173. That is how you get a page where the session cookie still exists and everything the app cached beside it has gone.
+
+This is the same origin definition that CORS uses, which is worth saying out loud once: the rule that decides who can read a response is the rule that decides who can read your storage.`,
+    explanation: `Wiping on a port change is a plausible-sounding privacy behaviour and no browser does it. Nothing was wiped, which is testable in a minute: serve the old port and everything is there.
+
+Reading under a differently shaped key inverts the mechanism. The port is not part of a key inside a shared store; it is part of which store you are talking to, and your code never sees it.
+
+Blaming sessionStorage identifies the right feeling and the wrong storage. Preferences that survive a browser restart are in localStorage, and it lost them too, so the explanation has to cover both.`,
+    hints: ['Write out the full origin in each case, all three parts of it.'],
+    tags: ['storage', 'origins'],
+  },
+  {
+    id: 'document-cookie-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'The page starts with no cookies at all. What does this print?',
+    code: `document.cookie = 'theme=dark'
+document.cookie = 'consent=1'
+
+console.log(document.cookie)
+console.log(document.cookie.theme)`,
+    options: [
+      "'consent=1', then undefined, because each assignment replaces the cookie string",
+      "'theme=dark; consent=1', then 'dark'",
+      "'theme=dark; consent=1', then undefined",
+      "An object holding both cookies, then 'dark'",
+    ],
+    correctOption: 2,
+    answerInFull: `'theme=dark; consent=1', then undefined.
+
+document.cookie is the strangest API in the browser, because reading it and writing it do unrelated things.
+
+Assigning sets exactly one cookie, whatever the string looks like. It does not replace the others, which is why two assignments leave two cookies. Attributes go in the same string after a semicolon, and they apply to the cookie being set:
+
+    document.cookie = 'theme=dark; Max-Age=31536000; Path=/; SameSite=Lax; Secure'
+
+Reading gives every cookie for this document as one string of name=value pairs joined by "; ". No attributes come back at all: you cannot see a cookie's expiry, its path or its SameSite from JavaScript, only its name and its value. And it is a string, so it has no theme property, which is the undefined on the second line.
+
+Parsing it is yours to write, and the modern replacement is cookieStore, which is asynchronous and gives you real objects.
+
+Two absences worth knowing. An HttpOnly cookie never appears here, however it was set, which is the point of the flag. And a cookie set from JavaScript can never be HttpOnly, because a script that can set it can read it.
+
+Then the fact that decides when to use cookies at all: every one of these is attached to every request to the origin, images and API calls included.`,
+    explanation: `Expecting the assignment to replace everything is the reasonable reading of an ordinary property, and it is what makes the API worth seeing once. There is no way to remove a cookie by assigning either. You set it again with an expiry in the past.
+
+An object with a property per cookie is what everyone wants and what cookieStore approaches. document.cookie predates all of that and is a string on both sides.
+
+The middle option is the one to be careful of, because the first half is right. Getting the read shape right and then treating the result as an object is exactly the bug this question exists to catch.`,
+    hints: [],
+    tags: ['storage', 'cookies'],
+  },
 ]

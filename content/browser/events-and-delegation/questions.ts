@@ -444,4 +444,191 @@ The summary I would end on: delegation is the default for lists and repeated str
     ],
     tags: ['events', 'delegation'],
   },
+  {
+    id: 'preventdefault-submit-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'The log flashes up for an instant, the page reloads, and the form is empty again. The request never reaches the server. Why, and what is the fix?',
+    code: `form.addEventListener('submit', (event) => {
+  console.log('saving', form.elements.email.value)
+  save(new FormData(form))
+})`,
+    options: [
+      'Nothing cancelled the browser default, so the form submits and the page navigates away mid-handler. Call event.preventDefault() first',
+      'The handler has to return false to tell the browser not to submit',
+      'The listener belongs on the submit button rather than on the form, because the browser submits before a listener on the form runs',
+      'save is asynchronous and the page is gone before it finishes, so the call needs an await in front of it',
+    ],
+    correctOption: 0,
+    answerInFull: `The handler ran, and then the browser did what it always does with a submit event: it submitted the form as a navigation.
+
+Your listener does not replace the default action. It runs alongside it, and the default happens once the event has finished travelling unless something cancels it.
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault()
+      save(new FormData(form))
+    })
+
+That is the whole fix, and it is the first line of almost every submit handler ever written.
+
+The symptom is worth recognising on sight, because it explains three different bug reports. A log that appears and vanishes is a page unloading. A network request that starts and is cancelled is the same thing: the browser tears down the page and everything in flight with it. And a form that "resets itself" has not reset, it has reloaded.
+
+preventDefault is also what you want on a link that should not navigate, a checkbox that should not tick until the server agrees, and a context menu you are replacing.
+
+Two things it is not. It does not stop the event travelling, so every other listener on the path still runs. And it does nothing at all on an event that is not cancelable, which you can check with event.cancelable.`,
+    explanation: `return false is a real convention in two places and neither of them is here. In an inline onsubmit attribute, and in a jQuery handler, it means preventDefault and stopPropagation together. In a listener added with addEventListener the return value is thrown away.
+
+Moving the listener to the button changes nothing worth having. The click on the button is what generates the submit event on the form, so the form's listener is not late, and a submit handler on the form is the right place for form validation.
+
+Awaiting save is a genuinely good idea for other reasons and it is not the cause. The navigation is not waiting for your handler to finish, and awaiting inside a handler does not hold it up, because the default fires after the handler returns, which an await does immediately.`,
+    hints: ['What does the browser do with a submit event once every listener has run?'],
+    tags: ['events', 'forms'],
+  },
+  {
+    id: 'onclick-property-concept',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A component sets button.onclick = save. A later feature adds button.onclick = track somewhere else. Only track runs. What is the rule, and what would have avoided it?',
+    options: [
+      'Both are registered, and a browser only runs the most recently registered handler for a given type',
+      'onclick runs during the capture phase and is skipped when the click starts on the element itself',
+      'onclick is one property holding one function, so the second assignment overwrote the first. addEventListener keeps a list, and both would have run',
+      'onclick is deprecated, and browsers ignore it as soon as any other listener exists on the element',
+    ],
+    correctOption: 2,
+    answerInFull: `onclick is a property. It holds one function, and assigning to it replaces whatever was there.
+
+That is the difference between the two ways of listening. addEventListener appends to a list the element keeps, so ten calls give you ten handlers running in the order they were registered. A property has room for exactly one.
+
+    button.addEventListener('click', save)
+    button.addEventListener('click', track) // both run
+
+The failure is quiet because neither piece of code is wrong on its own, and the one that breaks is the one written first. It shows up in shared components, in anything a plugin touches, and in code that runs twice.
+
+Two smaller differences worth having. A property handler cannot be registered for the capture phase or given once or a signal, because there is nowhere to put the options. And removing one is easy, button.onclick = null, where removeEventListener needs the same function reference you passed in.
+
+There is one thing the property does better: it is idempotent. Assigning the same function twice leaves one handler, so code that might run more than once cannot stack up duplicates. addEventListener also refuses an exact duplicate of type, handler reference and capture flag, and an inline arrow is never that duplicate, which is how handlers pile up on a re-render.`,
+    explanation: `"Only the last one runs" describes the outcome and gets the mechanism wrong, and the mechanism is what makes it predictable. Nothing chose between two registered handlers. There was only ever one, because the second assignment threw the first away.
+
+Phases are a real thing and they are not this. A property handler listens in the bubble phase, the same as addEventListener without options, and both would have run at the target anyway.
+
+onclick is not deprecated. It is old and limited, and it works exactly as specified in every browser.`,
+    hints: ['How many functions can a property hold?'],
+    tags: ['events', 'listeners'],
+  },
+  {
+    id: 'checkbox-value-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A settings panel saves each checkbox as the user changes it. Every save records the string "on", whether the box was ticked or unticked. Why?',
+    code: `form.addEventListener('change', (event) => {
+  save(event.target.name, event.target.value)
+})`,
+    options: [
+      'change fires before the browser has updated the input, so value is one event behind. Listen for input instead',
+      'The checkboxes have no value attribute, so the browser substitutes "on". Give each one value="true"',
+      'change bubbles, so by the time the handler runs event.target is the form rather than the checkbox',
+      'value on a checkbox is the string it submits when ticked, and it never changes. Whether it is ticked is event.target.checked',
+    ],
+    correctOption: 3,
+    answerInFull: `value is the wrong property. A checkbox's state is checked.
+
+An input's value is what it contributes to a form submission. For a text field that is what the user typed, which is why value works everywhere else and the habit is so easy to form. For a checkbox it is a fixed string, defaulting to "on", and it exists so the server can tell which of several boxes was ticked. It does not change when the box does. What changes is checked, a boolean.
+
+    save(event.target.name, event.target.checked)
+
+The reason "on" appears at all is that nothing in your markup set a value, so the browser used its default. Setting one would only change which string you always get.
+
+The neighbouring cases are worth knowing together, because a form handler meets all of them:
+
+    text, textarea, select: value
+    checkbox and radio: checked, and value says which one
+    file input: files, a FileList, and value is a fake path
+    number input: value is still a string, valueAsNumber is the number
+
+A radio group is the case where both properties matter at once. Each button has its own value, and the one to read is the checked one, which is what querySelector('input[name="plan"]:checked') is for.`,
+    explanation: `Being one event behind is a real bug in other places, and change is not one of them: it fires after the value has settled, which is the difference between change and input. Switching to input would give you exactly the same "on".
+
+Adding value="true" is the most tempting answer here, because it makes the string look right in the payload. It would record "true" for every checkbox, ticked or not, and turn an obviously wrong value into a plausible one.
+
+The bubbling option has the mechanism inside out. Bubbling is why one listener on the form sees every field, and target stays on whatever the event happened to for the whole journey. It is currentTarget that would be the form.`,
+    hints: ['Which property changes when the user clicks the box?'],
+    tags: ['events', 'forms'],
+  },
+  {
+    id: 'delegation-rerender-coding',
+    type: 'coding',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'The list is rebuilt from scratch whenever the data changes. The delete buttons work on the first render and do nothing after any render that follows. Which version keeps working?',
+    options: [
+      'Attach a listener to every delete button, but find them with getElementsByClassName, so the live collection covers buttons added later',
+      'Attach a listener to every delete button inside a DOMContentLoaded handler, so the document is ready before anything is registered',
+      'One click listener on the list, added once, which uses event.target.closest(".delete") to work out what was clicked',
+      'Attach a listener to every delete button and pass { once: false }, so a registration is not discarded after it fires',
+    ],
+    correctOption: 2,
+    answerInFull: `One listener on the list, which is what delegation is for.
+
+    list.addEventListener('click', (event) => {
+      const button = event.target.closest('.delete')
+      if (!button) return
+      remove(button.closest('.row').dataset.id)
+    })
+
+Nothing about a re-render touches it. The listener is on the list, the list is not what gets rebuilt, and a row that did not exist when the listener was registered is handled anyway because the click reaches the list by bubbling.
+
+The version that breaks is not wrong so much as tied to a lifetime it cannot control. Listeners live on nodes. Rebuild the rows and the old nodes are discarded with everything attached to them, so the buttons on screen are new objects that nobody has registered anything on. The per-button code has to run again after every render, and the render that forgets is the bug.
+
+closest is the other half, and it is doing more than it looks. The click landed on whatever was under the pointer, which is usually an icon or a label inside the button, so event.target is rarely the button itself. closest walks up from there and returns the first ancestor that matches, which turns "you clicked the svg" into "you clicked the delete button".
+
+When the container is document rather than a list, add a contains check as well, because closest can walk past where you meant to stop.`,
+    explanation: `The live collection is the interesting wrong answer, because the collection really does update. What it updates is its own contents, and a listener is not one of them: addEventListener was called on the elements that were in it at the time. There is nothing in a collection that attaches anything to a node that joins it later.
+
+DOMContentLoaded fixes a different bug, the one where a script runs before the markup exists. It fires once, so it is no help at all against a list rebuilt an hour into the session.
+
+once: false is the default, and passing it explicitly changes nothing. once: true is the option that does something, and it removes a listener after it fires, which is the opposite of the problem here.`,
+    hints: ['What happens to a listener when the node it was attached to is replaced?'],
+    tags: ['events', 'delegation'],
+  },
+  {
+    id: 'bubble-default-concept',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A button sits inside a card. Each has a click listener added with addEventListener(type, handler) and no third argument. You click the button. Which listener runs first, and why?',
+    options: [
+      "The card's, because the event travels from the outside in and the card is on the way to the button",
+      "The button's. With no options the listener is on the bubble phase, and bubbling runs from the target outwards",
+      "The card's, if its listener was registered first, because listeners run in the order they were added",
+      'Neither is guaranteed. The order of listeners on two different elements is left to the browser',
+    ],
+    correctOption: 1,
+    answerInFull: `The button's, then the card's.
+
+The third argument to addEventListener defaults to false, which means the bubble phase, and bubbling starts at the target and works outwards. So the innermost listener on the path goes first.
+
+The event did travel from the outside in before that. The browser computes the path from the root to the target, runs it downwards for the capture phase, reaches the target, and runs it back up for the bubble phase. Nothing ran on the way down here because neither listener asked to be on it.
+
+    card.addEventListener('click', onCard, true) // capture: now the card goes first
+
+Registration order decides between listeners on the same element, and nothing else. Across elements the path decides, and the path is fixed before any handler runs.
+
+Two consequences worth carrying. Delegation works because of this: a listener on a container hears clicks on its children, and it hears them after any listener the child has of its own. And capture is the answer when you need to be first, which is what it is genuinely for, such as seeing an event before something further in can stop it travelling.`,
+    explanation: `Outside in is the capture phase, and it is real, and no listener here is on it. The natural mental picture of an event "arriving from the top" describes half the journey, and the half almost nobody registers for.
+
+Registration order is the right rule in the wrong scope. Two listeners on the same element run in the order they were added; two on different elements are ordered by where those elements sit on the path.
+
+The order is fully specified, not left to the browser. That is what makes delegation something you can build on rather than something that happens to work.`,
+    hints: [],
+    tags: ['events', 'propagation'],
+  },
 ]

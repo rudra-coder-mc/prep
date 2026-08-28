@@ -405,4 +405,163 @@ What I would not do is chunk the insertion with setTimeout and call it fixed. It
     ],
     tags: ['dom', 'performance'],
   },
+  {
+    id: 'script-before-element-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'The page looks right and the console says "Cannot read properties of null (reading \'addEventListener\')". What is wrong, and what is the smallest fix?',
+    code: `<head>
+  <script src="/app.js"></script>
+</head>
+<body>
+  <button id="buy">Buy</button>
+</body>
+
+// app.js
+document.getElementById('buy').addEventListener('click', onBuy)`,
+    options: [
+      'getElementById takes a CSS selector the way querySelector does, so the argument has to be "#buy"',
+      'The script runs while the head is still being parsed, so the button does not exist yet and the lookup returned null. Give the script tag defer, or move it below the markup',
+      'Nothing is null. onBuy is being called rather than passed, so the error comes from inside it',
+      'getElementById returns a collection rather than one element, and a listener has to go on an entry in it',
+    ],
+    correctOption: 1,
+    answerInFull: `The script ran before the button was parsed, so getElementById found nothing and returned null.
+
+HTML is parsed top to bottom, and a plain script tag stops the parse: the browser fetches the file, runs it to completion, and only then carries on reading the document. At the moment app.js runs, everything below it does not exist yet. The button is in the tree by the time you look at the page, which is what makes this confusing, and it was not in the tree when the code ran.
+
+The fix is one attribute.
+
+    <script src="/app.js" defer></script>
+
+defer keeps the download early and moves the execution to after the document has been parsed. A module script, type="module", is deferred by default and needs nothing. Moving the tag to the end of the body works for the same reason and costs you the early download.
+
+The version people reach for instead is a DOMContentLoaded listener wrapping the whole file. It works, and it is the right tool when you do not control the tag, and it is a wrapper around every line of your code to fix a problem an attribute fixes.
+
+Worth knowing for the same reason: a lookup that finds nothing is never an error. getElementById and querySelector return null, and querySelectorAll returns an empty NodeList. The error always arrives one line later, at whatever you did with the result.`,
+    explanation: `The selector option is the commonest wrong answer, and it is the two APIs blurring together. querySelector takes a selector, so "#buy". getElementById takes the id itself, so "buy", and passing "#buy" to it would find nothing at all.
+
+Blaming the handler is a good instinct on a different error. onBuy with no parentheses is a reference being passed, which is correct. Had it been called, the error would name something inside onBuy rather than a null before it.
+
+The collection option is the singular and plural pair getting swapped. getElementsByClassName and getElementsByTagName return collections, and the two named ById and querySelector return one element or null.`,
+    hints: ['When does the browser reach the button, and when does it run the script?'],
+    tags: ['dom', 'scripts'],
+  },
+  {
+    id: 'nodelist-to-array-coding',
+    type: 'coding',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'Every row on the page carries the class row. You want an array holding the text of each one. Which version gives you that array?',
+    options: [
+      'querySelectorAll(".row") and call map on it, since it holds elements and map returns a new array',
+      'getElementsByClassName("row") and call map on it, because a live collection is a real array',
+      'Spread querySelectorAll(".row") into an array first, then call map on the array',
+      'querySelectorAll(".row") and call forEach on it, collecting the result forEach returns',
+    ],
+    correctOption: 2,
+    answerInFull: `Spread it, then map.
+
+    const texts = [...document.querySelectorAll('.row')].map((row) => row.textContent)
+
+querySelectorAll returns a NodeList, and a NodeList is not an array. It has length, it is indexable, and it can be iterated, and the only array method on it is forEach. No map, no filter, no find, no reduce. Calling map on one throws "rows.map is not a function", which reads like the selector matched nothing and does not mean that.
+
+Array.from does the same job and takes a mapping function, so this is one call if you prefer it.
+
+    const texts = Array.from(document.querySelectorAll('.row'), (row) => row.textContent)
+
+An HTMLCollection, which is what getElementsByClassName gives you, is worse: it has no forEach either. Spread it too, or query with querySelectorAll instead.
+
+The general name for what these are is array-like: something with a length and numeric keys that never went near Array.prototype. arguments is the other one you meet. The habit worth building is to convert once, at the point of the query, and work with an array from there.`,
+    explanation: `Mapping a NodeList directly is the wrong answer almost everyone writes first, because a NodeList prints in the console looking exactly like an array of elements. What it prints is not what it inherits from.
+
+The live collection option is that mistake plus a second one. Liveness is about whether the collection re-answers from the tree, and it has nothing to do with which methods it has. HTMLCollection is further from an array than NodeList, not closer.
+
+forEach exists on a NodeList, so that version runs and produces nothing. forEach returns undefined whatever the callback does, which makes this the quiet failure of the four: no error, and an undefined further down the file.`,
+    hints: [
+      'What type does querySelectorAll return, and which array methods does it actually have?',
+    ],
+    tags: ['dom', 'collections'],
+  },
+  {
+    id: 'classlist-concept',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A row already has class="row selected". Why is classList.add("active") the right way to mark it active, and className the wrong one?',
+    options: [
+      'className is read-only on an element in the tree, so assigning to it silently does nothing',
+      'className only reports the classes the markup gave the element, so classes added by script never appear in it',
+      'className is the whole class attribute as one string, so writing to it replaces every class at once. classList is a token list with add, remove, toggle and contains',
+      'className is a snapshot taken when the element was parsed, and classList is the live view of the same attribute',
+    ],
+    correctOption: 2,
+    answerInFull: `className is one string holding the whole attribute. classList is the list of classes in it.
+
+So assigning to className replaces everything.
+
+    row.className = 'active' // class="active", and selected is gone
+    row.classList.add('active') // class="row selected active"
+
+Concatenating instead of assigning, className += ' active', keeps the others and moves the problem: you own the spacing, adding twice gives you the class twice, and removing one class means splitting the string and joining it back.
+
+classList is the API written for this, and its four methods cover everything you would otherwise write by hand.
+
+    row.classList.add('active')
+    row.classList.remove('selected')
+    row.classList.toggle('open') // returns whether it is now on
+    row.classList.contains('active') // true or false
+
+add is idempotent, so adding a class an element already has changes nothing. toggle takes an optional second argument, toggle('open', isOpen), which forces it on or off and is what you want when the state comes from a variable rather than from the current class.
+
+className is not deprecated and is fine for the one case it fits: replacing the entire set of classes deliberately.`,
+    explanation: `Read-only is a reasonable guess for a property that behaves badly, and className is writable. That is the whole problem: it writes, and it writes over.
+
+The markup option is the attribute and property distinction applied where it does not hold. It is a real rule about value, checked and selected, where the attribute stays at the initial value. className and classList both reflect the current class attribute, and a change through either is visible in the other.
+
+Nothing here is live or static. That pair is about collections of nodes, such as querySelectorAll against getElementsByClassName, and a classList is not a collection of nodes.`,
+    hints: [],
+    tags: ['dom', 'classes'],
+  },
+  {
+    id: 'inline-style-read-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A stylesheet sets .card { padding: 12px }. Nothing sets a style attribute on the element. What does this print?',
+    code: `const card = document.querySelector('.card')
+
+console.log(card.style.padding)
+console.log(getComputedStyle(card).padding)`,
+    options: [
+      'An empty string, then 12px',
+      '12px, then 12px',
+      'undefined, then 12px',
+      'An empty string, then an empty string',
+    ],
+    correctOption: 0,
+    answerInFull: `An empty string, then 12px.
+
+element.style is the style attribute, and nothing more. It reads and writes the inline styles on that one element, so on an element with no style attribute every property on it is the empty string. It knows nothing about your stylesheet, about a class, or about anything inherited.
+
+getComputedStyle gives you the value the browser actually resolved after every stylesheet, every class and every inherited value have been applied. That is why it is the one to read from, and it has two properties worth knowing before you do.
+
+It returns absolute values. A width set as 50% comes back in pixels, and a colour comes back as rgb whatever you wrote in the CSS, so comparing its result to the string in your stylesheet usually fails.
+
+And it forces layout. The browser cannot answer from the queue of pending writes, so it flushes and computes layout for the document first. One call is nothing. One per iteration in a loop that also writes is the thrashing shape.
+
+The asymmetry is the thing to hold on to: write through style, read through getComputedStyle.`,
+    explanation: `12px twice is the natural expectation, and it is expecting style to mean "the style of this element". It means the style attribute of this element, which is a much smaller thing.
+
+undefined is a good guess for a property that does not exist, and style is a CSSStyleDeclaration where every recognised property exists and is the empty string when unset. That matters in a condition: an empty string is falsy, so an if on card.style.padding is testing whether the inline style is set, not whether there is padding.
+
+Two empty strings would mean the browser had not resolved the stylesheet, which is not a state your code can observe. The computed value always exists once the element is in the document.`,
+    hints: [],
+    tags: ['dom', 'styles'],
+  },
 ]
