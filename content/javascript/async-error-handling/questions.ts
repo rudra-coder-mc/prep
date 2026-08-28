@@ -380,4 +380,196 @@ Transport-level explanations are unfalsifiable from here, but the empty object i
     hints: ['What does JSON.stringify actually enumerate?'],
     tags: ['error', 'scenario', 'debugging'],
   },
+  {
+    id: 'thrown-value-has-no-message',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'The handler runs, so the failure was caught. Why does it log "failed: undefined"?',
+    code: `async function load() {
+  throw 'not found'
+}
+
+load().catch((error) => console.log('failed:', error.message))`,
+    options: [
+      'A rejection reason is wrapped before it reaches the handler, so the string is on error.reason instead',
+      'Throwing a value that is not an Error loses the reason, so the handler receives an empty object',
+      'The handler receives exactly what was thrown, and what was thrown is a string. A string has no message property',
+      'error.message is filled in when the stack is captured, and throwing a plain value skips that step',
+    ],
+    correctOption: 2,
+    answerInFull: `Because a string was thrown. throw takes any value at all, and the handler receives that value untouched, so error is the string and a string has no message.
+
+Throw an Error instead:
+
+    throw new Error('not found')
+
+An Error carries a message and a stack, and the stack is the half that says where. A string carries the sentence and nothing else, so the log tells you what went wrong and never where, at exactly the moment you need to know.
+
+This matters more than it looks, because the handler is usually a long way from the throw and cannot check. Every line that reads error.message, logs error.stack, or narrows with instanceof is written against Errors and quietly does nothing useful for anything else. Rejecting with a plain object is the same problem in friendlier clothing.
+
+Code at a real boundary is written to survive what other people throw:
+
+    const message = error instanceof Error ? error.message : String(error)`,
+    explanation: `Nothing wraps a rejection reason. That is the same rule that lets you reject with a custom error subclass and read your own fields off it in the handler, so it is worth getting right in both directions.
+
+The reason plainly survived: the handler ran, which means it was given something to run with. It received the string and asked it for a property it does not have.
+
+The stack option sounds like a real mechanism and is not one. An Error captures its stack when it is constructed, not when it is thrown, which is worth knowing separately: an error built far from where it is thrown carries a stack that points at the wrong place.`,
+    hints: ['What exactly is the handler given?'],
+    tags: ['error', 'async', 'debugging'],
+  },
+  {
+    id: 'catch-placed-too-early-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `Promise.resolve()
+  .catch((error) => console.log('caught', error.message))
+  .then(() => {
+    throw new Error('late')
+  })`,
+    options: [
+      'caught late',
+      'Nothing, and the error is discarded, because the chain already has a handler on it',
+      'Nothing. There is no handler after the throw, so it surfaces as an unhandled rejection',
+      'caught undefined, since the catch runs with no reason to report',
+    ],
+    correctOption: 2,
+    answerInFull: `Nothing is printed. The throw rejects the promise that the last then returned, there is nothing attached below it, and the rejection is reported as unhandled. Node ends the process by default; a browser logs "Uncaught (in promise)".
+
+A chain is a sequence of links, and a handler only sees what reaches it from above. This catch is attached to an already fulfilled promise, so it never runs, and it is finished long before the then underneath it throws.
+
+Move it to the end, where everything above drains into it:
+
+    Promise.resolve()
+      .then(() => {
+        throw new Error('late')
+      })
+      .catch((error) => console.log('caught', error.message))
+
+The rule to carry away: a catch protects what is above it and never what is below. That is also the reason a catch in the middle of a long chain deserves a second look. Anything it does not rethrow, the rest of the chain reads as success.`,
+    explanation: `"caught late" reads catch as covering the whole chain, the way a try block covers everything between its braces. Each handler is attached at one point in a sequence, and position is the entire answer here.
+
+The discarded option gets the printing right and the consequence wrong. Nothing goes quietly. An unhandled rejection is reported, and under Node's default policy it takes the process down.
+
+"caught undefined" has the catch running on a promise that was never rejected. A fulfilled promise skips catch handlers in exactly the way a rejected one skips thens.`,
+    hints: ['What is each handler attached to?'],
+    tags: ['promise', 'error', 'async'],
+  },
+  {
+    id: 'catch-that-does-not-rethrow-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'An async function catches an error, logs it, and the catch block ends there. What does its caller get?',
+    options: [
+      'A rejected promise, since the error still happened',
+      'A fulfilled promise holding the error object as its value',
+      'Nothing. The function never settles, because the catch consumed the outcome',
+      'A fulfilled promise holding undefined, so as far as the caller can tell the call succeeded',
+    ],
+    correctOption: 3,
+    answerInFull: `A fulfilled promise holding undefined. Catching an error handles it, and a function that falls off the end of its catch block returns undefined, so the promise fulfils with undefined and the caller reads that as success.
+
+    async function load(id) {
+      try {
+        return await fetchUser(id)
+      } catch (error) {
+        console.log(error)   // handled, and now invisible
+      }
+    }
+
+The caller receives undefined and cannot tell whether the user was missing, the network was down, or fetchUser has a bug in it. Logging is not handling. Handling means deciding what the failure means, and a catch block has only three honest endings:
+
+Return a deliberate fallback, when this is the layer that knows one is correct.
+
+Rethrow with throw error, when it is not. Adding context on the way past is better still, since Error takes a cause: throw new Error('loading user ' + id, { cause: error }).
+
+Or do not catch here at all, and let the layer that knows about it deal with it.
+
+A catch that only logs is the most common way an error disappears in a codebase that has error handling everywhere.`,
+    explanation: `A rejected promise is the intuition that an error which happened must still be visible somewhere. Catching it is precisely what stops it being visible, which is what catching is for.
+
+Fulfilling with the error object is what a result-type API does, returning failures as ordinary values, and it is a real design used in other languages. JavaScript has two channels rather than one, and a caught error is in neither of them until you put it back.
+
+A promise that never settles is a real failure mode, from an executor that neither resolves nor rejects. Reaching the end of a catch block is an ordinary return rather than a hang.`,
+    hints: ['What does a function return when it falls off the end of a catch block?'],
+    tags: ['error', 'async', 'design'],
+  },
+  {
+    id: 'executor-throw-rejects-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `new Promise(() => {
+  throw new Error('boom')
+}).catch((error) => console.log('caught', error.message))`,
+    options: [
+      'Nothing. The throw happens at the line that constructs the promise, before there is a catch to reach it',
+      'caught boom',
+      'Nothing. The promise stays pending forever, since neither resolve nor reject was called',
+      'caught undefined, because reject was never called with a reason',
+    ],
+    correctOption: 1,
+    answerInFull: `caught boom
+
+A throw inside the executor rejects the promise with whatever was thrown. The constructor catches it on your behalf, so there is no synchronous exception at the new Promise line, and the catch at the end receives the error exactly as if reject had been called with it.
+
+This is worth knowing because the executor runs synchronously, which makes it look like ordinary code where an ordinary throw would apply. It is the one place where the promise machinery is already wrapped around your code before that code runs.
+
+The rule stops at the first asynchronous boundary, and that is the part that catches people out:
+
+    new Promise((resolve) => {
+      setTimeout(() => {
+        throw new Error('boom')   // rejects nothing
+      }, 100)
+    })
+
+By the time the timer fires, the executor has long returned and nothing is wrapping the throw. Inside a scheduled callback you have to call reject yourself.`,
+    explanation: `A synchronous throw at the construction is what the code looks like it should do, and the executor really does run synchronously, so the reasoning is sound right up to the last step. The constructor is a try block you did not write.
+
+Staying pending forever is the correct behaviour for an executor that does nothing at all. This one does something: it throws, and throwing counts as settling.
+
+"caught undefined" is what calling reject with no argument would give you, and nothing here calls reject. The thrown value is the reason.`,
+    hints: ['Who is on the stack when the executor runs?'],
+    tags: ['promise', 'error', 'async'],
+  },
+  {
+    id: 'promise-finally-receives-nothing-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does a .finally callback receive, and what does the next .then in the chain get?',
+    options: [
+      'The settled value, and the next then gets whatever the finally callback returned',
+      'The value if it fulfilled and the reason if it rejected, so the callback can tell which happened',
+      'Nothing, and the next then gets the value the chain already had',
+      'Nothing, and the next then gets undefined, since cleanup ends the chain it is in',
+    ],
+    correctOption: 2,
+    answerInFull: `The callback is called with no arguments, and the value passes straight through it.
+
+    Promise.resolve('value')
+      .finally(() => console.log('done'))
+      .then((v) => console.log(v))   // value
+
+Both halves are deliberate. finally is for work that has to happen either way, and code that cannot see how things went cannot accidentally treat a failure as a success. Passing the outcome through untouched is what makes it safe to drop into the middle of a chain.
+
+A rejection behaves the same way: it carries on past the finally to the next catch, so cleanup never swallows a failure.
+
+There are exactly two ways to change the outcome from inside, and both are deliberate rather than accidental. Throwing replaces it with that rejection, and returning a promise that rejects does the same. A plain return value is ignored, which is the opposite of what returning from a then or a catch does.
+
+Use it for clearing a timer, hiding a spinner, releasing a handle. If the code you are writing needs to know whether the thing succeeded, it belongs in then or catch instead.`,
+    explanation: `Putting finally on the same footing as then is the natural reading, since every other handler in the chain passes its return value along. finally is the one whose return is ignored, and that asymmetry is what makes it cleanup rather than a step in the computation.
+
+Receiving the value or the reason is what people want from it, and the API that provides it is the two-argument form of then, or a catch followed by a then. finally is blind on purpose.
+
+The last option has cleanup destroying the result, which would make finally unusable anywhere except the end of a chain. Nothing is lost: the value it was handed is the value it passes on.`,
+    hints: [],
+    tags: ['promise', 'error', 'async'],
+  },
 ]

@@ -331,4 +331,111 @@ Nothing here runs two callbacks at once. One thread means one callback at a time
     hints: [],
     tags: ['event-loop', 'microtasks'],
   },
+  {
+    id: 'callback-value-read-too-early',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'This logs undefined, and raising the delay does not help. Why?',
+    code: `function loadUser() {
+  let user
+
+  setTimeout(() => {
+    user = { name: 'Ada' }
+  }, 0)
+
+  return user
+}
+
+console.log(loadUser())`,
+    options: [
+      'The assignment creates a variable local to the callback, so the outer user is never written',
+      'setTimeout runs its callback on another thread, and the main thread reads user before that thread has finished',
+      'A delay of zero is too short for the assignment to land, so a real delay would fix it',
+      'The callback runs after loadUser has already returned, so the return happens while user is still undefined',
+    ],
+    correctOption: 3,
+    answerInFull: `The callback has not run yet when the return runs.
+
+setTimeout hands the function to the runtime and returns immediately. Nothing queued can run while the stack is busy, so loadUser reaches its return with user still undefined, console.log prints that, and only then does the callback run and assign to a variable nobody is reading any more.
+
+The value cannot be returned, because at the moment of the return it does not exist. It has to be delivered rather than fetched, which is what a callback, a promise and await each do:
+
+    function loadUser() {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve({ name: 'Ada' }), 0)
+      })
+    }
+
+    console.log(await loadUser())
+
+This is the shape underneath almost every "why is my data undefined" question. The code reads correctly from top to bottom, and the lines run in a different order from the one they are written in.`,
+    explanation: `The scoping answer is worth checking yourself against rather than dismissing. Assigning with no declaration writes the outer variable, and the closure is exactly what reaches it, so the assignment is fine. Writing const user inside the callback really would create a second variable and produce the same log, for a different reason.
+
+There is no other thread. The assignment has not been done slightly too late, it has not been done at all, and adding threads to the explanation removes the thing worth learning.
+
+Raising the delay is what people try first, and it is the most useful wrong answer here because it is testable in ten seconds. Every delay behaves the same way, including one, because the return happens before any of them.`,
+    hints: ['At the moment the return runs, has the callback run?'],
+    tags: ['event-loop', 'async', 'callbacks'],
+  },
+  {
+    id: 'who-counts-the-delay-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'While setTimeout(fn, 5000) is waiting, what is doing the waiting?',
+    options: [
+      'The engine, which pauses at that line for five seconds and then carries on',
+      'The runtime around the engine holds the timer and queues fn when it expires, while the engine carries straight on to the next line',
+      'A second thread, which runs fn when the time comes, which is why the rest of the program is not blocked',
+      'Nothing waits. The engine checks the elapsed time each time it reaches the end of the script',
+    ],
+    correctOption: 1,
+    answerInFull: `The host, which is the browser or Node rather than the engine. setTimeout is not part of the JavaScript language at all: it is a function the runtime provides, and the timer lives on that side.
+
+The sequence is worth being able to say out loud. Calling setTimeout hands over the function and the delay and returns immediately, so the next line runs at once. The runtime counts the time. When the delay has elapsed it puts the function on the callback queue. The event loop picks it up from there, once the call stack is empty.
+
+Two things follow directly, and they are the two things people find surprising about timers.
+
+The delay is a minimum rather than an appointment, because being queued and being run are separate events with a possibly busy stack between them.
+
+And nothing runs in parallel. The counting happens outside the engine and the callback happens inside it, so there is still only ever one thing executing.`,
+    explanation: `The engine pausing is what a sleep does in other languages, and what a while loop watching the clock does here. Not blocking is the entire reason setTimeout exists, and a version that paused would freeze the page for five seconds.
+
+A second thread is the tempting one, because half of it is true: the waiting genuinely does happen outside the engine. The callback does not. It runs on the same single thread as everything else, which is why a long synchronous task delays it and why two callbacks never overlap.
+
+The last option is close to the event loop's real job and wrong about who holds the deadline. The loop does not inspect your timers to see which are due; it takes what the runtime has already decided to queue.`,
+    hints: [],
+    tags: ['event-loop', 'async', 'timers'],
+  },
+  {
+    id: 'callback-does-not-mean-async-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'Which of these callbacks runs asynchronously?',
+    options: [
+      'The one passed to array.forEach',
+      'The one passed to setTimeout',
+      'The one passed to array.sort',
+      'All three, since passing a function to be called later is what makes code asynchronous',
+    ],
+    correctOption: 1,
+    answerInFull: `Only the one passed to setTimeout.
+
+forEach and sort call their callback immediately, as many times as they need, and do not return until they are finished. By the time the line below them runs, every call has already happened. Passing a function as an argument defers nothing by itself: a function is a value like any other.
+
+setTimeout is different because of what it does with the function rather than because it takes one. It gives it to the runtime to hold, and returns before it has been called even once.
+
+The test that works without memorising a list is to ask where the result comes out. forEach and sort finish before the next line, so the result is available there. setTimeout, fetch, addEventListener and readFile all return before their work is done, so the result has to come back through the callback, and the line after the call cannot use it.
+
+Worth naming the confusion this clears up: callback and asynchronous get used as if they were the same word. One is how a function is passed, the other is a question about when it runs.`,
+    explanation: `forEach is the belief this question exists for, and it usually comes from code that hands forEach an async callback and finds the loop does not wait. forEach is a plain loop with a function call in the middle of it.
+
+sort looks more like machinery than forEach does, and its comparator is called an unpredictable number of times in an order you do not control. All of that happens before sort returns.
+
+The last option states the rule the question is breaking. Keep the half of it that is true: a callback is how a genuinely asynchronous API hands you a result, which is why the two ideas got tangled together in the first place.`,
+    hints: [],
+    tags: ['event-loop', 'async', 'callbacks'],
+  },
 ]

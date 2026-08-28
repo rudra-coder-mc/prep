@@ -14,15 +14,15 @@ covers every hosted service rather than only the company GitLab.
 
 **`main` is green.** `npm run verify` exited 0 through lint, format check,
 typecheck, 373 unit tests, 48 integration tests against real Postgres and a real
-speech engine, the production build, and all 61 Playwright tests. It took two
-runs on the same tree to get there: the first failed on
-`e2e/spoken-questions.spec.ts:63` alone, in its usual way, and the second passed
-everything. That is the convention below being applied rather than an exception
-to it, and it is why the open item on that spec is still the most urgent thing in
-this file. A spec that fails half the time makes the merge rule mean nothing.
+speech engine, the production build, and all 61 Playwright tests, on the first
+run. The run before it, finishing task 16, needed two: the first failed on
+`e2e/spoken-questions.spec.ts:63` alone, in its usual way. That is the convention
+below being applied rather than an exception to it, and it is why the open item
+on that spec is still the most urgent thing in this file. A spec that fails half
+the time makes the merge rule mean nothing.
 
-At the head of `main` the content check reports 43 topics, 496 questions, 86
-exercises, 269 narration sections and 992 question scripts, tiered as SWE-1 106,
+At the head of `main` the content check reports 43 topics, 512 questions, 86
+exercises, 269 narration sections and 1024 question scripts, tiered as SWE-1 122,
 SWE-2 258, Senior 73 and Staff 59. The working tree is clean and matches that.
 Re-run `verify` rather than trusting any figure you read anywhere, including
 here, and read the section on piping it before you do.
@@ -90,8 +90,12 @@ and nothing checks that the topic on the other end exists.
 
 ## In flight
 
-**Nothing.** Task 16 is committed and merged into `main`, its branch is deleted,
-and the working tree is clean. It was the last thing carried between sessions.
+**Nothing.** Tasks 16 and 17 are committed and merged into `main`, their branches
+are deleted, and the working tree is clean.
+
+**The audio for task 17 has not been recorded.** Sixteen questions across the
+four async topics are silent until somebody runs `narration:build` for them, and
+that is deliberate: see the rule below on not recording mid-task. Ask Atul.
 
 **Merged branches are piling up undeleted**, which the conventions below say
 should not happen. `git branch --merged main` is the list; seventeen of its
@@ -108,24 +112,28 @@ session in that state.
 
 ## The next action
 
-**Phase 4 in `TASKS.md`: fill SWE-1 and SWE-2.** Everything left in the file
-is content. Four tiers over 43 topics is roughly two questions per tier per topic,
-which carries no promise at all, so the tiers being prepared for have to reach
-five or six per topic before readiness means anything. Tasks 17 and 18 are four
-topics each and nothing blocks either of them.
+**Task 18 in `TASKS.md`: fill the browser.** It is the last task in Phase 4,
+covering `the-dom`, `events-and-delegation`, `fetch-and-the-network` and
+`storage`, and nothing blocks it. Everything left in the file after that is
+content too.
 
-Tasks 15 and 16 are done and set the shape the rest match. Eight topics now carry
-six SWE-1 questions and six SWE-2 questions each, which takes a topic from ten or
-eleven questions to thirteen, fourteen or fifteen. Everything added was a choice
-question, because every one of those topics already had its one open question and
-its ordering question, and the caps in the brief did not move to make room.
+Tasks 15, 16 and 17 are done and set the shape it matches. Twelve topics now
+carry six SWE-1 questions and six SWE-2 questions each. Everything added was a
+choice question, because every one of those topics already had its one open
+question and its ordering question, and the caps in the brief did not move to
+make room.
 
-**Task 16 was almost entirely SWE-1.** Its four topics were already at six or
-seven SWE-2 questions and at two or three SWE-1, so fifteen of the sixteen
-questions written for it were SWE-1. Expect the same shape ahead. The bank was
-authored before tiers existed and tagged afterwards, and tagging it honestly
-produced few SWE-1 questions, so what Phase 4 is filling is a thin bottom rather
-than a thin middle.
+**The fill is almost entirely SWE-1 by now.** Fifteen of task 16's sixteen
+questions were SWE-1, and all sixteen of task 17's were, because those topics
+were already at six or more SWE-2 and at one, two or three SWE-1. Expect the same
+in the browser topics and check before planning the work. The bank was authored
+before tiers existed and tagged afterwards, and tagging it honestly produced few
+SWE-1 questions, so what Phase 4 is filling is a thin bottom rather than a thin
+middle.
+
+The total per topic follows from that rather than being aimed at. Task 17 left
+two topics at sixteen questions, because a topic already carrying eight SWE-2
+questions keeps them.
 
 Author to `docs/tasks/converting-a-topic.md`, which carries the rule for tagging a
 new question with a tier. Read the section below on what the tagging taught

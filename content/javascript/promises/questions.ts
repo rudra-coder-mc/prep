@@ -359,4 +359,116 @@ Retrying is something no combinator does. A retry policy is written around a pro
     hints: [],
     tags: ['promises'],
   },
+  {
+    id: 'forgotten-await-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: "This prints Promise { { name: 'Ada' } } and then undefined. What is missing?",
+    code: `async function getUser() {
+  return { name: 'Ada' }
+}
+
+const user = getUser()
+
+console.log(user)
+console.log(user.name)`,
+    options: [
+      'An await on the call, so user is the object the promise fulfils with rather than the promise itself',
+      'An await on the return inside getUser, since the object is being wrapped twice',
+      'Nothing is missing. console.log cannot print a settled promise, so it prints the wrapper',
+      'A delay. The object is read before the promise has settled, which is why name is undefined',
+    ],
+    correctOption: 0,
+    answerInFull: `An await on the call.
+
+An async function always returns a promise, whether or not its body does anything asynchronous, so getUser() hands back a promise and user holds that rather than the object.
+
+    const user = await getUser()
+
+Reading a property off a promise is not an error. A promise has no name property, so the answer is undefined and the line runs happily. That is what makes this one irritating to find: nothing throws, and the failure surfaces further along as a missing value, or as [object Promise] inside a string.
+
+Two ways to recognise it in a log. Node prints a promise as Promise followed by its state or value, which is the first line above. A browser console prints Promise and leaves you to expand it.
+
+await is only legal inside an async function, or at the top level of a module. Somewhere else, the alternatives are .then or making the surrounding function async, and the second is usually the right one.`,
+    explanation: `Awaiting the return value inside getUser is legal, common and almost always redundant. A promise returned from an async function is adopted rather than wrapped, so there is never a promise inside a promise for the extra await to peel off.
+
+Blaming console.log gets the mechanism backwards. It printed exactly what it was given, and what it was given was a promise. The output is accurate reporting rather than a display problem, and the second line proves it.
+
+The last option describes a race, and there is no race here. The promise is already fulfilled by the time either line runs. Nothing ever asks it for its value.`,
+    hints: ['What does calling an async function give you, before anything is awaited?'],
+    tags: ['promises', 'async-await'],
+  },
+  {
+    id: 'promise-all-result-order-choice',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt: 'What does this print?',
+    code: `const slow = () => new Promise((resolve) => setTimeout(() => resolve('slow'), 50))
+const fast = () => Promise.resolve('fast')
+
+Promise.all([slow(), fast()]).then(([a, b]) => console.log(a, b))`,
+    options: [
+      'fast slow',
+      'slow fast',
+      'fast, and nothing else, because all settles with the first result',
+      'One or the other depending on which finishes first, so it cannot be relied on',
+    ],
+    correctOption: 1,
+    answerInFull: `slow fast
+
+Promise.all fulfils with an array in the order the promises were given, not the order they finished. The first element is whatever the first promise fulfilled with, however long it took to get there.
+
+That is what makes destructuring the result safe:
+
+    const [user, settings] = await Promise.all([fetchUser(), fetchSettings()])
+
+Position is the only thing tying a result back to the call that produced it, so the pairing has to be stable, and it is. The waiting overlaps and the answers stay where they were put.
+
+The separate fact worth holding next to it is that Promise.all does not start anything. Both functions are called, and both requests are already in flight, before Promise.all is reached. Calling a function that returns a promise starts its work; all only waits.`,
+    explanation: `Completion order is the natural reading of "wait for whichever comes back", and it is what a hand-rolled version would give you if it pushed each result as it arrived. Promise.all writes each result into the slot its promise came from, which is why it can guarantee the order at all.
+
+Settling with the first result is Promise.race, which is a real combinator and a different one. all waits for every promise before it fulfils.
+
+The last option is worth ruling out rather than leaving as a doubt, because a guarantee nobody trusts gets coded around. The order is specified, and every engine gives you the same one.`,
+    hints: [],
+    tags: ['promises', 'async'],
+  },
+  {
+    id: 'what-await-pauses-choice',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'An async function awaits a request that takes two seconds. What is stopped for those two seconds?',
+    options: [
+      'The whole program. Nothing else runs until the await finishes',
+      'Only that function. It is suspended, and the thread goes back to running everything else',
+      'Nothing at all. The function carries on past the await and comes back for the value later',
+      'Only that function, and only if its caller awaited it too',
+    ],
+    correctOption: 1,
+    answerInFull: `Only the function the await is written in.
+
+await suspends that function and hands control back to whoever called it. The thread is free the whole time: timers fire, clicks are handled, other async functions run. When the promise settles, the rest of the function is queued as a microtask and picks up where it left off.
+
+Two words worth keeping apart. Blocking means the thread cannot do anything else, which is what a long synchronous loop does. Waiting is what await does, and it costs nothing while it happens.
+
+The practical consequence is the one that reads backwards at first. Two awaits in a row take as long as the sum of both, because the second call has not started yet:
+
+    const a = await one()   // starts, then waits
+    const b = await two()   // only starts now
+
+If they do not depend on each other, start both and wait once:
+
+    const [a, b] = await Promise.all([one(), two()])`,
+    explanation: `The whole program is what the syntax suggests, since the code below the await genuinely does not run. It is one function's worth of code that is paused, not the program's.
+
+"Nothing at all" is the overcorrection in the other direction, where async marks a function as fire and forget. The function really does stop at the await. That is the entire point of the keyword, and it is what lets the next line use the value.
+
+The last option makes the pause conditional on the caller, and it is not. The suspension happens either way. What not awaiting the caller changes is that nobody is waiting for the result, which loses the value and any error along with it.`,
+    hints: [],
+    tags: ['promises', 'async-await', 'event-loop'],
+  },
 ]
