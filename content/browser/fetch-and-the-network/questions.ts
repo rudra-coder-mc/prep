@@ -468,4 +468,209 @@ The shape of the errors matters as much as the list. One error type per meaningf
     ],
     tags: ['fetch', 'architecture'],
   },
+  {
+    id: 'response-is-not-the-body-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'The endpoint returns a JSON array of forty items. This logs undefined and the list renders empty. Nothing throws. Why?',
+    code: `async function loadItems() {
+  const items = await fetch('/api/items')
+  console.log(items.length)
+  return items
+}`,
+    options: [
+      'The await resolved before the body had arrived, so a second await on the same promise is needed to get the data',
+      'fetch fulfils with a Response, which describes the reply and does not hold it. The body is a second step, await response.json()',
+      'The server wraps the array in an envelope, so the count is on items.data.length rather than on items',
+      'Reading length on a response is only valid after the status has been checked, so the ok check is what is missing',
+    ],
+    correctOption: 1,
+    answerInFull: `fetch gives you a Response. The data is one more await away.
+
+    const response = await fetch('/api/items')
+    if (!response.ok) throw new Error(response.status)
+    const items = await response.json()
+
+The split is deliberate. The first promise settles when the status line and the headers arrive, which may be well before any of the body has, and that is what lets you look at the status or the content type and decide whether to read the rest at all. The second promise is the body being read to the end, which is why json, text and blob are all asynchronous.
+
+Nothing throws here because a Response is an ordinary object with no length property, and reading a property that does not exist is undefined rather than an error. So the failure travels: the caller gets a Response where it expected an array, and the complaint surfaces wherever somebody finally tries to iterate it.
+
+Two things make this recognisable in a console. A Response logs as Response with a status and a url on it, not as an array. And an async function that returns it hands the caller a promise of a Response, so the same undefined turns up one layer further out.
+
+Worth pairing with the status check while you are here, because the same wrapper wants both, and a body read without one parses a 500's HTML error page as JSON.`,
+    explanation: `Awaiting the same promise twice gives you the same Response again. A settled promise has one value and hands it out to everyone who asks, so there is no second thing to wait for on that promise. The second wait exists, and it is on a different promise, the one response.json() returns.
+
+The envelope answer is the one that sends people to read the API docs for an hour. It is a real shape plenty of APIs use, and it would give you undefined in exactly the same way, which is why the console is the thing to check first: a Response and a wrapped payload do not look remotely alike.
+
+The status check is genuinely missing and it is not the cause. Adding it would change nothing about this log, because the request succeeded.`,
+    hints: ['What does the first promise settle with, and when?'],
+    tags: ['fetch', 'promises'],
+  },
+  {
+    id: 'post-json-coding',
+    type: 'coding',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A new item has to be created by POSTing it as JSON to an endpoint that reads a JSON body. Which request is right?',
+    options: [
+      'method POST, a Content-Type of application/json, and JSON.stringify(item) as the body',
+      'method POST and the item object as the body, since fetch serialises an object and sets the type from it',
+      'method POST and JSON.stringify(item) as the body, with no headers, so the browser can work the content type out from the string',
+      'method POST, JSON.stringify(item) passed as a json option, which fetch reads in place of body',
+    ],
+    correctOption: 0,
+    answerInFull: `Both halves by hand: you serialise, and you say what it is.
+
+    await fetch('/api/items', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item),
+    })
+
+body takes a string, FormData, URLSearchParams, a Blob or a stream. An object is none of those, so it is coerced to a string the ordinary way and the server receives the literal text object Object. No error, a 400 from something further away, and a puzzling half hour.
+
+The content type is separate because the browser cannot infer it. A string is a string; only you know it is JSON. Send it without one and the browser labels it text/plain, and a server whose JSON body parser is conditional on the content type skips it and hands the handler an empty body.
+
+The exception is the one that gets asked about. With FormData you set neither: the browser generates a multipart boundary and writes it into the header itself, so a Content-Type you set by hand replaces the one carrying the boundary and the server cannot parse the body at all. URLSearchParams is similar, and it labels itself as form-urlencoded.
+
+This is also the point at which a request stops being simple and gets preflighted, because application/json is not a content type an HTML form could have sent.`,
+    explanation: `Expecting fetch to serialise the object is expecting it to be a client library. Every popular one does exactly that, which is why this is the commonest thing to get wrong on moving off axios, and fetch stays at the transport layer where a body is bytes.
+
+Leaving the headers off is the subtle version, because it looks like it works. The request goes out, the body is correct, and whether anything reads it depends on a server-side check you cannot see from here.
+
+A json option does not exist. It is worth ruling out rather than half remembering, because the second argument silently ignores keys it does not know, so a typo there fails without a word.`,
+    hints: ['Two things the browser does for you with FormData and does not do for JSON.'],
+    tags: ['fetch', 'requests'],
+  },
+  {
+    id: 'query-encoding-debugging',
+    type: 'debugging',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'Searching for R&D budget returns nothing. The server logs a q of "R" and a second parameter it has never heard of, named "D budget". Why?',
+    code: `const query = input.value // R&D budget
+const response = await fetch('/api/search?q=' + query)`,
+    options: [
+      'A space is not legal in a URL, so the browser truncated the request at the first one',
+      'The value is concatenated into the URL raw, so its & is read as a separator and starts a new parameter. Build the query with URLSearchParams, or run the value through encodeURIComponent',
+      'The server is splitting the query string wrongly, since an ampersand inside a value is legal and should be passed through',
+      'encodeURI is the missing call. encodeURIComponent is for whole URLs and would escape the slashes in the path',
+    ],
+    correctOption: 1,
+    answerInFull: `The ampersand in the value is doing the job an ampersand does in a query string.
+
+Once concatenated, the URL is /api/search?q=R&D budget, and nothing distinguishes the user's ampersand from a separator you wrote. The server parses two parameters, exactly as asked.
+
+    const url = new URL('/api/search', location.origin)
+    url.searchParams.set('q', input.value)
+    await fetch(url)
+
+URLSearchParams encodes every value as it goes, so nothing a user types can change the shape of the URL. It also handles repeated keys and the empty string sensibly, which hand-built strings do not.
+
+The one-liner version, for a URL you are assembling by hand:
+
+    fetch('/api/search?q=' + encodeURIComponent(input.value))
+
+The pair to keep straight is encodeURI and encodeURIComponent. encodeURI escapes a whole URL and deliberately leaves the characters that give a URL its structure alone, ampersand, question mark, slash and equals among them, so it does nothing at all about this. encodeURIComponent escapes one piece that is going inside a URL and escapes all of them, which is what a value needs.
+
+The same class of bug reaches further than search boxes. A plus sign in a value is read as a space, and a hash truncates everything after it.`,
+    explanation: `Truncation at the space is a reasonable guess and the log rules it out: "D budget" arrived with its space intact. Spaces really are not legal in a URL, and the browser encodes them for you rather than dropping them, which is why this bug hides until a value contains punctuation that means something.
+
+Blaming the server is the answer that costs a day. An ampersand inside a value is legal, and it is legal encoded as %26. Raw, it is a separator by definition, and every parser in every language agrees.
+
+The encodeURI option is the two functions swapped. It is worth being able to state the difference in one line, because reaching for the wrong one produces code that looks defended and is not.`,
+    hints: ['Write out the URL string that actually gets requested.'],
+    tags: ['fetch', 'urls'],
+  },
+  {
+    id: 'headers-object-output',
+    type: 'output',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'The server answers with a Content-Type of application/json and a few other headers. What does this print?',
+    code: `const response = await fetch('/api/items')
+
+console.log(response.headers['content-type'])
+console.log(response.headers.get('Content-Type'))
+console.log({ ...response.headers })`,
+    options: [
+      'application/json, then application/json, then an object holding every header',
+      'undefined, then application/json, then an empty object',
+      'undefined, then null, because the key was asked for with different capitalisation, then an empty object',
+      'undefined, then application/json, then an object holding every header',
+    ],
+    correctOption: 1,
+    answerInFull: `undefined, then application/json, then {}.
+
+response.headers is a Headers object, not a plain one, and the three lines are three consequences of that.
+
+Bracket access looks for an own property called content-type. There is no such property; the header lives inside the object and is reachable only through its methods, so the answer is undefined rather than an error.
+
+get returns it, and the case does not matter. Header names are case-insensitive by definition, and Headers normalises them, so Content-Type, content-type and CONTENT-TYPE are the same key. A missing header gives null.
+
+Spreading gives an empty object because spreading copies enumerable own properties and Headers has none. Everything it holds is behind an internal slot. Iterating is what works, since Headers is iterable:
+
+    Object.fromEntries(response.headers)
+    for (const [name, value] of response.headers) console.log(name, value)
+
+has and forEach are there too, and getSetCookie for the one header that legitimately repeats.
+
+The general shape is worth carrying past this API. FormData, URLSearchParams and Headers are all iterable objects with getters rather than plain bags of properties, and all three spread to nothing.`,
+    explanation: `Bracket access returning the value is the expectation a JSON response builds, because everything else in a payload is a plain object. The response body is; the response metadata is not.
+
+Case sensitivity is the trap that is not a trap here. It would matter for a plain object, where content-type and Content-Type are two different keys, which is part of why Headers exists.
+
+Expecting the spread to work is the one worth remembering, because it fails silently. No error, an empty object, and a log that says the response had no headers.`,
+    hints: [],
+    tags: ['fetch', 'headers'],
+  },
+  {
+    id: 'no-default-timeout-concept',
+    type: 'concept',
+    form: 'choice',
+    tier: 'swe-1',
+    prompt:
+      'A request to a struggling service hangs. How long will fetch wait, and how do you make it give up after five seconds?',
+    options: [
+      'Thirty seconds, and the timeout option in the second argument changes it',
+      'As long as the browser is willing to, and nothing in JavaScript can shorten it, so the timeout has to be enforced by the server',
+      'It has no timeout of its own and will wait for minutes. Pass a signal, AbortSignal.timeout(5000)',
+      'It follows the connection Keep-Alive, and the way to bound it is a Promise.race against a setTimeout, which is what a signal does internally',
+    ],
+    correctOption: 2,
+    answerInFull: `fetch has no timeout. It waits as long as the browser will, which is minutes.
+
+    await fetch(url, { signal: AbortSignal.timeout(5000) })
+
+Cancellation is the mechanism, and a timeout is one use of it. The other is cancelling by hand, with a controller you keep:
+
+    const controller = new AbortController()
+    fetch(url, { signal: controller.signal })
+    controller.abort()
+
+And when a request needs both, a timeout and a cancel button, AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]) takes whichever fires first.
+
+An aborted fetch rejects, which is the part to handle deliberately. The rejection is a DOMException whose name is AbortError, and a timeout gives a TimeoutError, so the check is on name rather than on the type.
+
+    catch (error) {
+      if (error.name === 'AbortError') return // we cancelled it on purpose
+      showError(error)
+    }
+
+A request you cancelled is not a failure and should not put an error in front of the user. That distinction is most of why this comes up in interviews.
+
+The same signal cancels an event listener registration, so a component can hold one controller and tear everything down in one call.`,
+    explanation: `A timeout option is the most tempting answer because almost every HTTP client has one, and the second argument to fetch silently ignores keys it does not recognise. Adding it produces code that reads as though it has a timeout and does not.
+
+Leaving it to the server is a real belt to wear and no use as braces. A server timeout does not help when the problem is the network between you and it, which is the case where a request hangs for minutes.
+
+Racing a promise against a timer does bound how long your code waits, and it leaves the request running: the browser keeps the connection, the server keeps working, and nothing tells either to stop. Aborting is better precisely because it does.`,
+    hints: [],
+    tags: ['fetch', 'cancellation'],
+  },
 ]

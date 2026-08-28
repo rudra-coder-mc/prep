@@ -25,43 +25,11 @@ narration script needs to know.
 task says what blocks it. One task is one branch and one merge, as always.
 
 Task numbers are the blocking graph's names, so a finished task leaves a gap
-rather than renumbering the ones after it. The numbering starts partway through
-because the tasks before it are done.
+rather than renumbering the ones after it, and a finished phase goes the same
+way. The numbering starts partway through because the tasks before it are done.
 
 The focus is SWE-1 and SWE-2. Senior and Staff exist, they stay thin, and they
 show their real counts rather than pretending.
-
----
-
-# Phase 4: SWE-1 and SWE-2 get enough questions to mean something
-
-Four tiers across 43 topics is roughly two questions per tier per topic, which
-carries no promise at all. Bring the tiers that matter to five or six questions
-per topic, in the topics a real interview at these levels opens with. Senior and
-Staff stay as they are.
-
-Each task below is four topics, one branch, authored to
-`docs/tasks/converting-a-topic.md`, which carries the rule for tagging a new
-question with a tier. Nothing blocks them, so they can be taken in any order.
-
-Tasks 15, 16 and 17 set the shape the rest match: six questions at SWE-1 and six
-at SWE-2 in every topic they touched. Everything added was a choice question,
-since each of these topics already has its one open question and its ordering
-question.
-
-The total is whatever that leaves, rather than a number to hit. Twelve topics
-have finished anywhere from thirteen to sixteen questions, because a topic
-already carrying eight SWE-2 questions keeps them.
-
-Check what a topic actually has before planning the work. Task 16 was fifteen
-SWE-1 questions out of sixteen and task 17 was sixteen out of sixteen, because
-their topics were already at six or more SWE-2. The bank was authored before
-tiers existed and tagged afterwards, and tagging it honestly produced few SWE-1
-questions, so what is being filled is a thin bottom rather than a thin middle.
-
-## 18. Fill the browser
-
-`the-dom`, `events-and-delegation`, `fetch-and-the-network`, `storage`.
 
 ---
 

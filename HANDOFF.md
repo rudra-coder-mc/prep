@@ -15,14 +15,15 @@ covers every hosted service rather than only the company GitLab.
 **`main` is green.** `npm run verify` exited 0 through lint, format check,
 typecheck, 373 unit tests, 48 integration tests against real Postgres and a real
 speech engine, the production build, and all 61 Playwright tests, on the first
-run. The run before it, finishing task 16, needed two: the first failed on
-`e2e/spoken-questions.spec.ts:63` alone, in its usual way. That is the convention
-below being applied rather than an exception to it, and it is why the open item
-on that spec is still the most urgent thing in this file. A spec that fails half
-the time makes the merge rule mean nothing.
+run. Task 17's run was green first time too, and task 16's needed two, the first
+failing on `e2e/spoken-questions.spec.ts:63` alone in its usual way. Two clean
+runs in a row are not evidence that spec is fixed: it has passed on the re-run
+after every failure it has ever had. The open item on it is still the most urgent
+thing in this file, because a spec that fails half the time makes the merge rule
+mean nothing.
 
-At the head of `main` the content check reports 43 topics, 512 questions, 86
-exercises, 269 narration sections and 1024 question scripts, tiered as SWE-1 122,
+At the head of `main` the content check reports 43 topics, 530 questions, 86
+exercises, 269 narration sections and 1060 question scripts, tiered as SWE-1 140,
 SWE-2 258, Senior 73 and Staff 59. The working tree is clean and matches that.
 Re-run `verify` rather than trusting any figure you read anywhere, including
 here, and read the section on piping it before you do.
@@ -37,7 +38,8 @@ question takes typed input: every one is a choice question, an ordering question
 or an open question, at most one open per topic and only on an `interview` or
 `scenario` subject, and `npm run content:check` fails a build that breaks either
 rule. Nothing in the schema, the session flow or the speech pipeline is waiting
-on anything, and `TASKS.md` holds only Phase 4 and Phase 5.
+on anything. Phase 4 is finished, so `TASKS.md` holds three topics in Phase 5 and
+one loose end that is documentation rather than content.
 
 **Every question carries a tier**, one of `swe-1`, `swe-2`, `senior` or `staff`,
 named after the level of interview that asks it. The promise it buys is in
@@ -66,10 +68,14 @@ ones enrolled so far, because an interview does not restrict itself to the topic
 somebody chose to open. A finished tier offers the tier above it, says how many
 questions accepting enrols, and waits. `src/lib/readiness.ts` is the calculation
 and `docs/decisions/0032-readiness-is-measured-over-the-whole-tier.md` is the
-argument. **Expect the number to read as brutal:** 74 SWE-1 questions on the
-JavaScript track have to reach step 3, three correct answers each spread over
-four days, so it starts at zero and stays low for weeks. That is the claim being
-honest, not a bug.
+argument. **Expect the number to read as brutal:** every SWE-1 question on the
+JavaScript track has to reach step 3, three correct answers each spread over four
+days, so it starts at zero and stays low for weeks. That is the claim being
+honest, not a bug. Note that Phase 4 made it worse before it makes it better: the
+JavaScript denominator was 74 questions when this was written and is 116 now, so
+finishing a fill drops the percentage. The browser track is a separate
+denominator and task 18 took it from 6 to 24, so the same drop has now happened
+there.
 
 **The JavaScript track is thirty-nine topics deep**, in teaching order from types
 and coercion to what a bundler changes. `README.md` lists them in that order and
@@ -90,17 +96,32 @@ and nothing checks that the topic on the other end exists.
 
 ## In flight
 
-**Nothing.** Tasks 16 and 17 are committed and merged into `main`, their branches
-are deleted, and the working tree is clean.
+**Nothing.** Task 18 is committed and merged into `main`, its branch is deleted,
+and the working tree is clean.
 
-**The audio for task 17 has not been recorded.** Sixteen questions across the
-four async topics are silent until somebody runs `narration:build` for them, and
-that is deliberate: see the rule below on not recording mid-task. Ask Atul.
+**Task 18's audio has never been built.** Its eighteen new questions are
+thirty-six new scripts, and no recording exists for any of them, so every listen
+button on one answers 502 until somebody runs the build over the four browser
+topics. That is the ordinary state of new content rather than a fault: nothing
+was recorded because recording mid-task is not wanted, and the rule below applies
+here as much as to task 17.
+
+**The audio for task 17 is unbuilt, or partly built, and nobody knows which.** A
+`narration:build` over the four async topics was started and stopped partway
+through, and its log was lost with it. That is safe: the build is incremental and
+keyed by the hash of the spoken text, so anything already recorded is correct and
+gets skipped, and anything missing gets made. Re-running it for the four topics
+is how you find out, and until somebody does, some of those thirty-two clips are
+silent in the player.
+
+Do not run it without asking. It was stopped because recording mid-task is not
+wanted, and the rule is below twice: in the notes on authoring a group, and again
+under the narration player.
 
 **Merged branches are piling up undeleted**, which the conventions below say
-should not happen. `git branch --merged main` is the list; seventeen of its
+should not happen. `git branch --merged main` is the list; eighteen of its
 entries are branches other than `main`, and the newest is
-`feature/fill-language-fundamentals`. All of them are merged, so deleting them
+`feature/fill-the-browser`. All of them are merged, so deleting them
 loses nothing, and nobody has done it because permission was never asked for. The
 tagging branches from Phase 2 were deleted on merge, which is why they are not
 among them.
@@ -112,38 +133,61 @@ session in that state.
 
 ## The next action
 
-**Task 18 in `TASKS.md`: fill the browser.** It is the last task in Phase 4,
-covering `the-dom`, `events-and-delegation`, `fetch-and-the-network` and
-`storage`, and nothing blocks it. Everything left in the file after that is
-content too.
+**Task 19 in `TASKS.md`: regular expressions, numbers and precision, strings.**
+It is the whole of Phase 5 and the last content in the file, it is three topics
+the language track has no home for today, and nothing blocks it.
 
-Tasks 15, 16 and 17 are done and set the shape it matches. Twelve topics now
-carry six SWE-1 questions and six SWE-2 questions each. Everything added was a
-choice question, because every one of those topics already had its one open
-question and its ordering question, and the caps in the brief did not move to
-make room.
+It is a bigger job than anything Phase 4 held, and the difference is worth being
+clear about before starting. Phase 4 added questions to topics that already
+existed. These are whole topics, so each one owes a lesson with at least one
+visual, two exercises, ten or eleven questions across all six subjects, a
+`narration.ts` whose every section names a heading the lesson actually has, and a
+place in the teaching order, which means renumbering the `order` field on the
+topics below it. Splitting the group across the track rather than dropping three
+topics in a row is the point of decision `0019`.
 
-**The fill is almost entirely SWE-1 by now.** Fifteen of task 16's sixteen
-questions were SWE-1, and all sixteen of task 17's were, because those topics
-were already at six or more SWE-2 and at one, two or three SWE-1. Expect the same
-in the browser topics and check before planning the work. The bank was authored
-before tiers existed and tagged afterwards, and tagging it honestly produced few
-SWE-1 questions, so what Phase 4 is filling is a thin bottom rather than a thin
-middle.
+They are written tier-aware from the start, which is the one thing that is easier
+than Phase 4 was: the schema refuses a question with no tier, and all three
+subjects are asked at SWE-1 and SWE-2, so the thin bottom Phase 4 spent four
+tasks filling does not have to happen here.
 
-The total per topic follows from that rather than being aimed at. Task 17 left
-two topics at sixteen questions, because a topic already carrying eight SWE-2
-questions keeps them.
+**Task 20 is the alternative for a short session.** It is a rewrite of the
+`Evaluation` section of `docs/architecture.md`, which still describes typed
+answers that decision `0023` removed. It is documentation, it is small, nothing
+blocks it, and it has been sitting under Loose ends for a while.
 
-Author to `docs/tasks/converting-a-topic.md`, which carries the rule for tagging a
-new question with a tier. Read the section below on what the tagging taught
-before starting; it is where the hard calls were settled, and the tagging rule is
-the same rule a new question is written against.
+Author either to `docs/tasks/converting-a-topic.md`, which carries the rule for
+tagging a new question with a tier. Read the section below on what the tagging
+taught before starting; it is where the hard calls were settled, and the tagging
+rule is the same rule a new question is written against.
 
-Phase 5 adds three topics the language track has no home for, regular
-expressions, numbers and precision, and strings. Those are whole topics rather
-than extra questions, so each one owes a lesson, a narration script and the
-visuals that go with it.
+### What Phase 4 finished with
+
+Sixteen topics now carry six SWE-1 questions and six SWE-2 questions each, and
+run to between thirteen and sixteen questions in total. Everything the four
+tasks added was a choice question, because every one of those topics already had
+its one open question and its ordering question, and the caps in the brief did
+not move to make room.
+
+**The fill turned out to be almost entirely SWE-1.** Fifteen of task 16's sixteen
+questions were, all sixteen of task 17's were, and all eighteen of task 18's
+were: the four browser topics were already at six or more SWE-2, and at one or
+two SWE-1. The bank was authored before tiers existed and tagged afterwards, and
+tagging it honestly produced few SWE-1 questions, so what Phase 4 filled was a
+thin bottom rather than a thin middle.
+
+The total per topic followed from that rather than being aimed at. Two of task
+17's topics and two of task 18's finished at sixteen questions, because a topic
+already carrying eight or nine SWE-2 questions keeps them.
+
+**What an SWE-1 question turned out to be**, over three tasks of writing them: a
+bug somebody meets in their first year, where the wrong options are wrong on a
+fact rather than on a judgement. A forgotten `await`, a script that runs before
+the element it looks for exists, a `NodeList` that has no `map`, a form that
+reloads the page because nothing called `preventDefault`, and a `false` that
+comes back out of `localStorage` as a truthy string. The test in the brief is
+whether somebody two years in has met the API at all, and it rules out more than
+it sounds like it does.
 
 ### What the tier tagging has taught
 
@@ -222,6 +266,13 @@ it because the original already printed several lines.
   something an answer would otherwise have asserted wrongly. An answer in full is
   the thing a reader trusts most, so it is the worst place to be approximately
   right.
+- **An error message is a fact about the installed runtime, and runtimes move.**
+  A question in the modules topic was going to be built on `Cannot use import
+statement outside a module`, which recent Node no longer produces for a file
+  with no `type` field: it detects the module syntax, reparses and warns instead.
+  The question became one about what classifies a file, with the message as the
+  symptom, which is the better question anyway. Reproduce an error before
+  quoting it, in a scratch directory rather than from memory.
 - **A group is a branch, not a block of the track.** Its topics take whatever
   positions in the teaching order they belong in, which usually means splitting
   the group across the track and renumbering everything below it. The memory
@@ -259,9 +310,11 @@ generated, so it does not add to this; narration is written and does.
 
 **Em dashes have crept back into the content.** Two hundred and ninety-one of
 them across thirty-one files, in the groups written after
-`improvement/unslop-content` cleaned the original twelve topics, and the newest
-group added two more in option text. The house style forbids them. Nobody owns
-the sweep, and doing it as one pass over `content/` is a branch of its own.
+`improvement/unslop-content` cleaned the original twelve topics. The house style
+forbids them. Nobody owns the sweep, and doing it as one pass over `content/` is
+a branch of its own. All four Phase 4 fills added none, so the number is a
+backlog rather than a trend: check it with a `grep -ro` over `content/` before
+believing any figure here.
 
 **Nobody has listened to a question read aloud and judged whether it works.**
 The pipeline is verified end to end, the recordings are valid WAV and the right
@@ -299,8 +352,8 @@ about the shared mutable prototype and shares nothing with `class-syntax`.
 
 **One end-to-end spec is flaky, nobody owns it, and it now blocks the merge
 rule.** "A question can be listened to before it is answered",
-`e2e/spoken-questions.spec.ts:63`, has failed seven times in fourteen full suite
-runs, and passes on a re-run of the same commit every time. Exactly half.
+`e2e/spoken-questions.spec.ts:63`, has failed seven times in sixteen full suite
+runs, and passes on a re-run of the same commit every time.
 
 **It has now taken a second spec with it.** In one run,
 `spoken-questions.spec.ts:75`, "the answer gets its own listen button", failed
@@ -546,9 +599,12 @@ re-rendering a whole lesson every time the voice moves on is far worse. A
 refactor that "does this properly in React" is the thing this deliberately
 avoids. The dimming itself is one rule in `globals.css`.
 
-**`.speech-cache` is gitignored, holds 2.7 GB and takes most of a working day to
-rebuild.** One file per script, addressed by content: 241 narration sections and
-844 question recordings, plus the orphans left behind by every edited script. The
+**`.speech-cache` is gitignored, holds 3.3 GB and takes most of a working day to
+rebuild.** One file per script, addressed by content: 1642 files on disk against
+the 269 narration sections and 1060 question scripts `content:check` counts. The
+difference runs both ways. Orphans left behind by every edited script are on one
+side, and on the other are the thirty-six scripts task 18 added and nobody has
+recorded. The
 last group added 114 recordings in about forty-five minutes, which is the rate to
 plan against. The app bind mounts this directory, so it is not a
 convenience copy, it is where playback reads from. Deleting it means nothing
@@ -562,6 +618,12 @@ single word in an explanation orphans that recording. The 502 names the command.
 merge it, and then ask Atul whether to record. It is his call, and he may say
 no. Nothing breaks by waiting: an unrecorded question is silent until somebody
 builds it, and the build is incremental when they do.
+
+**`narration:build` takes a topic and does nothing without one.** Run bare it
+starts the containers, prints the usage line naming a topic and exits 1, so a
+green-looking script that recorded nothing is easy to walk away from. The form is
+`npm run narration:build -- javascript/event-loop`, one topic per invocation, so
+a group of four is four commands.
 
 **Node 26 ships a `localStorage` global that shadows jsdom's and is unavailable
 without `--localstorage-file`.** `vitest.setup.ts` puts a working one back, the
@@ -832,6 +894,10 @@ Recordings already made are kept, so running the command again carries on.
 
 **`npm run verify` needs the Docker daemon** for its integration and end-to-end
 stages, and both of them start and stop the speech container around themselves.
+With Docker Desktop not running, the suite gets as far as the integration stage
+and stops on a socket error from `docker compose`, having already printed a green
+unit run above it. Read the last line before believing a run, because a failure
+there looks nothing like a failing test.
 
 **Internal links go through `AppLink`, not `next/link`.** `AppLink` is what
 feeds the global progress bar. The only deliberate exception is
