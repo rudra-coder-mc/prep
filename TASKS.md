@@ -30,27 +30,6 @@ show their real counts rather than pretending.
 
 ---
 
-# Loose ends
-
-Small, ready to take, and blocked by nothing. They sit outside the phases because
-they are not content, so they do not have to wait for the bank.
-
-## 20. The architecture doc still describes typed answers
-
-`docs/architecture.md` has an "Evaluation" section written before decision
-`0023`. It describes typing an answer and self grading it, an `expectedOutput`
-compared against what you typed, and "all three forms" meaning written, multiple
-choice and output. None of that exists: no question takes typed input, the forms
-are `choice`, `ordering` and `open`, and neither `expectedOutput` nor
-`expectedAnswer` appears anywhere in `src/` or `content/`.
-
-Rewrite the section against what the code does now, which is the three forms in
-`src/content/schema.ts` and how each one is graded. Say what an open question's
-self grade is for, since that is the only place a grade is still a judgement.
-Done when nothing in the doc names a field the schema does not have.
-
----
-
 # Not scheduled
 
 Real work, deliberately unordered. Do not pick these up as "the next task"
