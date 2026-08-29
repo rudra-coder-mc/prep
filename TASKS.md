@@ -11,8 +11,8 @@ The plan behind this file turns a bank of questions into a path with a promise a
 the end of it: finish a tier and you are prepared for that level of interview.
 The platform side is built. A tier is picked per track, marking a topic learned
 enrols only what that tier covers, and the dashboard measures readiness against
-the whole tier. What is left is the bank, which is why every task below is
-content.
+the whole tier. The content phases are done: the bank covers SWE-1 and SWE-2
+across the whole language track.
 
 Read `docs/decisions/0028-tiers-are-interview-levels.md` first, then `0031` and
 `0032` for how the pick and the promise behave. The terms are in
@@ -21,32 +21,12 @@ Read `docs/decisions/0028-tiers-are-interview-levels.md` first, then `0031` and
 `docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md` is what a new
 narration script needs to know.
 
-**Phases run in order.** Inside a phase, take the tasks top to bottom unless a
-task says what blocks it. One task is one branch and one merge, as always.
-
 Task numbers are the blocking graph's names, so a finished task leaves a gap
 rather than renumbering the ones after it, and a finished phase goes the same
 way. The numbering starts partway through because the tasks before it are done.
 
 The focus is SWE-1 and SWE-2. Senior and Staff exist, they stay thin, and they
 show their real counts rather than pretending.
-
----
-
-# Phase 5: the language gets its missing topics
-
-## 19. Regular expressions, numbers and precision, strings
-
-Three topics with no home in the track today, and all three are asked at SWE-1
-and SWE-2. Regular expressions: groups, greedy against lazy, `lastIndex` on a
-global regex, and when not to use one. Numbers and precision: floating point,
-`Number.EPSILON`, `toFixed` rounding, when `BigInt` is the answer, money.
-Strings: code points against code units, template literals and tagged templates,
-normalisation.
-
-Nothing blocks them, and they are written tier-aware from the start, so the
-schema will refuse a question with no tier. Done when the three
-pass the content check and read as lessons rather than lists of facts.
 
 ---
 

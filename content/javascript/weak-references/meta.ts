@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Weak references: WeakMap, WeakSet and WeakRef',
   summary:
     'Holding an object without keeping it alive, why the weak collections refuse to be iterated, what a strong value still retains, and why WeakRef is a last resort.',
-  order: 260,
+  order: 290,
   tags: ['memory', 'collections', 'weakmap'],
   prerequisites: ['javascript/garbage-collection', 'javascript/map-and-set'],
 }

@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'ES modules and CommonJS',
   summary:
     'Two module systems in one ecosystem: live bindings against copied values, static structure against runtime require, cycles, dynamic import and top level await.',
-  order: 370,
+  order: 400,
   tags: ['modules', 'runtime'],
   prerequisites: ['javascript/strict-mode-and-globalthis', 'javascript/promises'],
 }

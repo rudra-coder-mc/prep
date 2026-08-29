@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: '`extends`, `super` and the order of construction',
   summary:
     'The two chains extends links, why this does not exist until super() returns, how super finds a method, and what goes wrong extending Array and Error.',
-  order: 160,
+  order: 190,
   tags: ['classes', 'inheritance', 'prototype'],
   prerequisites: ['javascript/class-syntax', 'javascript/prototypes'],
 }

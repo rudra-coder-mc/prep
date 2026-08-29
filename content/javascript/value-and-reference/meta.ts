@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Values, references and copying',
   summary:
     'What a variable actually holds, why two identical objects are not equal, and how deep a copy goes.',
-  order: 30,
+  order: 50,
   tags: ['objects', 'memory', 'immutability'],
   prerequisites: ['javascript/types-and-coercion'],
 }

@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Array methods worth knowing cold',
   summary:
     'Which methods mutate and which copy, what each one returns, how sort really compares, and the holes and async callbacks that trip people up.',
-  order: 90,
+  order: 110,
   tags: ['arrays', 'collections', 'iteration'],
   prerequisites: ['javascript/higher-order-functions', 'javascript/value-and-reference'],
 }
