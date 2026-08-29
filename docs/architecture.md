@@ -8,7 +8,7 @@ A single-user, self-hosted learning platform built around one loop:
 Read topic  ->  Mark learned  ->  Recall questions on a schedule
      ^                                        |
      |                                        v
-  Review  <-  Weak topics surface  <-  Self-evaluate + confidence
+  Review  <-  Weak topics surface  <-  Answer + verdict
 ```
 
 The topic page is the centrepiece, not the question bank. Marking a topic as
@@ -59,8 +59,8 @@ This is the most important boundary in the system.
 under `content/`. They are authored in an editor, reviewed in diffs, and compiled
 into the application at build time. They are never rows in a table.
 
-**Progress lives in Postgres.** Who you are, what you answered, how confident you
-felt, when a question is next due, what you did each day.
+**Progress lives in Postgres.** Who you are, what you answered, what each answer
+was worth as evidence, when a question is next due, what you did each day.
 
 The two are joined by string slugs, not foreign keys. `topic_progress.topicSlug`
 holds `"javascript/closures"`; nothing in the database enforces that this topic
@@ -242,17 +242,24 @@ is the offer. See
 
 ## Recall scheduling
 
-Confidence drives the next interval:
+The ladder has five rungs: later today, then 1, 3, 7 and 14 days. On a graded
+form, a correct answer climbs one rung from wherever the question sits, and any
+wrong answer drops it to the bottom, however far it had climbed. The reset is
+what stands in for the guess a choice question cannot rule out.
 
-| Confidence                  | Next due    |
-| --------------------------- | ----------- |
-| 1, don't understand it      | later today |
-| 2, partly understand it     | 1 day       |
-| 3, can explain with help    | 3 days      |
-| 4, understand it            | 7 days      |
-| 5, can explain and apply it | 14 days     |
+An open question is placed by its self grade rather than moved: Passed lands on
+the top rung, Weak at three days, Failed at the bottom. A Weak on a question
+answered correctly four times is real information, and it should pull the
+question back down.
 
-A `failed` result resets to the bottom of the ladder regardless of confidence.
+Nobody rates their own confidence. `src/lib/interval-ladder.ts` derives one from
+the form and the verdict, 3 for a correct choice, 4 for a correct ordering, the
+self grade's worth on an open question, and records it on the attempt so the
+history says what kind of evidence each answer was. On a graded form that is all
+the number does; capping the rung with it would keep a well-known question in
+the queue forever. See
+`docs/decisions/0025-confidence-is-derived-and-the-ladder-climbs.md`.
+
 The daily queue is capped so it is never a wall, and fills in priority order:
 overdue, then due today, then weakest topics.
 
@@ -262,39 +269,42 @@ replacing it with real spaced repetition later needs no schema change.
 
 ## Evaluation
 
-Which mechanism a question uses depends on whether its answer is exact.
+No question takes typed input. An answer nobody grades is a self grade with
+extra steps, and an exact string comparison fails over quote characters rather
+than over the answer. A question's `form` says how it is answered, its `type`
+says what it is about, and the two are separate axes, so an `output` question
+can be a choice question or an ordering one. Every question carries
+`answerInFull`, the paragraph you would say if an interviewer asked, shown once
+the question is answered, whatever the form. See
+`docs/decisions/0023-every-question-is-answered-never-typed.md`.
 
-**Written questions are self-evaluated.** You type an answer, reveal the
-expected one, then mark Pass / Weak / Failed and rate confidence 1-5. Free-text
-answers are stored so you can see how your own explanations changed over time.
-There is no auto-grading and no AI tutor here. Grading free-text technical
-answers reliably is harder than everything else combined, and the honest
-self-assessment that active recall depends on does not need a machine.
+**`choice` questions grade themselves.** Choosing an option submits it; the
+server grades it in `src/lib/choice.ts`, records the attempt and returns the
+answer in full in one round trip. The correct option never reaches the browser
+before an answer arrives. There is no half-right option, so the ladder only ever
+sees a pass or a reset. Anything that can be asked this way is asked this way.
+See `docs/decisions/0011-multiple-choice-grades-itself.md`.
 
-**Multiple choice questions grade themselves.** There is nothing to assess when
-there is one right answer, and the ceremony of revealing and self-grading is
-what makes drilling slow. Choosing an option submits it; the server grades it,
-records the attempt and returns the explanation in one round trip. The correct
-option is never sent to the browser beforehand, exactly as an expected answer is
-not. A correct answer records a fixed confidence of 3 rather than asking, since
-recognising an answer is weaker evidence than recalling it. See
-`docs/decisions/0011-multiple-choice-grades-itself.md`.
+**`ordering` questions are answered by building the sequence a program prints.**
+The pool holds lines the program never prints as well as the ones it does, so
+the answer is a selection as much as an arrangement. The page submits positions,
+because a program can print the same line twice, and `src/lib/ordering.ts`
+compares the text at those positions. A sequence is right or it is not: scoring
+a nearly-right one needs a threshold, and every threshold is arbitrary. See
+`docs/decisions/0024-ordering-questions-carry-distractors.md`.
 
-**Output questions are checked against what the program prints.** An `output`
-question carrying an `expectedOutput` is compared to the typed answer after
-normalising the things that are not the answer: indentation, runs of spaces,
-line endings and which quote character was used. Case is left alone, because
-JavaScript is case-sensitive. A correct answer records a fixed confidence of 4,
-above a recognised answer and below explaining the thing. An `output` question
-with an `expectedAnswer` instead is still graded by eye, so the two never
-disagree about which value is authoritative.
-
-This is string comparison against an authored value, not code execution.
-Running the code is planned separately as browser-side WASM runners, in
-`docs/decisions/0007-execution-runners.md`.
+**`open` questions are the one place a grade is still a judgement.** Nothing is
+submitted. Answer in your head or out loud, reveal the answer in full, and mark
+yourself Passed, Weak or Failed against it. The form exists for the question
+with several valid routes to a good answer, where four options would destroy the
+point of asking, so the content check allows it only on `interview` and
+`scenario` questions and caps it at one per topic. The answer in full is written
+as what you had to have said, which makes the self grade a comparison rather
+than a feeling.
 
 All three forms write the same `attempts` row, so the ladder, the streak and the
-dashboard did not change to accommodate any of them.
+dashboard did not change to accommodate any of them. What each kind of answer is
+worth as evidence is the schedule's business; see Recall scheduling above.
 
 ## Narration
 
