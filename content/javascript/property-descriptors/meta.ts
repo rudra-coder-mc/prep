@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Properties, descriptors and accessors',
   summary:
     'The three flags every property carries, getters and setters, which operations see which properties, and what freeze really promises.',
-  order: 140,
+  order: 170,
   tags: ['objects', 'descriptors', 'immutability'],
   prerequisites: ['javascript/prototypes', 'javascript/value-and-reference'],
 }

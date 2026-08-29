@@ -1,0 +1,269 @@
+## Why this matters
+
+`'👍'.length` is `2`. Reversing a name with `split('').reverse().join('')` can
+produce a string that renders as replacement characters. Two strings that display
+identically, that were both typed by a user as "café", can be `!==` to each
+other, so a search finds nothing and a uniqueness check lets a duplicate through.
+
+None of that is a quirk. It is one design decision from 1995 showing through: a
+JavaScript string is a sequence of UTF-16 code units, and a code unit is not a
+character. Most string code never notices, and the code that does notice is
+usually handling somebody's name.
+
+## A string is a sequence of UTF-16 code units
+
+A code unit is sixteen bits. Unicode has more than sixteen bits' worth of code
+points, so anything above `U+FFFF` is stored as two code units, called a
+surrogate pair. `length`, indexing, `charAt`, `charCodeAt`, `slice` and
+`substring` all count and cut in code units:
+
+```js
+'👍'.length // 2
+'👍'.charCodeAt(0) // 55357, half of a surrogate pair
+'👍'.codePointAt(0) // 128077, the whole code point
+'👍'.slice(0, 1) // a lone surrogate, which renders as a replacement character
+```
+
+There are three units of length, and they answer different questions:
+
+- **Code units.** What `length` reports, and what storage and slicing use.
+- **Code points.** What Unicode assigns a number to. `codePointAt`, the `u` flag
+  on a regex, and iteration work in these.
+- **Grapheme clusters.** What a reader would call a character. A family emoji is
+  one grapheme, five code points and eight code units, because it is several
+  people joined by zero-width joiners. Only `Intl.Segmenter` counts these.
+
+If you are asked "how long is this string", the correct first move is to ask
+which of the three the answer is for.
+
+## Iterating fixes most of it
+
+Anything that iterates a string walks it by code point rather than by code unit.
+That is `for...of`, spread, `Array.from` and every regex with the `u` flag.
+
+<CodeWalkthrough
+  title="Two ways to split the same string"
+  code={`const flagged = '👍ok'
+console.log(flagged.length)
+console.log(flagged.split('').length)
+console.log([...flagged].length)
+console.log([...flagged].reverse().join(''))`}
+  steps={[
+    {
+      lines: [1, 2],
+      note: 'The emoji is one code point above U+FFFF, so it is stored as two code units. The three visible characters take four.',
+      variables: { 'flagged.length': '4' },
+      output: ['4'],
+    },
+    {
+      lines: [3],
+      note: "split('') cuts between code units, so the surrogate pair is torn in half. The array holds four entries and the first two are broken halves.",
+      variables: { "split('')": "['\\ud83d', '\\udc4d', 'o', 'k']" },
+      output: ['4', '4'],
+    },
+    {
+      lines: [4],
+      note: 'Spread uses the string iterator, which walks code points and keeps a surrogate pair together. Three entries, and each one renders.',
+      variables: { '[...flagged]': "['👍', 'o', 'k']" },
+      output: ['4', '4', '3'],
+    },
+    {
+      lines: [5],
+      note: 'Reversing the code points is safe. Reversing the code units would have put the low surrogate first, and neither half renders on its own.',
+      output: ['4', '4', '3', 'ko👍'],
+    },
+  ]}
+/>
+
+Iterating is not a complete fix, because it stops at code points. A family emoji
+or a flag reversed by code point still comes out wrong, and an accent written as
+a separate combining mark ends up attached to the wrong letter. For those,
+`Intl.Segmenter` with `granularity: 'grapheme'` is the only correct answer.
+
+## Template literals
+
+Backticks give you interpolation, real newlines and nesting, and every embedded
+expression is converted with `String()`:
+
+```js
+const name = 'Ada'`Hi ${name}, ${1 + 1} messages` // 'Hi Ada, 2 messages'
+```
+
+Two things worth knowing. Interpolating an object gives `'[object Object]'`,
+because `String()` runs `toString`, which is almost never what you wanted in a
+log line: `JSON.stringify` it instead. And a template literal preserves the
+indentation of the source file, so a multi-line template inside an indented
+function carries that indentation into the string.
+
+## Tagged templates
+
+Putting a function in front of a template calls it with the literal parts and the
+interpolated values kept apart:
+
+```js
+function tag(strings, ...values) {
+  return { strings: [...strings], raw: [...strings.raw], values }
+}
+
+const name = 'Ada'
+tag`Hi ${name}, you have 2\n items`
+// strings: ['Hi ', ', you have 2\n items']
+// raw:     ['Hi ', ', you have 2\\n items']
+// values:  ['Ada']
+```
+
+The point is that a tag sees the boundary between what the developer wrote and
+what came from a variable, which is what makes it the right tool for escaping.
+An HTML tag can escape every value and leave the literal parts alone; a SQL tag
+can turn every value into a bound parameter. That is what `graphql`, `css` in
+styled components and `sql` in query builders all are.
+
+`strings.raw` holds the text before escape sequences were processed, which is
+what `String.raw` exposes: <code>String.raw`a\nb`</code> is a three-character
+string with a backslash in it, not a newline.
+
+## Normalisation
+
+Unicode can spell the same text more than one way. "café" is either four code
+points ending in `é`, or five ending in `e` followed by a combining acute accent.
+They render identically and they are different strings:
+
+```js
+const composed = 'caf\u00e9' // 4 code points, ending in the single letter e-acute
+const decomposed = 'cafe\u0301' // 5 code points, e followed by a combining acute
+
+composed === decomposed // false
+composed.length === decomposed.length // false
+decomposed.includes('\u00e9') // false, there is no single e-acute in it
+```
+
+Which form you get depends on the operating system, the keyboard and the source
+of the data. macOS filenames are decomposed, most web input is composed, and a
+paste from a PDF can be either.
+
+`normalize()` converts between them. Normalise on the way in, once, and compare
+normalised strings thereafter:
+
+```js
+composed.normalize('NFC') === decomposed.normalize('NFC') // true
+```
+
+`NFC` composes and is the right default for storage and comparison. `NFD`
+decomposes, which is useful when you want to strip accents by removing the
+combining marks. `NFKC` and `NFKD` also fold compatibility characters, turning
+`①` into `1` and the `ﬁ` ligature into `fi`, which is what you want for a search
+index and not what you want for a name you will display back.
+
+## Comparing and sorting
+
+`===` on strings compares code units, which makes it exact, fast and completely
+unaware of language. `sort()` with no comparator inherits that:
+
+```js
+;['Zoe', 'Ängela', 'apple'].sort()
+// ['Zoe', 'apple', 'Ängela']
+```
+
+Every uppercase letter sorts before every lowercase one, because `'Z'` is 90 and
+`'a'` is 97, and `'Ä'` is 196 so it lands after everything. Nobody's address book
+sorts that way.
+
+`localeCompare` is the comparator that knows about language:
+
+```js
+;['Zoe', 'Ängela', 'apple'].sort((a, b) => a.localeCompare(b))
+// ['Ängela', 'apple', 'Zoe']
+
+'a'.localeCompare('A') // -1
+'a'.localeCompare('A', undefined, { sensitivity: 'base' }) // 0
+```
+
+`sensitivity: 'base'` is how you get a case-insensitive and accent-insensitive
+comparison without butchering the string first. For sorting a long list,
+`Intl.Collator` is the same rules with the setup done once rather than per
+comparison.
+
+## The interview angle
+
+> **"How do you count the characters in a string?"**
+> Ask which unit. `length` is code units and is right for storage limits and
+> nothing else. Spread or `Array.from` gives code points, which is right for most
+> validation. `Intl.Segmenter` gives grapheme clusters, which is what a person
+> means by a character. Then say the consequence: a 280-character limit measured
+> with `length` charges an emoji twice.
+
+> **"Two strings look the same and are not equal. What do you check?"**
+> Normalisation first, since the same accented letter has two spellings.
+> Then invisible characters: a zero-width space, a non-breaking space pasted from
+> a document, a trailing newline. `[...a].map((c) => c.codePointAt(0))` on both
+> shows you the difference in one line.
+
+## Traps
+
+- **Strings are immutable.** `s.toUpperCase()` returns a new string and changes
+  nothing. Assigning to `s[0]` fails silently in sloppy mode and throws in strict
+  mode.
+- **`replace` with a string replaces the first match only.** `replaceAll`, or a
+  regex with `g`.
+- **`split('')` breaks surrogate pairs.** Spread or `Array.from` instead.
+- **`padStart` never truncates.** `'abcdef'.padStart(3, '0')` is `'abcdef'`. It
+  pads to a minimum length, it does not fit to a length.
+- **`toUpperCase` can change the length.** `'ß'.toUpperCase()` is `'SS'`, so an
+  uppercase round trip is not reversible and a length check after it is not the
+  length check you wrote.
+- **`substring` swaps its arguments and clamps negatives to 0.**
+  `'abcdef'.substring(-3)` is the whole string, where `slice(-3)` is `'def'`.
+  Prefer `slice`.
+
+## In one picture
+
+<ConceptMap
+  center={'A string is code units'}
+  branches={[
+    {
+      label: 'Three units of length',
+      summary: 'Code units, code points and graphemes answer different questions.',
+      nodes: [
+        'length counts code units',
+        'iteration walks code points',
+        'Intl.Segmenter counts graphemes',
+      ],
+    },
+    {
+      label: 'Iterating fixes most of it',
+      summary: 'for...of, spread and Array.from keep a surrogate pair together.',
+      nodes: [
+        "split('') tears pairs in half",
+        'spread is the safe reverse',
+        'graphemes still need Segmenter',
+      ],
+    },
+    {
+      label: 'Templates',
+      summary: 'Interpolation converts with String(); a tag sees literals and values apart.',
+      nodes: [
+        'objects become [object Object]',
+        'a tag can escape values only',
+        'strings.raw is before escapes',
+      ],
+    },
+    {
+      label: 'Normalisation',
+      summary: 'The same text has more than one spelling until you normalise it.',
+      nodes: [
+        'NFC for storage and comparison',
+        'NFKC folds ligatures and digits',
+        'normalise once, at the edge',
+      ],
+    },
+    {
+      label: 'Comparing',
+      summary: '=== and sort() are code unit order, which is not any language order.',
+      nodes: [
+        "sort() puts 'Z' before 'a'",
+        'localeCompare knows the language',
+        "sensitivity 'base' ignores case and accents",
+      ],
+    },
+  ]}
+/>

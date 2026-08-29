@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Throwing, catching and finally',
   summary:
     'What throw does to the stack, the exact order try, catch and finally run in, and the return value finally quietly replaces.',
-  order: 270,
+  order: 300,
   tags: ['error', 'control-flow'],
   prerequisites: ['javascript/recursion-and-the-call-stack', 'javascript/scope-and-hoisting'],
 }

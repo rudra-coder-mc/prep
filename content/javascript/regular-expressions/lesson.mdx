@@ -1,0 +1,274 @@
+## Why this matters
+
+A regular expression is the densest notation in the language: a line of it
+replaces a page of string handling, and a line of it is also where a subtle bug
+hides longest, because nobody reads it carefully in review.
+
+Three things separate someone who uses regexes from someone who is caught out by
+them. Knowing that a global regex carries state between calls. Knowing that
+`.+` takes everything it can and gives back only under protest. And knowing when
+the answer is a parser rather than a pattern.
+
+## Flags, and where the state lives
+
+A pattern is written as a literal, `/\d+/g`, or built with `new RegExp('\\d+', 'g')`.
+The literal is compiled once when the script is parsed; the constructor is the
+one to use when the pattern is not known until runtime.
+
+The flags worth knowing:
+
+- **`g`** matches every occurrence rather than the first, and makes the regex
+  stateful.
+- **`i`** ignores case.
+- **`m`** makes `^` and `$` match at each line break rather than only at the ends
+  of the string.
+- **`s`** makes `.` match a newline. Without it, `.` matches anything except a
+  line terminator, which is the single most common "why did this not match".
+- **`u`** matches by code point and enables `\p{...}` Unicode property escapes,
+  so `/\p{L}+/u` matches letters in any script.
+- **`y`** is sticky: it matches only at `lastIndex` and nowhere later.
+
+`g` and `y` are the two that make a regex carry state. A global regex object has
+a mutable `lastIndex` property, and `test` and `exec` both read it and write it
+back:
+
+```js
+const re = /\d+/g
+re.test('a1') // true, lastIndex is now 2
+re.test('a1') // false, it started searching from index 2 and ran off the end
+re.test('a1') // true, the failure reset lastIndex to 0
+```
+
+That alternating result is one of the most reported "impossible" bugs in
+JavaScript, and it comes from a regex being shared. A pattern hoisted to module
+scope, used with `g` and called with `test` in a loop, will skip every other
+item.
+
+> Fixes, in order of preference: drop the `g` flag if you only want a yes or no,
+> because `test` does not need it. Create the regex inside the function so each
+> call gets a fresh one. Or reset `re.lastIndex = 0` before each use, which works
+> and reads like an apology.
+
+## Groups
+
+Parentheses do two jobs at once, which is why there are three kinds:
+
+```js
+/(\d{4})-(\d{2})/ // capturing: numbered from 1, in the order the ( appears
+/(?:\d{4})-(\d{2})/ // non-capturing: groups for the quantifier, captures nothing
+/(?<year>\d{4})-(?<month>\d{2})/ // named: readable, and available as .groups
+```
+
+A match result is array-like: index `0` is the whole match, then one entry per
+capturing group, with `index` and `input` hanging off it and `groups` holding the
+named ones. A group that did not participate in the match is `undefined`, which
+matters for an optional group:
+
+```js
+'a1'.match(/(\d)(\d)?/) // ['1', '1', undefined]
+```
+
+Named groups also work in a replacement string, which is where they earn their
+keep:
+
+```js
+'2024-05-01'.replace(/(?<y>\d{4})-(?<m>\d{2})-(?<d>\d{2})/, '$<d>/$<m>/$<y>')
+// '01/05/2024'
+```
+
+`$&` is the whole match, `$1` is the first group, and `$$` is a literal dollar.
+
+## Greedy against lazy
+
+Every quantifier is greedy by default: it takes as much as it can and gives
+characters back one at a time only when the rest of the pattern fails.
+
+<CodeWalkthrough
+  title="Why .+ swallows both tags"
+  code={`const html = '<a><b>'
+console.log(html.match(/<.+>/)[0])
+console.log(html.match(/<.+?>/)[0])`}
+  steps={[
+    {
+      lines: [2],
+      note: 'The < matches at index 0. Then .+ takes everything it can, all the way to the end of the string.',
+      variables: { consumed: "'a><b>'", remaining: "''" },
+    },
+    {
+      lines: [2],
+      note: 'Now the pattern still needs a >, and there is nothing left. So .+ gives one character back and tries again. That character is >, and the match succeeds.',
+      variables: { consumed: "'a><b'", matched: "'<a><b>'" },
+      output: ['<a><b>'],
+    },
+    {
+      lines: [3],
+      note: 'The ? after + makes it lazy: take as little as possible, then let the rest of the pattern ask for more. It takes one character, a.',
+      variables: { consumed: "'a'", remaining: "'><b>'" },
+    },
+    {
+      lines: [3],
+      note: 'The pattern needs a > and the next character is one, so it stops there. Same pattern, one character of difference, and the match ends at the first tag.',
+      variables: { matched: "'<a>'" },
+      output: ['<a><b>', '<a>'],
+    },
+  ]}
+/>
+
+The giving back is called backtracking, and it is where a regex spends its time.
+A pattern that has to backtrack across many possible splits gets slow in a way
+that is not obvious from reading it, which is the trap at the end of this lesson.
+
+Lazy is not always the fix. Often the better pattern is a negated character
+class, `/<[^>]+>/`, which cannot overshoot in the first place and does not
+backtrack at all.
+
+## Which method you want
+
+Six methods, and picking the wrong one accounts for most regex frustration:
+
+- **`test`** returns a boolean. Use it when you want a yes or no, and prefer it
+  without `g`.
+- **`match`** without `g` returns one match object with its groups. With `g` it
+  returns a flat array of matched strings and **no groups at all**. Either way it
+  returns `null` when nothing matched, which is the source of "cannot read
+  properties of null".
+- **`matchAll`** returns an iterator of full match objects, so you get every
+  match _and_ its groups and index. It requires `g` and throws without it. This
+  is usually the one you want.
+- **`replace`** replaces the first match, or every match with `g`.
+  **`replaceAll`** requires a global regex or a string. Both accept a function as
+  the replacement, which receives the match, then each group, then the index.
+- **`exec`** returns one match at a time, advancing `lastIndex`, so it is the low
+  level loop `matchAll` was added to replace.
+- **`split`** takes a regex, and captures in it are included in the output.
+
+```js
+'a1b22'.match(/\d+/) // ['1', index: 1, input: 'a1b22', groups: undefined]
+'a1b22'.match(/\d+/g) // ['1', '22']
+;[...'a1b22'.matchAll(/(\d+)/g)].map((m) => [m[1], m.index]) // [['1', 1], ['22', 3]]
+'a1b2'.replace(/\d/g, (digit) => digit * 2) // 'a2b4'
+```
+
+## Building a pattern from user input
+
+A string interpolated into a pattern is code, not data. Every regex metacharacter
+in it changes what the pattern means, and an unbalanced one is a `SyntaxError`
+thrown at your users:
+
+```js
+new RegExp(query) // query = 'a.c' now matches 'abc'
+new RegExp('a(') // SyntaxError: Invalid regular expression
+```
+
+Escape it. `RegExp.escape` does this and is recent, so the portable version is
+still worth knowing:
+
+```js
+const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+new RegExp(escape(query))
+```
+
+If the input can be arbitrarily long or deeply repetitive, escaping is not
+enough on its own: see the backtracking trap below.
+
+## When not to use one
+
+A regular expression matches regular languages, and most of what people reach for
+it with is not one:
+
+- **HTML and XML.** They nest arbitrarily, and nothing that cannot count can
+  match nesting. Use `DOMParser`.
+- **JSON, CSV with quoted fields, source code.** Same reason. Use a parser.
+- **Email addresses.** The real grammar is far larger than anyone's pattern.
+  Check for one `@` with something either side, then send a confirmation email,
+  which is the only check that establishes what you actually wanted to know.
+- **URLs.** `new URL(input)` parses and throws on invalid input, and it knows
+  about every part you were about to write a group for.
+- **Anything a string method already does.** `startsWith`, `endsWith`,
+  `includes` and `split` are clearer at a glance and faster.
+
+The reasonable use is what regexes are actually for: finding and extracting
+patterns in flat text, validating a format you defined, and tokenising.
+
+## The interview angle
+
+> **"Why does this `test` return true, then false, then true?"**
+> The regex is global, so it carries `lastIndex` between calls. The second call
+> starts from where the first stopped, fails, and resets. Say the fix in the same
+> breath: drop `g` for a boolean test, or do not share the object.
+
+> **"What is wrong with `/^(\w+\s?)*$/` as a validator?"**
+> Nested quantifiers over overlapping alternatives. On input that fails to match,
+> the engine has to try every way of splitting the string between the inner and
+> outer repetitions, and the number of ways roughly doubles with each extra
+> character. Twenty-six word characters followed by one that cannot match take
+> about three seconds; a few more and it is minutes. That is catastrophic
+> backtracking, and if the input comes from a request it is a denial of service
+> in one line. Rewrite so the alternatives cannot overlap, `/^\w+(\s\w+)*$/`,
+> which answers the same input in under a millisecond, or bound the length of
+> the input before matching.
+
+## Traps
+
+- **A shared global regex skips every other match.** The state is on the regex
+  object, not on the call.
+- **`match` returns `null`, not `[]`.** `str.match(re).length` throws whenever
+  nothing matched. `matchAll` returns an empty iterator instead, which is one
+  more reason to prefer it.
+- **`match` with `g` throws your groups away.** If you need captures for every
+  match, it is `matchAll`.
+- **`.` does not match a newline.** Add `s`, or use `[\s\S]`.
+- **`^` and `$` are the ends of the string, not of a line,** until you add `m`.
+- **`replaceAll` with a non-global regex throws.** Deliberately: it is a
+  contradiction rather than something to guess about.
+- **`\d` and `\w` are ASCII only.** `\w` is `[A-Za-z0-9_]`, so it does not match
+  an accented letter. Use `\p{L}` with the `u` flag for real text.
+
+## In one picture
+
+<ConceptMap
+  center={'Regular expressions'}
+  branches={[
+    {
+      label: 'Flags carry state',
+      summary: 'g and y give the regex object a mutable lastIndex that test and exec both move.',
+      nodes: ['a shared global regex alternates', 's makes . match a newline', 'u enables \\p{L}'],
+    },
+    {
+      label: 'Groups',
+      summary: 'Capturing, non-capturing and named, plus undefined for a group that did not run.',
+      nodes: [
+        'numbered by opening paren',
+        '(?: groups without capturing',
+        '$<name> works in a replacement',
+      ],
+    },
+    {
+      label: 'Greedy and lazy',
+      summary: 'Quantifiers take everything and give back one character at a time.',
+      nodes: [
+        '.+ overshoots then backtracks',
+        '.+? stops at the first chance',
+        '[^>]+ cannot overshoot at all',
+      ],
+    },
+    {
+      label: 'Which method',
+      summary: 'test for a boolean, matchAll for every match with its groups.',
+      nodes: [
+        'match returns null, not []',
+        'match with g drops groups',
+        'replace takes a function',
+      ],
+    },
+    {
+      label: 'When not to',
+      summary: 'Nesting cannot be matched, and user input is code until it is escaped.',
+      nodes: [
+        'HTML and JSON need parsers',
+        'new URL beats any pattern',
+        'nested quantifiers blow up',
+      ],
+    },
+  ]}
+/>

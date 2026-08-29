@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Optional chaining and nullish handling',
   summary:
     'Reading into something that might not be there, choosing a fallback without clobbering 0 and the empty string, and where ?. stops.',
-  order: 50,
+  order: 70,
   tags: ['syntax', 'null', 'defaults'],
   prerequisites: ['javascript/types-and-coercion'],
 }

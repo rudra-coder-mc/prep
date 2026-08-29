@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Static and private members',
   summary:
     'What belongs to the class rather than the instance, what #private really guarantees, the brand check, and where each one breaks.',
-  order: 170,
+  order: 200,
   tags: ['classes', 'encapsulation', 'static'],
   prerequisites: ['javascript/class-syntax', 'javascript/extends-and-super'],
 }
