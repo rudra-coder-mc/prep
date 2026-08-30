@@ -1,6 +1,10 @@
 import { isValidElement, type ReactNode } from 'react'
 import type { MDXComponents } from 'mdx/types'
-import { headingSlug } from '@prep/core'
+// The leaf module rather than the barrel, which pulls the content schema and
+// the whole of zod in behind it. Next drops that again, but the archive build
+// bundles this file for the phone, where it was half the download and where
+// `day.ts` reading process.env at module scope is a ReferenceError on load.
+import { headingSlug } from '@prep/core/headings'
 import {
   CallStack,
   CodeWalkthrough,

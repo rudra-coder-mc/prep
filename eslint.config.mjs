@@ -13,6 +13,8 @@ export default tseslint.config(
       '**/test-results/**',
       '**/coverage/**',
       '**/next-env.d.ts',
+      // The built content archive: compiled lesson pages and their bundles.
+      '.content-archive/**',
     ],
   },
   js.configs.recommended,
@@ -41,7 +43,7 @@ export default tseslint.config(
     // The packages are shared with the phone, so nothing in them may reach into
     // the web app. See
     // docs/decisions/0035-the-repository-is-a-workspace-and-the-logic-is-shared-once.md.
-    files: ['packages/**/*.ts'],
+    files: ['packages/**/*.ts', 'packages/**/*.tsx'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -55,5 +57,14 @@ export default tseslint.config(
         },
       ],
     },
+  },
+  {
+    // The one exception, and it is deliberate: the archive build bundles the web
+    // app's own lesson components so that a lesson renders identically on both
+    // surfaces rather than being maintained twice. The reach is confined to this
+    // directory and named in packages/content/src/archive/web-sources.ts. See
+    // docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md.
+    files: ['packages/content/src/archive/**'],
+    rules: { 'no-restricted-imports': 'off' },
   },
 )

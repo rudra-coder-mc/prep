@@ -125,6 +125,14 @@ export function listTechnologies(): string[] {
 }
 
 /**
+ * Where the curriculum is. The archive build hashes every file under it, which
+ * is the one thing that needs the directory itself rather than a path inside it.
+ */
+export function contentRoot(): string {
+  return CONTENT_ROOT
+}
+
+/**
  * Resolves scheduled question keys back to their content. Keys that no longer
  * exist are dropped rather than throwing, because deleting a topic leaves
  * schedule rows behind by design.

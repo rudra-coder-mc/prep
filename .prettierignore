@@ -6,3 +6,4 @@ playwright-report
 test-results
 .speech-cache
 .speech-cache-e2e
+.content-archive
