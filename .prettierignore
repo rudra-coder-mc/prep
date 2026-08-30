@@ -7,3 +7,4 @@ test-results
 .speech-cache
 .speech-cache-e2e
 .content-archive
+.content-archive-e2e

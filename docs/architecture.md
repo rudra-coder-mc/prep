@@ -504,6 +504,33 @@ phone grades locally. That is a real weakening of the guarantee the web keeps,
 and it is accepted rather than worked around. See
 `docs/decisions/0037-the-mobile-archive-carries-the-answers.md`.
 
+**Three endpoints serve a device, and all three only read.** The build writes
+the archive and the server hands it over; nothing is assembled per request, so
+the version a device is told about and the bytes it downloads come out of one
+build. The archive directory is a bind mount named by `CONTENT_ARCHIVE_DIR`, the
+way the recording cache is, so rebuilding the archive rebuilds nothing else.
+`npm run deploy` builds it before it copies. See
+`docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md`.
+
+`GET /api/device/archive/version` is what a device asks on launch: the version,
+the size of the download, and what is in it. The version is the one the archive
+on disk has rather than the one `content/` currently hashes to, because an edit
+nobody rebuilt is not something a device can be handed.
+
+`GET /api/device/archive` sends the whole thing as one zip, naming the version it
+sent in `X-Content-Version`. One URL serves every version, so that header is how
+a device tells that what arrived is what it decided to fetch. It is replaced
+whole rather than in parts, for the reason the build refuses to write half of
+one.
+
+`GET /api/device/audio/<key>` serves a recording and never makes one. That is the
+whole difference between it and `/api/speech/<key>`, which synthesises on a miss:
+a reader waiting on one section can wait, and a phone asking for a track's worth
+of keys cannot be allowed to. What is missing is reported, and
+`npm run narration:build` is what makes it. Either endpoint that finds nothing
+built answers 503, so a device can never read an empty answer as being up to
+date.
+
 ## Not in V1
 
 AI tutoring, multi-user support, social login, gamification beyond the streak,

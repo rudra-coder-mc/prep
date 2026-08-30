@@ -21,6 +21,16 @@ HOST="${PREP_HOST:-work@work}"
 DIR="${PREP_DIR:-prep}"
 URL="${PREP_URL:-https://work.tailba5bc0.ts.net}"
 
+# The archive is what a device downloads, and the server only ever reads it, so
+# it is built here and carried across with everything else. Without this the
+# server would serve whatever archive was last built on this machine, which is
+# an edit somebody made and a phone that never sees it. It takes about a second.
+# See docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md.
+# The directory is named rather than left to the default, so a CONTENT_ARCHIVE_DIR
+# sitting in the shell cannot build somewhere the rsync below does not look.
+echo "building the content archive"
+npm run content:archive -- "$PWD/.content-archive"
+
 echo "copying to $HOST:$DIR"
 rsync -a --delete \
   --exclude .env \

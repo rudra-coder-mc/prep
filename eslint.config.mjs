@@ -15,6 +15,7 @@ export default tseslint.config(
       '**/next-env.d.ts',
       // The built content archive: compiled lesson pages and their bundles.
       '.content-archive/**',
+      '.content-archive-e2e/**',
     ],
   },
   js.configs.recommended,

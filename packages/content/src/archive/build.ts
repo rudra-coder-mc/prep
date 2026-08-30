@@ -3,7 +3,15 @@ import { mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { archiveContent, type ArchiveContent } from './data'
 import { buildLessons } from './lessons'
-import { WORKSPACE_ROOT } from './web-sources'
+import {
+  ARCHIVE_FILE,
+  archiveDirectory,
+  CONTENT_FILE,
+  LESSONS_DIR,
+  MANIFEST_FILE,
+} from './location'
+import type { ArchiveManifest } from './manifest'
+import { writeArchiveZip } from './zip'
 
 /**
  * Writing the archive: the content as one JSON file, one pre-rendered page per
@@ -14,21 +22,6 @@ import { WORKSPACE_ROOT } from './web-sources'
  * nothing downstream could tell. See docs/glossary.md.
  */
 
-/** Where the build writes, unless told otherwise. Git ignores it. */
-export function defaultArchiveDirectory(): string {
-  return path.join(WORKSPACE_ROOT, '.content-archive')
-}
-
-export type ArchiveManifest = {
-  version: string
-  /** What is in it, for a build log and for a device to sanity check a download. */
-  topics: number
-  questions: number
-  exercises: number
-  narrationSections: number
-  files: string[]
-}
-
 export type BuiltArchive = {
   directory: string
   manifest: ArchiveManifest
@@ -36,12 +29,8 @@ export type BuiltArchive = {
   lessonBytes: number
 }
 
-const CONTENT_FILE = 'content.json'
-const MANIFEST_FILE = 'manifest.json'
-const LESSONS_DIR = 'lessons'
-
 /** Everything a build ever puts at the top level of its output directory. */
-const OURS = new Set([CONTENT_FILE, MANIFEST_FILE, LESSONS_DIR])
+const OURS = new Set([CONTENT_FILE, MANIFEST_FILE, LESSONS_DIR, ARCHIVE_FILE])
 
 function counts(content: ArchiveContent) {
   return {
@@ -86,7 +75,7 @@ async function emptyOutput(directory: string): Promise<void> {
  * leave the pages of deleted topics behind, and those would then be listed by a
  * manifest that no longer mentions them.
  */
-export async function buildArchive(directory = defaultArchiveDirectory()): Promise<BuiltArchive> {
+export async function buildArchive(directory = archiveDirectory()): Promise<BuiltArchive> {
   const content = await archiveContent()
 
   await emptyOutput(directory)
@@ -95,10 +84,19 @@ export async function buildArchive(directory = defaultArchiveDirectory()): Promi
 
   await writeFile(path.join(directory, CONTENT_FILE), JSON.stringify(content))
 
+  const files = [CONTENT_FILE, ...lessons.files].sort()
+
+  // Packed before the manifest is written, so a manifest on disk is always a
+  // promise the archive beside it can keep. A build interrupted here leaves no
+  // manifest, and the server reads that as nothing to serve rather than as a
+  // version it cannot deliver.
+  const bytes = await writeArchiveZip(directory, files)
+
   const manifest: ArchiveManifest = {
     version: content.version,
     ...counts(content),
-    files: [CONTENT_FILE, ...lessons.files].sort(),
+    files,
+    archive: { file: ARCHIVE_FILE, bytes },
   }
   await writeFile(path.join(directory, MANIFEST_FILE), JSON.stringify(manifest, null, 2) + '\n')
 

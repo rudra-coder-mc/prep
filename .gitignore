@@ -14,3 +14,4 @@ apps/web/e2e/.auth
 
 # The built content archive. Reproducible from git, so it is not kept in it.
 .content-archive
+.content-archive-e2e
