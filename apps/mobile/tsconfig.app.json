@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // No `dom` and no `node`. The app runs in Hermes, so a reference to either
+    // is a bundle that fails on the phone, and this is where it should fail
+    // instead. ./tsconfig.json is the wider one, covering the tests and their
+    // Node-backed stores, and is what an editor and eslint read.
+    "lib": ["ES2022"],
+    "types": []
+  },
+  "exclude": ["node_modules", "src/**/*.test.ts", "test-support/**"]
+}

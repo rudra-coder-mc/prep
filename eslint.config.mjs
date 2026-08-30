@@ -41,6 +41,15 @@ export default tseslint.config(
     },
   },
   {
+    // Metro reads its config as CommonJS, so this one file is not a module the
+    // way everything else here is.
+    files: ['apps/mobile/*.js'],
+    languageOptions: {
+      globals: { __dirname: 'readonly', module: 'writable', require: 'readonly' },
+    },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
+  {
     // The packages are shared with the phone, so nothing in them may reach into
     // the web app. See
     // docs/decisions/0035-the-repository-is-a-workspace-and-the-logic-is-shared-once.md.

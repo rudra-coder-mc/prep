@@ -12,6 +12,9 @@ apps/web/e2e/.auth
 .speech-cache
 .speech-cache-e2e
 
+# Expo's own working directory, written by `expo start`.
+.expo
+
 # The built content archive. Reproducible from git, so it is not kept in it.
 .content-archive
 .content-archive-e2e

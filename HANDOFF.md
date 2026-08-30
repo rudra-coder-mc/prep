@@ -14,8 +14,8 @@ Both are deliberate; see the hard rule in `CLAUDE.md`, which covers every hosted
 service rather than only the company GitLab. That rule now has exactly one named
 exception, and it is new: see the trap on it below.
 
-**`main` was green when task 28 merged.** The full `npm run verify` ran through
-lint, format check, typecheck, 502 unit tests, 88 integration tests against real
+**`main` was green when task 29 merged.** The full `npm run verify` ran through
+lint, format check, typecheck, 573 unit tests, 92 integration tests against real
 Postgres and a real speech engine, the production build and 74 Playwright specs.
 The `tts` image was rebuilt and its compose healthcheck confirmed, since
 `verify` does not cover the image and task 22 replaced the server inside it.
@@ -63,13 +63,13 @@ gained a mobile client section and the `device_sync` table.
 
 The plan is cut into tasks. Phase 6 in `TASKS.md` was fifteen tasks and two
 low-priority ones, each a slice that can be shown working on its own. Tasks 21
-through 28 are done, which is the whole of the server and the web side of the
-phase, so seven are left and nothing on the phone itself has been started. Task
-29 is the first of them and blocked by nothing.
+through 29 are done, which is the whole of the server, the whole of the web side
+of the phase, and the app's shell. Six are left. Tasks 30 and 31 are both
+unblocked; 30 is the one the rest hangs off.
 
 **The repository is a workspace.** `packages/core` holds the logic both clients
-share, `packages/content` holds the curriculum with its loader and validator, and
-`apps/web` is the Next application. The packages are consumed as TypeScript
+share, `packages/content` holds the curriculum with its loader and validator,
+`apps/web` is the Next application and `apps/mobile` is the Expo app. The packages are consumed as TypeScript
 source rather than a build: npm links them, Next transpiles them, and there is no
 compile step to remember. Two things in the move are worth knowing before you
 touch them, and both are in the traps below: how the loader finds the curriculum,
@@ -228,11 +228,20 @@ in that state.
 
 ## The next action
 
-**Take task 28 or task 29.** The server is finished. 28 is small: the web showing
-when each device last synced, which is the only thing `device_sync` is for. 29 is
-the first task in the app itself, an Expo app that logs in, pulls the archive and
-then works with everything switched off. Neither blocks the other, and 29 is the
-one that opens up the rest of the phase.
+**Take task 30, but open the app on a phone first.** The server, the web and the
+app's shell are all finished. Task 29 built `apps/mobile` and every piece of its
+logic is under test against real SQLite, real files and the real endpoints, but
+nobody has yet watched it render on a device: that needs Expo Go, and this
+machine has no way to run it. `npm run mobile`, scan the code, sign in against
+whichever machine is serving the stack, and download the curriculum once. Do that
+before building the queue on top of it.
+
+Two things in task 29 will shape what comes next. The app is typechecked twice,
+and `apps/mobile/tsconfig.app.json` is the pass that refuses `node` and `dom`
+libraries, so a Node import in `src/` fails in the terminal rather than in Metro.
+And every platform module sits behind an interface whose Node-backed twin is in
+`apps/mobile/test-support/`, which is what made the logic testable at all. Write
+new code the same way, or it stops being testable off a phone.
 
 Task 23 closed the oldest unknown in this file rather than finding work: nothing
 was missing. See the note on the backlog above before planning around any audio

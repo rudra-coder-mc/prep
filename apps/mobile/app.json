@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "prep",
+    "slug": "prep",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "prep",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#0b0e15",
+    "android": {
+      "package": "test.prep.app",
+      "edgeToEdgeEnabled": true
+    },
+    "plugins": ["expo-router"]
+  }
+}

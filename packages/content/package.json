@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./archive": "./src/archive/index.ts",
+    "./archive/types": "./src/archive/types.ts",
     "./archive/location": "./src/archive/location.ts",
     "./archive/manifest": "./src/archive/manifest.ts",
     "./content/*": "./content/*"

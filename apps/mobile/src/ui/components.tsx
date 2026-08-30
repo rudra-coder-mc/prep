@@ -1,0 +1,113 @@
+import type { ReactNode } from 'react'
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { colors, radius, space } from './theme'
+
+/** The few pieces every screen is made of. Anything used once stays in its screen. */
+
+export function Heading({ children }: { children: ReactNode }) {
+  return <Text style={styles.heading}>{children}</Text>
+}
+
+export function Muted({ children }: { children: ReactNode }) {
+  return <Text style={styles.muted}>{children}</Text>
+}
+
+export function Card({ children }: { children: ReactNode }) {
+  return <View style={styles.card}>{children}</View>
+}
+
+export function Button({
+  label,
+  onPress,
+  busy = false,
+  disabled = false,
+  tone = 'accent',
+}: {
+  label: string
+  onPress: () => void
+  busy?: boolean
+  disabled?: boolean
+  tone?: 'accent' | 'quiet'
+}) {
+  const off = disabled || busy
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: off, busy }}
+      onPress={onPress}
+      disabled={off}
+      style={({ pressed }) => [
+        styles.button,
+        tone === 'accent' ? styles.buttonAccent : styles.buttonQuiet,
+        off && styles.buttonOff,
+        pressed && styles.buttonPressed,
+      ]}
+    >
+      {busy ? (
+        <ActivityIndicator color={tone === 'accent' ? colors.accentFg : colors.fg} />
+      ) : (
+        <Text style={tone === 'accent' ? styles.buttonAccentText : styles.buttonQuietText}>
+          {label}
+        </Text>
+      )}
+    </Pressable>
+  )
+}
+
+/**
+ * Something that went wrong, said once. Failing to reach the server is the
+ * ordinary case rather than an error, so nothing here shouts.
+ */
+export function Problem({ children }: { children: ReactNode }) {
+  return (
+    <View style={styles.problem}>
+      <Text style={styles.problemText}>{children}</Text>
+    </View>
+  )
+}
+
+export function Waiting({ label }: { label: string }) {
+  return (
+    <View style={styles.waiting}>
+      <ActivityIndicator color={colors.accent} />
+      <Muted>{label}</Muted>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  heading: { color: colors.fg, fontSize: 22, fontWeight: '600' },
+  muted: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  card: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    padding: space.lg,
+    gap: space.sm,
+  },
+  button: {
+    borderRadius: radius.control,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  buttonAccent: { backgroundColor: colors.accent },
+  buttonQuiet: { backgroundColor: colors.raised, borderColor: colors.border, borderWidth: 1 },
+  buttonOff: { opacity: 0.5 },
+  buttonPressed: { opacity: 0.8 },
+  buttonAccentText: { color: colors.accentFg, fontSize: 16, fontWeight: '600' },
+  buttonQuietText: { color: colors.fg, fontSize: 16, fontWeight: '500' },
+  problem: {
+    backgroundColor: colors.raised,
+    borderLeftColor: colors.weak,
+    borderLeftWidth: 3,
+    borderRadius: radius.control,
+    padding: space.md,
+  },
+  problemText: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  waiting: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
+})
