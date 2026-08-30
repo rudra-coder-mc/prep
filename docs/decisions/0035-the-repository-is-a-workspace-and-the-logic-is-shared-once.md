@@ -54,3 +54,10 @@ use throughout.
 
 The pre-commit hooks and `npm run verify` become workspace aware. Adding a third
 surface later costs a package rather than a rewrite.
+
+Every path written down before this decision is one level out. A doc or an
+earlier ADR naming `src/lib/x.ts` means `apps/web/src/lib/x.ts` unless the file
+is one this moved, and `content/` means `packages/content/content/`. Those
+records were left as they were written rather than edited to match, since they
+describe what was decided at the time. `README.md` and `docs/architecture.md`
+are kept current and are the place to look for where something lives now.

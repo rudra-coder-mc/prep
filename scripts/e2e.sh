@@ -4,7 +4,9 @@
 set -e
 
 DB_NAME=${E2E_DB_NAME:-prep_e2e}
-SPEECH_CACHE_DIR=${E2E_SPEECH_CACHE_DIR:-.speech-cache-e2e}
+# Absolute, so the script and the app agree on one directory. The app runs from
+# apps/web, so a relative path would have them emptying and filling two.
+SPEECH_CACHE_DIR=${E2E_SPEECH_CACHE_DIR:-"$PWD/.speech-cache-e2e"}
 
 # The speech engine is off by default and the speech specs need it, so it is
 # started here and stopped again when the run ends, the same way
@@ -50,4 +52,4 @@ npm run db:migrate
 npm run db:seed
 
 # Not exec, because the trap above has to survive the run finishing.
-npx playwright test "$@"
+npx playwright test --config apps/web/playwright.config.ts "$@"

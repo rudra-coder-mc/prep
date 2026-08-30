@@ -1,8 +1,8 @@
-import { getTopic, type Topic } from '@/content/loader'
-import { cacheDirectory } from '@/lib/speech/cache'
-import { narrate } from '@/lib/speech/narrate'
-import { SpeechServiceError } from '@/lib/speech/piper'
-import { answerScript, questionScript } from '@/lib/speech/spoken-question'
+import { getTopic, type Topic } from '@prep/content'
+import { cacheDirectory } from '../apps/web/src/lib/speech/cache'
+import { narrate } from '../apps/web/src/lib/speech/narrate'
+import { SpeechServiceError } from '../apps/web/src/lib/speech/piper'
+import { answerScript, questionScript } from '../apps/web/src/lib/speech/spoken-question'
 
 /**
  * Records everything in one topic that can be listened to: every narration

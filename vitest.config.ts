@@ -15,7 +15,11 @@ const serverOnlyStub = path.join(path.dirname(require.resolve('server-only')), '
 
 export default defineConfig({
   plugins: [react()],
-  resolve: { tsconfigPaths: true },
+  resolve: {
+    // The web app's own alias, spelled out here because the root tsconfig no
+    // longer owns it: each workspace member has its own paths now.
+    alias: { '@': path.join(import.meta.dirname, 'apps/web/src') },
+  },
   test: {
     projects: [
       {
@@ -23,18 +27,23 @@ export default defineConfig({
         test: {
           name: 'unit',
           environment: 'jsdom',
-          setupFiles: ['./vitest.setup.ts'],
-          include: ['src/**/*.test.{ts,tsx}'],
-          exclude: ['src/**/*.integration.test.ts'],
+          setupFiles: ['./apps/web/vitest.setup.ts'],
+          include: ['apps/web/src/**/*.test.{ts,tsx}', 'packages/*/src/**/*.test.ts'],
+          exclude: ['apps/web/src/**/*.integration.test.ts'],
         },
       },
       {
         extends: true,
-        resolve: { alias: { 'server-only': serverOnlyStub } },
+        resolve: {
+          alias: {
+            '@': path.join(import.meta.dirname, 'apps/web/src'),
+            'server-only': serverOnlyStub,
+          },
+        },
         test: {
           name: 'integration',
           environment: 'node',
-          include: ['src/**/*.integration.test.ts'],
+          include: ['apps/web/src/**/*.integration.test.ts'],
           hookTimeout: 60_000,
           testTimeout: 60_000,
         },

@@ -13,6 +13,8 @@ services:
       NODE_ENV: development
       WATCHPACK_POLLING: 'true'
     volumes:
-      - ./src:/app/src
-      - ./content:/app/content
-      - ./public:/app/public
+      - ./apps/web/src:/app/apps/web/src
+      - ./apps/web/public:/app/apps/web/public
+      - ./packages/core/src:/app/packages/core/src
+      - ./packages/content/src:/app/packages/content/src
+      - ./packages/content/content:/app/packages/content/content

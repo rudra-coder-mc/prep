@@ -56,39 +56,17 @@ blocking edges below only make sense that way.
 Tasks below name them by number.
 
 Each task is a vertical slice that can be shown working on its own when it
-lands. Tasks 21 to 28 are the workspace and the server, and the web app has to
-behave identically through every one of them, because it is in daily use for the
-whole phase. Tasks 29 to 35 are the app.
+lands. Tasks 22 to 28 are the server, and the web app has to behave identically
+through every one of them, because it is in daily use for the whole phase. Tasks
+29 to 35 are the app.
 
-## 21. Move the repository to a workspace
-
-Blocked by nothing, and it blocks everything.
-
-npm workspaces with four members. `packages/core` holds the pure logic and the
-content types: the interval ladder, tiers, readiness, topic status, the daily
-queue, the day, and choice and ordering grading, plus the content schema,
-heading slugs and technology names, with the tests they already have.
-`packages/content` holds `content/`, the loader and the validator. `apps/web`
-keeps everything that touches Postgres, better-auth or the DOM. `apps/mobile`
-arrives in task 29.
-
-The point is that the phone and the laptop can never disagree about when a
-question is due. If they do, the product is broken in a way that is hard to see
-and impossible to trust.
-
-Every file bound for `packages/core` is already free of `server-only`, the
-database and the DOM, so nothing is owed as a prefactor first. About fifty
-import sites change. The pre-commit hook and `npm run verify` become workspace
-aware and keep running everything they run today.
-
-Read `0035`.
-
-Done when `verify` passes, the web app behaves identically, and nothing in
-`packages/core` imports from `apps/web`.
+The workspace that was task 21 is in place: `packages/core` holds the logic both
+clients share, `packages/content` holds the curriculum, and the Next app is
+`apps/web`.
 
 ## 22. Recordings are stored as Opus
 
-Blocked by 21.
+Blocked by nothing.
 
 Piper writes 22 kHz mono WAV. The cache is 1776 files and 3.6 GB, about 78 MB
 for one topic, and a phone cannot hold a track at that size. Opus at 32 kbps
@@ -132,7 +110,7 @@ a recording, and the command says so rather than leaving it to be inferred.
 
 ## 24. Build the content archive
 
-Blocked by 21.
+Blocked by nothing.
 
 One artefact holding every topic's meta, questions, exercises, narration scripts
 and audio keys, plus one pre-rendered lesson page each and the shared runtime
@@ -157,7 +135,7 @@ holds.
 
 ## 25. A personal account, and a token the phone can use
 
-Blocked by 21.
+Blocked by nothing.
 
 The web signs in with better-auth in a browser. The phone needs a credential it
 can hold and refresh without one, kept in secure storage. A session that has not
@@ -316,9 +294,9 @@ Blocked by nothing and blocking nothing. Take them when they are worth taking.
 
 ## 36. `buildDailyQueue` takes a timezone
 
-`src/lib/day.ts` defines a day as a calendar day in `APP_TIMEZONE`,
+`packages/core/src/day.ts` defines a day as a calendar day in `APP_TIMEZONE`,
 deliberately, so that travelling cannot shift when a streak rolls over.
-`src/lib/daily-queue.ts` computes the start and end of the day with `setHours`
+`packages/core/src/daily-queue.ts` computes the start and end of the day with `setHours`
 on whatever timezone the process is in. On one machine those are the same answer
 and the disagreement is invisible. Across a laptop and a phone they are not.
 

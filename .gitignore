@@ -8,6 +8,6 @@ test-results
 .env
 .env.local
 .DS_Store
-e2e/.auth
+apps/web/e2e/.auth
 .speech-cache
 .speech-cache-e2e

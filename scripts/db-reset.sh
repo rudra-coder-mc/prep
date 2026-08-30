@@ -17,6 +17,6 @@ echo ' ready'
 DATABASE_URL="postgres://${POSTGRES_USER:-prep}:${POSTGRES_PASSWORD:-prep}@localhost:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-prep}"
 export DATABASE_URL
 
-tsx src/db/reset.ts
-tsx src/db/migrate.ts
-tsx src/db/seed.ts
+tsx apps/web/src/db/reset.ts
+tsx apps/web/src/db/migrate.ts
+tsx apps/web/src/db/seed.ts

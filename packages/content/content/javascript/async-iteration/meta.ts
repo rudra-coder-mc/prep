@@ -1,0 +1,15 @@
+import type { TopicMeta } from '@prep/core'
+
+export const meta: TopicMeta = {
+  slug: 'async-iteration',
+  title: 'Async iteration and async generators',
+  summary:
+    'for await...of, Symbol.asyncIterator, async generators as producers, the pull model behind them, cleanup on early exit, and what stays sequential.',
+  order: 390,
+  tags: ['async', 'generators', 'iteration'],
+  prerequisites: [
+    'javascript/generators',
+    'javascript/promises',
+    'javascript/iterables-and-iterators',
+  ],
+}
