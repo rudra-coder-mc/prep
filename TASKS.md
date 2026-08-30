@@ -14,19 +14,326 @@ enrols only what that tier covers, and the dashboard measures readiness against
 the whole tier. The content phases are done: the bank covers SWE-1 and SWE-2
 across the whole language track.
 
-Read `docs/decisions/0028-tiers-are-interview-levels.md` first, then `0031` and
-`0032` for how the pick and the promise behave. The terms are in
-`docs/glossary.md`, the content conventions are in
-`docs/tasks/converting-a-topic.md`, and
+What is left is the second surface. The same loop on a phone, working with the
+server switched off, because the machine that serves the platform usually is.
+
+Phase 6 lists the decisions it rests on at its head, and
+`docs/decisions/0033-the-mobile-client-is-offline-first.md` is the one to read
+first. For the content behind the loop, read
+`docs/decisions/0028-tiers-are-interview-levels.md`, then `0031` and `0032` for
+how the pick and the promise behave. The terms are in `docs/glossary.md`, the
+content conventions are in `docs/tasks/converting-a-topic.md`, and
 `docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md` is what a new
 narration script needs to know.
+
+**Phases run in order.** Inside a phase, take the tasks top to bottom unless a
+task names what blocks it. One task is one branch and one merge, as always.
 
 Task numbers are the blocking graph's names, so a finished task leaves a gap
 rather than renumbering the ones after it, and a finished phase goes the same
 way. The numbering starts partway through because the tasks before it are done.
 
-The focus is SWE-1 and SWE-2. Senior and Staff exist, they stay thin, and they
-show their real counts rather than pretending.
+---
+
+# Phase 6: the same loop on a phone
+
+The machine serving the platform is off most of the time the phone is in a hand,
+so the app holds everything and needs nothing at rest. It replaces a content
+archive when it can reach the server and exchanges progress both ways when it
+can, and neither of those blocks anything the app does.
+
+Six decisions in `docs/decisions/` stand behind this phase, and they are worth
+reading together before the first task rather than one at a time, because the
+blocking edges below only make sense that way.
+
+- `0033-the-mobile-client-is-offline-first.md`, which every task here serves
+- `0034-lessons-are-pre-rendered-and-shown-in-a-webview.md`
+- `0035-the-repository-is-a-workspace-and-the-logic-is-shared-once.md`
+- `0036-recordings-are-stored-compressed.md`
+- `0037-the-mobile-archive-carries-the-answers.md`
+- `0038-expo-is-the-one-hosted-service.md`
+
+Tasks below name them by number.
+
+Each task is a vertical slice that can be shown working on its own when it
+lands. Tasks 21 to 28 are the workspace and the server, and the web app has to
+behave identically through every one of them, because it is in daily use for the
+whole phase. Tasks 29 to 35 are the app.
+
+## 21. Move the repository to a workspace
+
+Blocked by nothing, and it blocks everything.
+
+npm workspaces with four members. `packages/core` holds the pure logic and the
+content types: the interval ladder, tiers, readiness, topic status, the daily
+queue, the day, and choice and ordering grading, plus the content schema,
+heading slugs and technology names, with the tests they already have.
+`packages/content` holds `content/`, the loader and the validator. `apps/web`
+keeps everything that touches Postgres, better-auth or the DOM. `apps/mobile`
+arrives in task 29.
+
+The point is that the phone and the laptop can never disagree about when a
+question is due. If they do, the product is broken in a way that is hard to see
+and impossible to trust.
+
+Every file bound for `packages/core` is already free of `server-only`, the
+database and the DOM, so nothing is owed as a prefactor first. About fifty
+import sites change. The pre-commit hook and `npm run verify` become workspace
+aware and keep running everything they run today.
+
+Read `0035`.
+
+Done when `verify` passes, the web app behaves identically, and nothing in
+`packages/core` imports from `apps/web`.
+
+## 22. Recordings are stored as Opus
+
+Blocked by 21.
+
+Piper writes 22 kHz mono WAV. The cache is 1776 files and 3.6 GB, about 78 MB
+for one topic, and a phone cannot hold a track at that size. Opus at 32 kbps
+mono takes a topic to about 7 MB and the library to about 330 MB.
+
+**Prune before transcoding.** Those 1776 recordings answer 1417 scripts the
+content actually has, because editing a script orphans the recording it used to
+key. `npm run speech:prune` removes them. Transcoding first spends the work on
+several hundred files nothing points at.
+
+Transcode in place rather than re-synthesising: the cache key is a hash of the
+script and not of the bytes, so every key survives the format change and the 23
+hours of speech already made are kept. Compression runs in the `tts` container,
+where audio is made, so the app container gains no new dependency.
+
+Read `0036`.
+
+Done when the cache is Opus with no WAV left, and the player still plays every
+form of recording in the browser.
+
+## 23. Build a whole track's recordings ahead of time
+
+Blocked by 22.
+
+`narration:build` takes a whole track and builds every narration section and
+every question script in it.
+
+Some audio has never been built and nobody knows how much. A build over the four
+async topics was stopped partway and its log was lost, task 18's browser
+questions were never recorded, and task 19 added three whole topics after that.
+Every listen button with no recording behind it answers 502, and a phone that
+cannot reach the server has no way to recover from one.
+
+The build is incremental and keyed by the hash of the spoken text, so anything
+already recorded is skipped and nothing is redone. It has to report what it
+built and what it skipped, because not being able to tell is the reason this
+task exists.
+
+Done when every narration section and question script in the language track has
+a recording, and the command says so rather than leaving it to be inferred.
+
+## 24. Build the content archive
+
+Blocked by 21.
+
+One artefact holding every topic's meta, questions, exercises, narration scripts
+and audio keys, plus one pre-rendered lesson page each and the shared runtime
+chunk those pages animate with. The build lives in `packages/content`: it
+compiles `lesson.mdx` with `@mdx-js/mdx` and bundles it with the visual
+components through esbuild, so building what the phone reads needs neither the
+web app nor a database running.
+
+The archive is versioned by a hash of the files it was built from and replaced
+whole rather than in parts. Audio is not in it.
+
+It carries every question in full, correct options included, which weakens the
+guarantee `0011` and `0023` hold on the web. A device that cannot ask anything
+what the correct option is has no other way to grade. Spend no effort making the
+archive hard to read.
+
+Read `0034` and `0037`.
+
+Done when a built archive's lesson pages open in a browser with their visuals
+animating, and the archive and `content:check` agree about what the content
+holds.
+
+## 25. A personal account, and a token the phone can use
+
+Blocked by 21.
+
+The web signs in with better-auth in a browser. The phone needs a credential it
+can hold and refresh without one, kept in secure storage. A session that has not
+reached the server for thirty days expires and costs one login, which is
+acceptable because reading and answering never stop.
+
+Done when a device can authenticate, refresh, and be refused cleanly once its
+token has expired, with the browser login unchanged.
+
+## 26. The server serves what a device needs
+
+Blocked by 24 and 25.
+
+Three endpoints: the current content version, the archive itself, and audio by
+key.
+
+**The audio endpoint never synthesises.** It serves what exists and reports what
+is missing, because a phone asking for a thousand missing recordings would
+occupy the server for a day. Making them ahead of time is what task 23 is for.
+One recording is one file, so an interrupted download needs no resume logic:
+what arrived stays, and the next attempt fetches the rest.
+
+Done when a device holding nothing can read the version, pull the archive, and
+get a clear answer for both a recording that exists and one that does not.
+
+## 27. Sync, both directions
+
+Blocked by 25.
+
+Attempts by id, learned marks and tier picks by timestamp with last write
+winning. Ingesting attempts replays each affected question's history through the
+interval ladder to rebuild its schedule row, which is why the progress half of
+this needs no new tables: attempts are only ever inserted, and everything else
+worth knowing is derived from them. Two devices merging have nothing to resolve.
+
+The one new table is `device_sync`, a row per device holding its name and when
+it last synced.
+
+Done when an integration test against real Postgres runs the exchange both ways,
+and a question answered on one side comes out due at the same moment on the
+other.
+
+## 28. The web says when a device last synced
+
+Blocked by 27.
+
+The server can never start a sync, because it has no route to a sleeping phone.
+So the web shows when each device last synced, and says so when one has not been
+heard from in a while. That reminder is the only thing `device_sync` is for.
+
+Done when the web shows the reminder for a device that has not synced recently,
+and nothing for one that has.
+
+## 29. The app logs in, refreshes and works with the server off
+
+Blocked by 26. This is where offline first becomes real.
+
+An Expo app that logs in on first run, pulls the archive, mirrors the server's
+tables in SQLite, and then opens and works with the stack stopped. It runs the
+same `packages/core` functions over the same shapes, so both sides reach the
+same answer about what is due. Database access is the only thing written twice,
+once against Postgres and once against SQLite.
+
+The address is a tailnet hostname, which is fixed across networks and carries a
+real certificate. Whichever machine is serving the stack is the one the app
+points at.
+
+Development is Expo Go, not a development build.
+
+Read `0038`.
+
+Done when the app is opened with everything switched off and every screen it has
+by then works.
+
+## 30. The daily queue on the phone
+
+Blocked by 29.
+
+The queue and the three question forms, graded locally with the same choice and
+ordering functions the server runs. An attempt is written to SQLite and waits
+for a sync. The answer in full appears when the question has been answered and
+not before, which is the part of the web's guarantee that survives offline.
+
+Done when a review session runs end to end with nothing switched on, and the
+schedule the phone computes for a question matches what the server would.
+
+## 31. Downloading a track's audio
+
+Blocked by 23, 26 and 29.
+
+A track at a time, one file per key. The app says how much it is about to
+download and how much it already holds, because the library is hundreds of
+megabytes and the phone's storage is the constraint that made task 22 worth
+doing.
+
+Done when a track's audio is on the phone and plays with nothing switched on,
+and an interrupted download continues rather than starting again.
+
+## 32. The lesson on the phone
+
+Blocked by 31.
+
+The pre-rendered page in a WebView, with the player and everything else native
+around it. The bridge carries four messages and no state: React Native sends in
+the heading the narration is on and the colour theme, the page sends back taps
+on internal links so navigation stays native.
+
+Read `0034`, and `docs/decisions/0018-the-lesson-follows-the-voice.md` for how
+a section of speech finds its section of lesson.
+
+Done when a lesson reads and animates on the phone the way it does on the
+laptop, the lesson follows the voice, and a link inside it navigates natively.
+
+## 33. The phone syncs
+
+Blocked by 27 and 30.
+
+A sync on launch, on returning to the foreground, and at the end of a review
+session. Failure is silent, and the app keeps working entirely from what it
+already holds.
+
+Done when a session answered on the phone and a session answered on the laptop
+merge in both directions with no attempt lost, and the app with the stack off
+neither blocks nor complains.
+
+## 34. The dashboard, the tier pick and the exercises
+
+Blocked by 30.
+
+The rest of the loop, natively: readiness over the whole tier, the streak, the
+weak-topic list, picking a tier per track, and exercises with their status and
+notes.
+
+Done when the phone's dashboard and the web's agree once a sync has run.
+
+## 35. An installable APK
+
+Blocked by 33.
+
+EAS Build on the personal Expo account, downloaded and sideloaded onto the
+phone. `.easignore` excludes `content/` and the built archive, so what leaves
+the machine is application source and nothing else. Check what the upload
+actually contained rather than trusting the ignore file to be right.
+
+Read `0038`, and the Expo exception in `CLAUDE.md` before it.
+
+Done when the APK is on the phone, logs in against the tailnet hostname, pulls
+the archive and a track's audio, and runs a review session with the
+laptop shut.
+
+---
+
+# Low priority
+
+Blocked by nothing and blocking nothing. Take them when they are worth taking.
+
+## 36. `buildDailyQueue` takes a timezone
+
+`src/lib/day.ts` defines a day as a calendar day in `APP_TIMEZONE`,
+deliberately, so that travelling cannot shift when a streak rolls over.
+`src/lib/daily-queue.ts` computes the start and end of the day with `setHours`
+on whatever timezone the process is in. On one machine those are the same answer
+and the disagreement is invisible. Across a laptop and a phone they are not.
+
+It stays low priority because it cannot affect anybody in a single timezone.
+
+Done when the queue and the streak name the same day whatever the device is set
+to, with a test that fails if they part again.
+
+## 37. The daily reminder on the phone
+
+One local notification a day, at a time that can be changed.
+
+Expo Go is unreliable about local notifications on Android, so this is verified
+on a real build rather than in the development loop, which means it is only
+properly testable after task 35.
 
 ---
 
@@ -34,14 +341,6 @@ show their real counts rather than pretending.
 
 Real work, deliberately unordered. Do not pick these up as "the next task"
 without discussing it first. Each needs breaking down before it is actionable.
-
-## The mobile version
-
-The same content in an app, because most of the day is spent on a phone and a
-lesson and a question are both things you can do there. It waits until the web
-side is finished and the JavaScript content is final. Nothing in the platform may
-assume a browser before then: the tier lives in the database rather than in
-`localStorage`, and topic audio can already be downloaded a topic at a time.
 
 ## Dates and time, and `Proxy` with `Reflect`
 

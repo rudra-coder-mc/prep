@@ -23,6 +23,21 @@ Tasks stay local too:
 - `TASKS.md` in this repo is the only task list. See below for what that
   changes.
 
+### The one named exception: Expo
+
+Atul has named his personal Expo account, for building the Android APK and for
+nothing else. EAS Build uploads the app source it is given, so what it is given
+matters:
+
+- `.easignore` excludes `content/` and the built content archive. The curriculum
+  never reaches Expo.
+- Recordings are not in the repository, so they never reach it either.
+- Progress is in Postgres and never leaves the machine at all.
+
+Do not extend this to another Expo service, and do not read it as precedent for
+naming a second provider. See
+`docs/decisions/0038-expo-is-the-one-hosted-service.md`.
+
 This overrides the global rules, which assume company work. If a hosted service
 is ever wanted, it has to be a personal account that Atul names explicitly.
 Never infer one.

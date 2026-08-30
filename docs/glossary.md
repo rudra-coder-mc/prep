@@ -195,3 +195,32 @@ topics somebody chose to open.
 
 Not to be confused with: a topic's status, which describes one topic, or the
 streak, which describes attendance rather than knowledge.
+
+## Content archive
+
+Everything a device needs to work with nothing to connect to: every topic's
+meta, questions, exercises and narration scripts, one pre-rendered lesson page
+each, and the code those pages animate with. Built from `content/`, versioned by
+a hash of the files it was built from, and replaced whole rather than in parts.
+
+Not to be confused with: the audio, which is addressed one recording at a time
+and downloaded separately, because it is two orders of magnitude larger than the
+archive and grows with every track.
+
+## Refresh
+
+Replacing the content archive on a device with a newer one from the server. One
+direction, and a refresh that fails costs nothing, because the archive is
+reproducible from git and the device keeps the one it already has.
+
+Not to be confused with: a sync, which carries progress in both directions and
+is the only exchange whose data cannot be rebuilt from the repository.
+
+## Sync
+
+The two-way exchange of progress between a device and the server: attempts by
+id, and learned marks and tier picks by timestamp. Always started by the device,
+because the server has no way to reach a phone.
+
+Not to be confused with: a refresh, which brings content down and carries no
+progress in either direction.
