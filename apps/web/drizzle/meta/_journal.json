@@ -15,6 +15,13 @@
       "when": 1787832100096,
       "tag": "0001_track_tier",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788091795291,
+      "tag": "0002_sync",
+      "breakpoints": true
     }
   ]
 }

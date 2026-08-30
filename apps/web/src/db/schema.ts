@@ -10,7 +10,7 @@ import {
   timestamp,
   unique,
 } from 'drizzle-orm/pg-core'
-import { TIERS } from '@prep/core'
+import { RESULTS, TIERS } from '@prep/core'
 
 /* -------------------------------------------------------------------------- */
 /* Authentication                                                             */
@@ -78,7 +78,7 @@ export const verification = pgTable('verification', {
 /* Slugs point at content directories in git and are deliberately not foreign  */
 /* keys. See docs/decisions/0002-content-in-git.md.                            */
 
-export const attemptResult = pgEnum('attempt_result', ['passed', 'weak', 'failed'])
+export const attemptResult = pgEnum('attempt_result', RESULTS)
 export const exerciseStatus = pgEnum('exercise_status', ['in_progress', 'completed'])
 
 /**
@@ -149,11 +149,20 @@ export const attempts = pgTable(
     notes: text('notes'),
     hintsUsed: integer('hints_used').notNull().default(0),
     attemptedAt: timestamp('attempted_at').defaultNow().notNull(),
+    /**
+     * When this server learned of the attempt, which is when it was answered
+     * only if it was answered here. A device that spent a week offline hands
+     * over attempts dated that week, so a second device asking what is new
+     * since its last sync has to ask by this rather than by `attempted_at`,
+     * or it never sees them.
+     */
+    recordedAt: timestamp('recorded_at').defaultNow().notNull(),
   },
   (table) => [
     index('attempts_user_question').on(table.userId, table.questionId),
     index('attempts_user_attempted_at').on(table.userId, table.attemptedAt),
     index('attempts_user_topic').on(table.userId, table.topicSlug),
+    index('attempts_user_recorded_at').on(table.userId, table.recordedAt),
   ],
 )
 
@@ -216,6 +225,32 @@ export const dailyActivity = pgTable(
   (table) => [unique('daily_activity_user_day').on(table.userId, table.day)],
 )
 
+/**
+ * One row per device that has ever synced: what to call it, and when it was
+ * last heard from.
+ *
+ * A sync is always started by the device, because the server has no route to a
+ * sleeping phone. So this is the whole of what the server can say about one:
+ * the web reads it to point out a device that has not been heard from in a
+ * while. See docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md.
+ */
+export const deviceSync = pgTable(
+  'device_sync',
+  {
+    id: text('id')
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    /** Chosen by the device on first run and kept for as long as it is installed. */
+    deviceId: text('device_id').notNull(),
+    name: text('name').notNull(),
+    lastSyncedAt: timestamp('last_synced_at').defaultNow().notNull(),
+  },
+  (table) => [unique('device_sync_user_device').on(table.userId, table.deviceId)],
+)
+
 export const userRelations = relations(user, ({ many }) => ({
   trackTier: many(trackTier),
   topicProgress: many(topicProgress),
@@ -223,4 +258,5 @@ export const userRelations = relations(user, ({ many }) => ({
   reviewSchedule: many(reviewSchedule),
   exerciseProgress: many(exerciseProgress),
   dailyActivity: many(dailyActivity),
+  deviceSync: many(deviceSync),
 }))

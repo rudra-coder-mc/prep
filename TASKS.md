@@ -95,29 +95,21 @@ clear refusal from `/api/device/audio/<key>`, which never synthesises. The
 server only reads: `npm run content:archive` writes `archive.zip` and
 `npm run deploy` runs it first, so the archive on the server is never older than
 the content beside it. See
-`docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md`. That leaves
-task 27 as the only server task, and task 29 is unblocked as well.
+`docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md`.
 
-## 27. Sync, both directions
-
-Blocked by nothing.
-
-Attempts by id, learned marks and tier picks by timestamp with last write
-winning. Ingesting attempts replays each affected question's history through the
-interval ladder to rebuild its schedule row, which is why the progress half of
-this needs no new tables: attempts are only ever inserted, and everything else
-worth knowing is derived from them. Two devices merging have nothing to resolve.
-
-The one new table is `device_sync`, a row per device holding its name and when
-it last synced.
-
-Done when an integration test against real Postgres runs the exchange both ways,
-and a question answered on one side comes out due at the same moment on the
-other.
+Task 27 is done, so the server is finished: `POST /api/device/sync` exchanges
+attempts, learned marks and tier picks in one request, and the schedule, the
+streak and every topic status are rebuilt from them rather than exchanged.
+`replaySchedule` in `packages/core` is the fold both sides run, which is what
+makes them agree about when a question is next due. The one new table is
+`device_sync`; the one new column is `attempts.recorded_at`, without which a
+device that synced yesterday never sees the week a phone answered offline. See
+`docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
+Exercise progress deliberately does not travel yet: see task 34.
 
 ## 28. The web says when a device last synced
 
-Blocked by 27.
+Blocked by nothing.
 
 The server can never start a sync, because it has no route to a sleeping phone.
 So the web shows when each device last synced, and says so when one has not been
@@ -192,7 +184,7 @@ laptop, the lesson follows the voice, and a link inside it navigates natively.
 
 ## 33. The phone syncs
 
-Blocked by 27 and 30.
+Blocked by 30.
 
 A sync on launch, on returning to the foreground, and at the end of a review
 session. Failure is silent, and the app keeps working entirely from what it
@@ -210,7 +202,13 @@ The rest of the loop, natively: readiness over the whole tier, the streak, the
 weak-topic list, picking a tier per track, and exercises with their status and
 notes.
 
-Done when the phone's dashboard and the web's agree once a sync has run.
+Exercise progress is the one part of the loop the sync does not carry. It is
+neither derived from attempts nor needed before this task, so task 27 left it
+out. It is a fourth collection in the same payload, merged by `updatedAt` the
+way a tier pick is, and task 33's exchange has to grow to include it.
+
+Done when the phone's dashboard and the web's agree once a sync has run,
+exercises included.
 
 ## 35. An installable APK
 
