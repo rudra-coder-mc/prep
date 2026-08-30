@@ -3,7 +3,9 @@
 ## Status
 
 Accepted. Supersedes `0017`, replaces the built-audio-only half of `0021`, and
-amends `0020`.
+amends `0020`. The bulk build below is now scoped to a track as well as a topic,
+which is the caller this one predicted arriving: a device out of reach of the
+server cannot synthesise, so it takes a track with it. See `0033`.
 
 ## Context
 
@@ -60,7 +62,8 @@ the build**, which is the part `0017` had no answer for:
 
 **The bulk build survives, scoped to a topic.** The e2e suite empties the cache
 and asserts on synthesis, so it needs a deterministic way to prepare one, and the
-mobile client will need the same command with a different caller.
+mobile client will need the same command with a different caller. It got one:
+the command takes a track now, and a topic when it is given one.
 
 **A `speech:prune` command deletes any recording no current script hashes to**,
 because otherwise the cache only ever grows.

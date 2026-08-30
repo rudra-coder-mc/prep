@@ -63,7 +63,8 @@ voice is unavailable for the rest. To listen while you write, start it:
 Two commands act on that cache directly, and nothing depends on either:
 
 ```bash
-npm run narration:build -- javascript/closures   # record one topic ahead of time
+npm run narration:build -- javascript            # record a whole track ahead of time
+npm run narration:build -- javascript/closures   # or one topic of it
 npm run speech:prune                             # delete what no script says any more
 ```
 

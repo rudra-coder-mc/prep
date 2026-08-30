@@ -1,89 +1,92 @@
-import { getTopic, type Topic } from '@prep/content'
 import { cacheDirectory } from '../apps/web/src/lib/speech/cache'
-import { narrate } from '../apps/web/src/lib/speech/narrate'
+import {
+  buildRecordings,
+  plannedRecordings,
+  topicsIn,
+  unrecorded,
+} from '../apps/web/src/lib/speech/build'
 import { SpeechServiceError } from '../apps/web/src/lib/speech/piper'
-import { answerScript, questionScript } from '../apps/web/src/lib/speech/spoken-question'
 
 /**
- * Records everything in one topic that can be listened to: every narration
+ * Records everything in a track that can be listened to: every narration
  * section, and for every question one recording of the prompt and one of the
  * answer with its explanation.
  *
- * `npm run narration:build -- javascript/closures`.
+ * `npm run narration:build -- javascript` for a whole track, or
+ * `npm run narration:build -- javascript/closures` for one topic.
  *
- * Nothing depends on this. A recording is made the first time it is asked for,
- * so this is bulk preparation for the two callers that want a cache filled
- * before anybody waits on it: an e2e run that needs a topic already recorded,
- * and the mobile client downloading a topic before a journey. It is scoped to a
- * topic because both of those are, and because the whole curriculum was the
- * waste decision `0029` was written to end. See
- * docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md.
+ * A track is the unit because a track is what a device downloads before a
+ * journey. Audio is still made when it is asked for on the web, which is
+ * decision `0029`; what changed is that a phone out of reach of the server
+ * cannot ask, so a listen button with no recording behind it is a dead end
+ * rather than a wait. See
+ * docs/decisions/0033-the-mobile-client-is-offline-first.md.
  *
  * Anything already recorded is skipped, so running it twice is cheap and
  * running it after an edit records only what changed.
+ *
+ * It says what is missing before it starts and reads the cache again when it
+ * finishes, so "this track is fully recorded" is something the filesystem
+ * answers rather than something a counter claims. That is the whole point: a
+ * run of this was once stopped partway, its log was lost, and nobody could tell
+ * afterwards what had been built.
  *
  * The parts of the engine are imported directly rather than through
  * `@/lib/speech`, whose `server-only` marker throws outside a server module.
  */
 async function main() {
-  const topic = await requested()
-  const sections = topic.narration ?? []
-
-  console.log(
-    `recording ${topic.slug}: ${sections.length} sections and ${topic.questions.length} questions, into ${cacheDirectory()}, engine at ${process.env.SPEECH_SERVICE_URL ?? 'http://tts:5000'}`,
-  )
-
-  const tally = { recorded: 0, already: 0 }
-
-  // One at a time throughout. The engine is a single container doing real work,
-  // and a topic arriving at once would only make it slower.
-  for (const [position, section] of sections.entries()) {
-    await record(tally, section.script, `${position + 1}/${sections.length} ${section.title}`)
-  }
-
-  // A question is spoken from the words it already has rather than from a
-  // script written for it, which is the opposite of how a lesson is narrated. A
-  // question is a sentence somebody asks out loud; a lesson is a document. See
-  // docs/decisions/0021-questions-are-spoken-from-built-audio.md.
-  for (const question of topic.questions) {
-    await record(tally, questionScript(question), `${question.id} question`)
-    await record(tally, answerScript(question), `${question.id} answer`)
-  }
-
-  console.log(
-    `${topic.slug} ready: ${tally.recorded} recorded, ${tally.already} already there, ${tally.recorded + tally.already} recordings in all`,
-  )
-}
-
-/** The topic named on the command line, or an error saying how to name one. */
-async function requested(): Promise<Topic> {
-  const slug = process.argv[2]
-  if (slug === undefined) {
-    throw new Error('name the topic to record: npm run narration:build -- javascript/closures')
-  }
-
-  const [technology, directory] = slug.split('/')
-  const topic = technology && directory ? await getTopic(technology, directory) : null
-
-  if (!topic) {
+  const target = process.argv[2]
+  if (target === undefined) {
     throw new Error(
-      `no topic called "${slug}". A slug is technology/topic, as in javascript/closures`,
+      'name what to record: npm run narration:build -- javascript, or javascript/closures for one topic',
     )
   }
 
-  return topic
-}
+  const topics = await topicsIn(target)
+  const planned = plannedRecordings(topics)
+  const missing = await unrecorded(planned)
 
-type Tally = { recorded: number; already: number }
+  // A topic names itself in the target, so counting it there would only read as
+  // "1 topics".
+  const scope =
+    topics.length === 1
+      ? `${planned.length} scripts`
+      : `${topics.length} topics, ${planned.length} scripts`
 
-async function record(tally: Tally, script: string, what: string) {
-  const { source } = await narrate(script)
-  if (source === 'engine') {
-    tally.recorded += 1
-    console.log(`  recorded  ${what}`)
-  } else {
-    tally.already += 1
+  console.log(
+    `${target}: ${scope}, into ${cacheDirectory()}, engine at ${process.env.SPEECH_SERVICE_URL ?? 'http://tts:5000'}`,
+  )
+  console.log(`${planned.length - missing.length} already recorded, ${missing.length} to record`)
+
+  if (missing.length === 0) {
+    console.log(`${target} is fully recorded: nothing to do`)
+    return
   }
+
+  // Counted out here as well as inside the build, so a run that stops partway
+  // can still say what it made. Losing that is the reason this command exists.
+  let made = 0
+
+  try {
+    await buildRecordings(missing, (item, done, total) => {
+      made = done
+      console.log(`  ${String(done).padStart(String(total).length)}/${total}  ${item.what}`)
+    })
+  } catch (error) {
+    console.error(`stopped after recording ${made} of ${missing.length}`)
+    throw error
+  }
+
+  const left = await unrecorded(planned)
+  if (left.length > 0) {
+    throw new Error(
+      `${target} is not fully recorded: ${left.length} of ${planned.length} scripts still have no audio, starting with ${left[0]?.what}`,
+    )
+  }
+
+  console.log(
+    `${target} is fully recorded: ${planned.length} scripts, ${made} made now, ${planned.length - made} already there`,
+  )
 }
 
 main().catch((error: unknown) => {

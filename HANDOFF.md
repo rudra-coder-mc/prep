@@ -140,19 +140,23 @@ server has every recording rather than the subset it had recorded for itself.
 Recordings are content addressed, so a cache from one machine is valid on
 another.
 
-**Some question and narration audio has never been built, and nobody knows how
-much.** A `narration:build` over the four async topics was started and stopped
-partway through and its log was lost, task 18's browser questions were never
-recorded at all, and task 19 added three whole topics after that. Every listen
-button with no recording behind it answers 502.
+**The audio backlog does not exist, and that was measured rather than assumed.**
+This file said for months that some question and narration audio had never been
+built and nobody knew how much, naming the async topics whose build was stopped
+partway, task 18's browser questions and task 19's three topics. Task 23 asked
+the cache instead of guessing: every one of the 1417 scripts in `content/` has a
+recording, all 1417 are Ogg Opus with an `OpusHead` where one belongs, and the
+smallest is 11 KB. Nothing was missing on this machine and nothing had to be
+built. The builds that looked lost had run.
 
-This has an owner rather than being an open sore: task 23 makes `narration:build`
-take a whole track and build every narration section and every question script in
-it, which is exactly what the phone needs before it can be taken anywhere. The
-build is incremental and keyed by the hash of the spoken text, so anything
-already recorded is skipped and nothing is redone. Until then, do not run it
-mid-task. That rule is below twice, in the notes on authoring a group and again
-under the narration player.
+What that leaves is a habit rather than a backlog: a script edited without a
+rebuild is still silent, so the survey is the thing to run, not a memory of this
+paragraph. `npm run narration:build -- javascript` says what is missing before it
+records anything, so asking costs the seconds it takes to stat 1265 files.
+
+**The server's cache is a different question, and nobody has surveyed it.** It
+is still WAV, so the app there reads it as empty. See the note on rsyncing this
+one across, above.
 
 **Merged branches are piling up undeleted**, which the conventions below say
 should not happen. `git branch --merged main` lists twenty of them, up from
@@ -166,14 +170,13 @@ in that state.
 
 ## The next action
 
-**Take task 23, 24 or 25.** Task 22 unblocked 23, and 24 and 25 were never
-blocked, so nothing orders the three against each other. 23 builds every
-recording a track needs, 24 is the content archive, 25 is the phone's
-credential.
+**Take task 24 or 25.** Neither was ever blocked and nothing orders them against
+each other: 24 is the content archive, 25 is the phone's credential. 26 needs
+both, so whichever is taken second is the one holding it up.
 
-23 is the one to take first. It is the task that finds out how much audio has
-never been built, which is the oldest unknown in this file, and every later
-task that involves a phone holding recordings depends on the answer.
+Task 23 is done, and it closed the oldest unknown in this file rather than
+finding work: nothing was missing. See the note on the backlog above before
+planning around any audio that is supposedly unbuilt.
 
 `TASKS.md` carries the whole phase with the blocking edges on each task. Take
 the order from there rather than from this file, and read `0033` before any of
@@ -688,14 +691,15 @@ re-rendering a whole lesson every time the voice moves on is far worse. A
 refactor that "does this properly in React" is the thing this deliberately
 avoids. The dimming itself is one rule in `globals.css`.
 
-**`.speech-cache` is gitignored, holds 3.3 GB and takes most of a working day to
-rebuild.** One file per script, addressed by content: 1642 files on disk against
-the 269 narration sections and 1060 question scripts `content:check` counts. The
-difference runs both ways. Orphans left behind by every edited script are on one
-side, and on the other are the thirty-six scripts task 18 added and nobody has
-recorded. The
-last group added 114 recordings in about forty-five minutes, which is the rate to
-plan against. The app bind mounts this directory, so it is not a
+**`.speech-cache` is gitignored, holds 301 MB and takes most of a working day to
+rebuild.** One file per script, addressed by content, and since task 22 pruned
+it and task 23 surveyed it the two sides agree exactly: 1417 files on disk
+against the 291 narration sections and 1126 question scripts `content:check`
+counts. Expect that to part again the moment a script is edited, because the old
+recording is orphaned rather than replaced, and `npm run speech:prune` is what
+closes the gap. The last group added 114 recordings in about forty-five minutes,
+which is the rate to plan against. The app bind mounts this directory, so it is
+not a
 convenience copy, it is where playback reads from. Deleting it means nothing
 plays until `npm run narration:build` has finished, and there is no synthesis
 fallback any more, so every listen button says to run the build until it does.
@@ -708,11 +712,19 @@ merge it, and then ask Atul whether to record. It is his call, and he may say
 no. Nothing breaks by waiting: an unrecorded question is silent until somebody
 builds it, and the build is incremental when they do.
 
-**`narration:build` takes a topic and does nothing without one.** Run bare it
-starts the containers, prints the usage line naming a topic and exits 1, so a
-green-looking script that recorded nothing is easy to walk away from. The form is
-`npm run narration:build -- javascript/event-loop`, one topic per invocation, so
-a group of four is four commands.
+**`narration:build` takes a track or a topic, and does nothing without one.**
+Run bare it starts the containers, prints the usage line and exits 1, so a
+green-looking run that recorded nothing is easy to walk away from. The forms are
+`npm run narration:build -- javascript` and `npm run narration:build --
+javascript/event-loop`, so a group of four topics is now one command over the
+track rather than four.
+
+**It reads the cache to decide it is finished, rather than counting what it
+did.** A survey runs before anything is recorded and again at the end, and the
+closing line is the second survey speaking. That is deliberate: the reason the
+command was widened is that a run was stopped partway, its log was lost, and
+nobody could tell afterwards what existed. A tally in a lost log answers nothing
+and the disk answers every time.
 
 **Node 26 ships a `localStorage` global that shadows jsdom's and is unavailable
 without `--localstorage-file`.** `vitest.setup.ts` puts a working one back, the
