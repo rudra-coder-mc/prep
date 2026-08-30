@@ -68,6 +68,18 @@ npm run narration:build -- javascript/closures   # or one topic of it
 npm run speech:prune                             # delete what no script says any more
 ```
 
+One more command builds what the phone reads, and it needs neither the stack nor
+the database running:
+
+```bash
+npm run content:archive                          # every topic, plus a lesson page each
+```
+
+It writes `.content-archive/`: the whole curriculum as one JSON file, one
+pre-rendered lesson page per topic, and the chunk and stylesheet those pages
+share. The version it prints is a hash of the files it was built from, and that
+is what a device compares to decide whether to refresh. Audio is not in it.
+
 ## Running it on the machine that serves it
 
 The platform also runs on a spare Ubuntu machine, `work`, published at
@@ -129,8 +141,13 @@ the logic that decides when a question is due rather than reimplementing it. See
   exercises beside it, version-controlled rather than stored in the database.
 - `apps/web/` is the Next application: everything that touches Postgres,
   better-auth or the DOM.
+- `packages/content/src/archive/` builds the content archive: the curriculum as
+  data, and every lesson compiled into a page that opens on its own. It bundles
+  the web app's own lesson components rather than a copy of them, so a lesson
+  reads the same on both surfaces. See
+  `docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md`.
 - `apps/web/src/components/visuals/` is the reusable animation library the
-  lessons import.
+  lessons import, and the one the archive compiles into its pages.
 - `apps/web/src/app/(app)/` is everything behind the login, under one persistent
   top bar.
 - `apps/web/src/components/{chrome,ui,motion}/` are the shell, the UI

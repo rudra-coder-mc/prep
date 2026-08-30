@@ -8,3 +8,7 @@
  */
 export * from './loader'
 export * from './validate'
+
+// The archive build is deliberately not re-exported here. It pulls in esbuild,
+// postcss and Tailwind, and this entry point is what the web app imports. It is
+// reached as @prep/content/archive by the one command that builds it.

@@ -76,30 +76,12 @@ missing before it records and reads the cache again to say it has finished. It
 also answered the question it was written to answer. Nothing was missing: all
 1417 scripts in `content/` have a recording on this machine.
 
-## 24. Build the content archive
-
-Blocked by nothing.
-
-One artefact holding every topic's meta, questions, exercises, narration scripts
-and audio keys, plus one pre-rendered lesson page each and the shared runtime
-chunk those pages animate with. The build lives in `packages/content`: it
-compiles `lesson.mdx` with `@mdx-js/mdx` and bundles it with the visual
-components through esbuild, so building what the phone reads needs neither the
-web app nor a database running.
-
-The archive is versioned by a hash of the files it was built from and replaced
-whole rather than in parts. Audio is not in it.
-
-It carries every question in full, correct options included, which weakens the
-guarantee `0011` and `0023` hold on the web. A device that cannot ask anything
-what the correct option is has no other way to grade. Spend no effort making the
-archive hard to read.
-
-Read `0034` and `0037`.
-
-Done when a built archive's lesson pages open in a browser with their visuals
-animating, and the archive and `content:check` agree about what the content
-holds.
+Task 24 is done: `npm run content:archive` writes `.content-archive/`, holding
+the curriculum as one JSON file and one pre-rendered lesson page per topic. It
+bundles the web app's own lesson components rather than a copy of them, so a
+lesson reads the same on both surfaces. That reach across the workspace boundary
+is `docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md`,
+and task 37 is the tidy-up it defers.
 
 ## 25. A personal account, and a token the phone can use
 
@@ -115,7 +97,7 @@ token has expired, with the browser login unchanged.
 
 ## 26. The server serves what a device needs
 
-Blocked by 24 and 25.
+Blocked by 25.
 
 Three endpoints: the current content version, the archive itself, and audio by
 key.
@@ -274,7 +256,29 @@ It stays low priority because it cannot affect anybody in a single timezone.
 Done when the queue and the streak name the same day whatever the device is set
 to, with a test that fails if they part again.
 
-## 37. The daily reminder on the phone
+## 37. Move the lesson components into a package of their own
+
+`packages/content/src/archive/` reaches into `apps/web` for the MDX component map
+and the visual library, because a lesson has to render identically on both
+surfaces and the cheapest way to guarantee that is for both to use one copy. The
+dependency points from a shared package into an application, which is backwards,
+and the eslint boundary is switched off for that one directory to allow it. See
+`docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md`.
+
+The structurally right answer is a package holding the visuals, the component map
+and the three small helpers they use, with `apps/web` keeping thin re-export
+shims so its own imports do not change. It was deliberately not done first: it
+costs a fifth workspace member and an amendment to `0035`, and buys nothing until
+something other than these two surfaces renders a lesson.
+
+Take it when a third surface appears, or when the reach starts causing trouble.
+`packages/content/src/archive/web-sources.ts` names every path involved, and is
+meant to be the whole of the change.
+
+Done when no package imports from an app, the eslint exception is gone, and the
+archive and the web still render the same lesson.
+
+## 38. The daily reminder on the phone
 
 One local notification a day, at a time that can be changed.
 

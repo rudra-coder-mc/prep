@@ -29,6 +29,7 @@
     "db:seed": "npm run db:seed --workspace @prep/web",
     "prepare": "husky",
     "content:check": "tsx scripts/check-content.ts",
+    "content:archive": "tsx scripts/build-archive.ts",
     "narration:build": "./scripts/with-services.sh tsx scripts/build-narration.ts",
     "speech:prune": "tsx scripts/prune-narration.ts",
     "speech:transcode": "./scripts/with-services.sh tsx scripts/transcode-narration.ts"

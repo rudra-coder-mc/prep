@@ -124,8 +124,26 @@ and nothing checks that the topic on the other end exists.
 **Nothing is uncommitted.** The mobile planning session landed as six ADRs,
 three glossary entries, a mobile section in `docs/architecture.md`, the Expo
 exception in the hard rule, and Phase 6 in `TASKS.md`. Task 21 landed after it,
-so the repository is now a workspace, and task 22 after that, so recordings are
-Opus.
+so the repository is now a workspace, task 22 after that, so recordings are
+Opus, then task 23, then task 24.
+
+**The content archive is built by `npm run content:archive`.** It writes
+`.content-archive/`: `content.json` holding every topic in full with the audio key
+of every question and narration section, one pre-rendered lesson page per topic,
+and the chunk and stylesheet those pages share. It needs neither the stack nor
+the database. At the head of `main` it is 46 topics, 563 questions, 92 exercises
+and 291 narration sections, which is what `content:check` reports, and the
+`apps/web/e2e/archive.spec.ts` specs open every one of the 46 pages.
+
+The thing to know before changing it is that it bundles the web app's own MDX
+component map and visual components rather than a copy, so the two surfaces
+cannot render a lesson differently. That points a shared package at an
+application, which the eslint boundary otherwise forbids and which is switched off
+for `packages/content/src/archive/` alone. Every path involved is in
+`packages/content/src/archive/web-sources.ts`, and it is meant to be the whole of
+the change if those components ever move. See
+`docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md` and
+task 37.
 
 **The server's recording cache is still WAV, and the app there will read it as
 empty.** `scripts/deploy.sh` excludes `.speech-cache` in both directions, so
@@ -170,13 +188,22 @@ in that state.
 
 ## The next action
 
-**Take task 24 or 25.** Neither was ever blocked and nothing orders them against
-each other: 24 is the content archive, 25 is the phone's credential. 26 needs
-both, so whichever is taken second is the one holding it up.
+**Take task 25**, the phone's credential. It was never blocked, and it is now the
+only thing 26 is waiting for, since task 24 built the archive.
 
-Task 23 is done, and it closed the oldest unknown in this file rather than
-finding work: nothing was missing. See the note on the backlog above before
-planning around any audio that is supposedly unbuilt.
+Task 23 closed the oldest unknown in this file rather than finding work: nothing
+was missing. See the note on the backlog above before planning around any audio
+that is supposedly unbuilt.
+
+Task 24 turned up one thing worth carrying forward. The lesson bundle was half
+zod, because `apps/web/src/mdx-components.tsx` reached `headingSlug` through the
+`@prep/core` barrel and the barrel pulls the content schema in behind it. On the
+web Next drops it again and nothing shows; in a plain browser it was 320 KB of a
+668 KB download and a hard `ReferenceError` on load, because `day.ts` reads
+`process.env` at module scope. It imports `@prep/core/headings` now. **Anything
+else that gets bundled for the phone should reach for a leaf module rather than
+the barrel**, and should be opened in a browser rather than trusted to a build
+that passed.
 
 `TASKS.md` carries the whole phase with the blocking edges on each task. Take
 the order from there rather than from this file, and read `0033` before any of

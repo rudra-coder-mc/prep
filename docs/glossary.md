@@ -200,8 +200,9 @@ streak, which describes attendance rather than knowledge.
 
 Everything a device needs to work with nothing to connect to: every topic's
 meta, questions, exercises and narration scripts, one pre-rendered lesson page
-each, and the code those pages animate with. Built from `content/`, versioned by
-a hash of the files it was built from, and replaced whole rather than in parts.
+each, and the code those pages animate with. Built from `content/` and from the
+components those pages render with, versioned by a hash of the files it was built
+from, and replaced whole rather than in parts.
 
 Not to be confused with: the audio, which is addressed one recording at a time
 and downloaded separately, because it is two orders of magnitude larger than the

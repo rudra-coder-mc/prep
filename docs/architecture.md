@@ -459,6 +459,19 @@ internal links. Everything else, the queue, the three question forms, the
 player, the dashboard, is native. See
 `docs/decisions/0034-lessons-are-pre-rendered-and-shown-in-a-webview.md`.
 
+`packages/content/src/archive/` is that build, run by `npm run content:archive`.
+It compiles each `lesson.mdx` with `@mdx-js/mdx` and bundles it with esbuild into
+one page per topic plus a chunk and a stylesheet they all share, and it writes the
+curriculum beside them as one JSON file carrying every question, exercise and
+narration script with the key of each recording. It reads files and nothing else,
+so building what the phone reads needs neither the web app nor the database
+running.
+
+The components it bundles are the web app's own, reached across the workspace
+boundary on purpose so that one definition of a lesson serves both surfaces.
+Every path it reaches for is in `packages/content/src/archive/web-sources.ts`.
+See `docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md`.
+
 It talks to the server in two exchanges, both started by the device.
 
 ```
