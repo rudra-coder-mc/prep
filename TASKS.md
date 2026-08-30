@@ -83,21 +83,16 @@ lesson reads the same on both surfaces. That reach across the workspace boundary
 is `docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md`,
 and task 37 is the tidy-up it defers.
 
-## 25. A personal account, and a token the phone can use
-
-Blocked by nothing.
-
-The web signs in with better-auth in a browser. The phone needs a credential it
-can hold and refresh without one, kept in secure storage. A session that has not
-reached the server for thirty days expires and costs one login, which is
-acceptable because reading and answering never stop.
-
-Done when a device can authenticate, refresh, and be refused cleanly once its
-token has expired, with the browser login unchanged.
+Task 25 is done: a device signs in at `/api/device/session` and carries the
+session it gets back as a bearer token, which every endpoint already accepts
+because better-auth resolves the header before the session check runs. Nothing
+new is stored, and the browser still gets a cookie. See
+`docs/decisions/0040-a-device-carries-its-session-in-a-header.md`. Tasks 26 and
+27 are unblocked, so they are the two to take next and either order works.
 
 ## 26. The server serves what a device needs
 
-Blocked by 25.
+Blocked by nothing.
 
 Three endpoints: the current content version, the archive itself, and audio by
 key.
@@ -114,7 +109,7 @@ get a clear answer for both a recording that exists and one that does not.
 
 ## 27. Sync, both directions
 
-Blocked by 25.
+Blocked by nothing.
 
 Attempts by id, learned marks and tier picks by timestamp with last write
 winning. Ingesting attempts replays each affected question's history through the

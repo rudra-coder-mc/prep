@@ -43,6 +43,10 @@ export default defineConfig({
         test: {
           name: 'integration',
           environment: 'node',
+          // better-auth reads its secret when the module is first imported, and
+          // these tests run the real thing. The value only has to be stable
+          // across one run: nothing signed here outlives the test database.
+          env: { BETTER_AUTH_SECRET: 'integration-test-secret' },
           include: ['apps/web/src/**/*.integration.test.ts'],
           hookTimeout: 60_000,
           testTimeout: 60_000,

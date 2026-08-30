@@ -472,6 +472,15 @@ boundary on purpose so that one definition of a lesson serves both surfaces.
 Every path it reaches for is in `packages/content/src/archive/web-sources.ts`.
 See `docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md`.
 
+Both exchanges need a signed-in device, and a device has no cookie jar. It
+signs in once at `/api/device/session`, stores the token it gets back, and sends
+it as `Authorization: Bearer <token>` from then on. better-auth's `bearer`
+plugin turns that header into the session the rest of the server already checks,
+so every endpoint authenticates a device and a browser the same way. The token
+is a thirty-day session that moves its expiry forward whenever the device
+reaches the server. See
+`docs/decisions/0040-a-device-carries-its-session-in-a-header.md`.
+
 It talks to the server in two exchanges, both started by the device.
 
 ```
