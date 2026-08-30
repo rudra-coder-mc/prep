@@ -349,9 +349,13 @@ is therefore a new recording rather than a stale one, and the old entry is
 orphaned rather than served.
 
 Three commands act on the cache from outside, and nothing in the application
-depends on any of them. `npm run narration:build -- javascript/closures` records
-one topic before anybody asks, which is what the e2e suite needs to prepare a
-cache and what the mobile client will need before a journey. `npm run
+depends on any of them. `npm run narration:build -- javascript` records a whole
+track before anybody asks, and takes one topic instead when it is given one. A
+track is the unit because a track is what a device downloads before a journey,
+and a topic is what somebody records after editing one lesson. It surveys the
+cache before it starts and reads it again when it finishes, so whether a track
+is fully recorded is something the filesystem answers rather than something the
+run claims. `npm run
 speech:prune` deletes every recording no current script hashes to, which is what
 stops the orphans accumulating. `npm run speech:transcode` converts a cache made
 before recordings were compressed, and is a migration rather than a routine: run

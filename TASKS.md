@@ -71,26 +71,10 @@ that. The library on this machine went from 3.6 GB to 301 MB. The server's cache
 is still WAV, which the app reads as an empty cache and re-records from: see
 `HANDOFF.md`.
 
-## 23. Build a whole track's recordings ahead of time
-
-Blocked by nothing.
-
-`narration:build` takes a whole track and builds every narration section and
-every question script in it.
-
-Some audio has never been built and nobody knows how much. A build over the four
-async topics was stopped partway and its log was lost, task 18's browser
-questions were never recorded, and task 19 added three whole topics after that.
-Every listen button with no recording behind it answers 502, and a phone that
-cannot reach the server has no way to recover from one.
-
-The build is incremental and keyed by the hash of the spoken text, so anything
-already recorded is skipped and nothing is redone. It has to report what it
-built and what it skipped, because not being able to tell is the reason this
-task exists.
-
-Done when every narration section and question script in the language track has
-a recording, and the command says so rather than leaving it to be inferred.
+So is task 23: `npm run narration:build` takes a whole track, says what is
+missing before it records and reads the cache again to say it has finished. It
+also answered the question it was written to answer. Nothing was missing: all
+1417 scripts in `content/` have a recording on this machine.
 
 ## 24. Build the content archive
 
@@ -138,7 +122,8 @@ key.
 
 **The audio endpoint never synthesises.** It serves what exists and reports what
 is missing, because a phone asking for a thousand missing recordings would
-occupy the server for a day. Making them ahead of time is what task 23 is for.
+occupy the server for a day. `npm run narration:build` is what makes them ahead
+of time.
 One recording is one file, so an interrupted download needs no resume logic:
 what arrived stays, and the next attempt fetches the rest.
 
@@ -208,7 +193,7 @@ schedule the phone computes for a question matches what the server would.
 
 ## 31. Downloading a track's audio
 
-Blocked by 23, 26 and 29.
+Blocked by 26 and 29.
 
 A track at a time, one file per key. The app says how much it is about to
 download and how much it already holds, because the library is hundreds of
