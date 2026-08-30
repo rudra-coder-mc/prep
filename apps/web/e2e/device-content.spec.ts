@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test'
 import { unzipSync } from 'fflate'
 import { SIGNED_OUT_STATE } from './constants'
+import { deviceHeaders } from './device'
 
 test.use({ storageState: SIGNED_OUT_STATE })
-
-const EMAIL = process.env.SEED_USER_EMAIL ?? 'e2e@prep.test'
-const PASSWORD = process.env.SEED_USER_PASSWORD ?? 'e2e-password'
 
 /** Well formed, and no script hashes to it, so it stands for a recording nobody has made. */
 const ABSENT_KEY = 'a'.repeat(64)
@@ -25,12 +23,7 @@ const ABSENT_KEY = 'a'.repeat(64)
  * hundreds of keys at once.
  */
 test('a device reads the version, pulls the archive and asks for audio', async ({ request }) => {
-  const login = await request.post('/api/device/session', {
-    data: { email: EMAIL, password: PASSWORD },
-  })
-  expect(login.status()).toBe(200)
-  const { token } = await login.json()
-  const headers = { authorization: `Bearer ${token}` }
+  const headers = await deviceHeaders(request)
 
   const versionResponse = await request.get('/api/device/archive/version', { headers })
   expect(versionResponse.status()).toBe(200)
@@ -88,11 +81,7 @@ test('a device reads the version, pulls the archive and asks for audio', async (
  * speed of a missing file. The bound is wide because what it rules out is not.
  */
 test('a key from the archive is answered at once, recorded or not', async ({ request }) => {
-  const login = await request.post('/api/device/session', {
-    data: { email: EMAIL, password: PASSWORD },
-  })
-  const { token } = await login.json()
-  const headers = { authorization: `Bearer ${token}` }
+  const headers = await deviceHeaders(request)
 
   const download = await request.get('/api/device/archive', { headers })
   const unpacked = unzipSync(new Uint8Array(await download.body()))

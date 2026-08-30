@@ -531,6 +531,32 @@ of keys cannot be allowed to. What is missing is reported, and
 built answers 503, so a device can never read an empty answer as being up to
 date.
 
+**`POST /api/device/sync` is the one device endpoint that writes**, and the whole
+of the exchange: everything the device has that the server does not goes up, and
+everything the server has that the device does not comes back, in one request.
+
+Three things travel, and nothing else does, because nothing else is a fact
+somebody entered. Attempts merge by id, and an attempt is immutable, so the same
+one arriving twice changes nothing. Learned marks and tier picks merge by
+timestamp with the later one winning. Every rule is commutative and idempotent,
+so two devices have nothing to resolve and a sync that fails halfway is repaired
+by the next one.
+
+The schedule, the streak, the daily queue and every topic status are derived from
+those three rather than exchanged. Ingesting attempts replays each affected
+question's whole history from the bottom rung through `replaySchedule`, which is
+in `packages/core` so that the device folds the same attempts with the same
+function. That is what makes both sides agree about when a question is next due,
+rather than one of them being told.
+
+Attempts come back by `attempts.recorded_at`, which is when this server learned
+of one rather than when it was answered: a phone that was offline all week hands
+over attempts dated all week, and a device that synced on Tuesday would never ask
+for anything that old. Learned marks and tier picks are exchanged in full both
+ways instead, since the curriculum bounds them at one row per topic and one per
+track. See
+`docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
+
 ## Not in V1
 
 AI tutoring, multi-user support, social login, gamification beyond the streak,

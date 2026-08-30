@@ -14,9 +14,9 @@ Both are deliberate; see the hard rule in `CLAUDE.md`, which covers every hosted
 service rather than only the company GitLab. That rule now has exactly one named
 exception, and it is new: see the trap on it below.
 
-**`main` was green when task 22 merged.** The full `npm run verify` ran through
-lint, format check, typecheck, 387 unit tests, 49 integration tests against real
-Postgres and a real speech engine, the production build and 61 Playwright specs.
+**`main` was green when task 27 merged.** The full `npm run verify` ran through
+lint, format check, typecheck, 482 unit tests, 84 integration tests against real
+Postgres and a real speech engine, the production build and 73 Playwright specs.
 The `tts` image was rebuilt and its compose healthcheck confirmed, since
 `verify` does not cover the image and task 22 replaced the server inside it.
 `apps/web/e2e/spoken-questions.spec.ts:63` remains the flaky one: it has passed on the
@@ -226,10 +226,11 @@ in that state.
 
 ## The next action
 
-**Take task 27 or task 29.** 27 is the two-way progress exchange, the last of the
-server work. 29 is the first task in the app itself, and task 26 unblocked it: an
-Expo app that logs in, pulls the archive and then works with everything switched
-off. Neither blocks the other.
+**Take task 28 or task 29.** The server is finished. 28 is small: the web showing
+when each device last synced, which is the only thing `device_sync` is for. 29 is
+the first task in the app itself, an Expo app that logs in, pulls the archive and
+then works with everything switched off. Neither blocks the other, and 29 is the
+one that opens up the rest of the phase.
 
 Task 23 closed the oldest unknown in this file rather than finding work: nothing
 was missing. See the note on the backlog above before planning around any audio
@@ -261,6 +262,16 @@ know is that the middleware no longer refuses an API request for want of a
 cookie when it carries an `Authorization` header, so a new API route has to
 verify its own session rather than assume the gate did it. Every route that
 exists does. See `docs/decisions/0040-a-device-carries-its-session-in-a-header.md`.
+
+Task 27 left the rule the app has to be built against. **Only attempts, learned
+marks and tier picks travel. Everything else is derived on both sides**, from
+those, by the same `packages/core` functions: the schedule through
+`replaySchedule`, the streak through the day counts, the queue and every topic
+status as they already were. When the app needs a value the server also has, the
+question to ask is which of the three it comes from, not how to send it. The one
+place this is not true is exercise progress, which nothing derives and nothing
+yet carries: task 34 says so, and adding it is a fourth collection in the same
+payload. See `docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
 
 `TASKS.md` carries the whole phase with the blocking edges on each task. Take
 the order from there rather than from this file, and read `0033` before any of
@@ -1051,6 +1062,14 @@ engine having stopped rather than as something having stopped it. Nothing is
 corrupted, because recordings are content addressed and the build skips what it
 already has, so running it again carries on. Do not run it in the background and
 then do other work.
+
+**Do not sign a device in from a new e2e spec.** better-auth allows three
+sign-ins per ten seconds, and behind Playwright's own server there is no client
+IP to key on, so every spec shares one bucket. A fourth login in the window
+returns 429 and fails whichever specs happen to be around it rather than the one
+that spent it. `apps/web/e2e/device.ts` signs in once for the whole run and hands
+the token to anything that wants it, which is also what a device does.
+`device-session.spec.ts` still logs in for real, because that is its subject.
 
 **`npm run db:reset` drops two schemas, not one.** Drizzle keeps its migration
 journal in a schema called `drizzle`, separate from `public`. Dropping only

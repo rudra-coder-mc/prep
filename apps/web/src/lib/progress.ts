@@ -29,7 +29,7 @@ export async function getTopicProgress(
  * the newly in-scope questions arrive at the bottom and nothing in rotation
  * moves.
  */
-async function enrol(userId: string, topics: Topic[], tier: Tier, now: Date) {
+export async function enrol(userId: string, topics: Topic[], tier: Tier, now: Date) {
   const rows = topics.flatMap((topic) =>
     questionsUpTo(topic.questions, tier).map((question) => ({
       userId,
@@ -85,7 +85,20 @@ export async function markTopicLearned(userId: string, technology: string, direc
  */
 export async function pickTrackTier(userId: string, technology: string, tier: Tier) {
   await setTrackTier(userId, technology, tier)
+  await enrolLearnedTopics(userId, technology, tier, new Date())
+}
 
+/**
+ * Brings everything already learned on one track up to a tier. Separate from the
+ * pick above because a sync arrives at the same place by a different route: the
+ * tier was picked on another device, and this side has only the new value.
+ */
+export async function enrolLearnedTopics(
+  userId: string,
+  technology: string,
+  tier: Tier,
+  now: Date,
+) {
   const learned = await db
     .select({ topicSlug: topicProgress.topicSlug })
     .from(topicProgress)
@@ -103,6 +116,6 @@ export async function pickTrackTier(userId: string, technology: string, tier: Ti
     userId,
     topics.filter((topic) => topic !== null),
     tier,
-    new Date(),
+    now,
   )
 }

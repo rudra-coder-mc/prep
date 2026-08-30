@@ -211,6 +211,9 @@ export async function recordAttempt(userId: string, input: AttemptInput, now = n
     hintsUsed: input.hintsUsed,
     notes: input.notes ?? null,
     attemptedAt: now,
+    // An answer given here is learned of here, at the same moment. The column
+    // exists for the ones that are not: see @/lib/sync.
+    recordedAt: now,
   })
 
   await db

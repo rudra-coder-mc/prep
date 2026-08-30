@@ -17,7 +17,11 @@ export const LADDER_DAYS = [0, 1, 3, 7, 14] as const
 export const SAME_DAY_HOURS = 4
 
 export type Confidence = 1 | 2 | 3 | 4 | 5
-export type Result = 'passed' | 'weak' | 'failed'
+
+/** How an answer went. Closed, so the database and a device can both enforce it. */
+export const RESULTS = ['passed', 'weak', 'failed'] as const
+export type Result = (typeof RESULTS)[number]
+
 export type LadderStep = 0 | 1 | 2 | 3 | 4
 
 export const TOP_RUNG: LadderStep = 4
