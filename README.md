@@ -96,17 +96,17 @@ npm run dev:docker
 ```
 
 Short for `docker compose -f compose.yaml -f compose.dev.yaml up`. Same stack
-with `content/`, `src/` and `public/` bind-mounted and hot reload on, so editing
-a lesson or a component shows up immediately.
+with the app's sources, the shared packages and the curriculum bind-mounted and
+hot reload on, so editing a lesson or a component shows up immediately.
 
 Plain `docker compose up` runs the built image and does not pick up edits at
-all, including edits to `src/`. Use this profile while working, that one to just
-use the platform, and `docker compose up --build` after changing code you want
-the plain profile to serve.
+all. Use this profile while working, that one to just use the platform, and
+`docker compose up --build` after changing code you want the plain profile to
+serve.
 
 Plain `docker compose up` runs the image as it was last built, so anything
-changed since then needs `--build`. Under this profile that is only
-`package.json`, `next.config.ts` and the Dockerfile, since the other three
+changed since then needs `--build`. Under this profile that is only the
+manifests, `apps/web/next.config.ts` and the Dockerfile, since the source
 directories are mounted:
 
 ```bash
@@ -115,23 +115,36 @@ npm run dev:docker -- --build
 
 ## How it fits together
 
-- `content/<technology>/<topic>/` is the curriculum. An MDX lesson with its
-  questions and exercises beside it, version-controlled rather than stored in
-  the database.
-- `src/components/visuals/` is the reusable animation library the lessons import.
-- `src/app/(app)/` is everything behind the login, under one persistent top bar.
-- `src/components/{chrome,ui,motion}/` are the shell, the UI primitives, and the
-  single entrance animation the whole app uses.
-- `src/db/` holds the Drizzle schema and migrations. It stores users and their
-  progress, nothing else.
-- `src/lib/speech/` turns a narration script into audio and caches it by content.
-  `services/tts/` is the Piper container it talks to, and no text leaves the
-  machine. A recording is made the first time it is asked for and kept for good,
-  addressed by a hash of the words, so a page asks for audio with a key and the
-  server turns that key back into the script.
-- `src/components/speech/` is the player on a topic page, which reads that
-  topic's `narration.ts` aloud a section at a time, and the speaker button on a
-  question, which reads the prompt and then the answer once it has been given.
+The repository is an npm workspace with three members, so the phone can share
+the logic that decides when a question is due rather than reimplementing it. See
+`docs/decisions/0035-the-repository-is-a-workspace-and-the-logic-is-shared-once.md`.
+
+- `packages/core/` is the definition of the platform: the interval ladder, what
+  a tier covers, readiness, the daily queue, grading, and the schema the content
+  is written against. Pure functions over rows, with no database, DOM or
+  filesystem anywhere in it.
+- `packages/content/` is the curriculum and the code that reads it.
+  `content/<technology>/<topic>/` holds an MDX lesson with its questions and
+  exercises beside it, version-controlled rather than stored in the database.
+- `apps/web/` is the Next application: everything that touches Postgres,
+  better-auth or the DOM.
+- `apps/web/src/components/visuals/` is the reusable animation library the
+  lessons import.
+- `apps/web/src/app/(app)/` is everything behind the login, under one persistent
+  top bar.
+- `apps/web/src/components/{chrome,ui,motion}/` are the shell, the UI
+  primitives, and the single entrance animation the whole app uses.
+- `apps/web/src/db/` holds the Drizzle schema and migrations. It stores users
+  and their progress, nothing else.
+- `apps/web/src/lib/speech/` turns a narration script into audio and caches it
+  by content. `services/tts/` is the Piper container it talks to, and no text
+  leaves the machine. A recording is made the first time it is asked for and
+  kept for good, addressed by a hash of the words, so a page asks for audio with
+  a key and the server turns that key back into the script.
+- `apps/web/src/components/speech/` is the player on a topic page, which reads
+  that topic's `narration.ts` aloud a section at a time, and the speaker button
+  on a question, which reads the prompt and then the answer once it has been
+  given.
 
 See `docs/architecture.md` for the full picture and `docs/decisions/` for why
 it is shaped this way.

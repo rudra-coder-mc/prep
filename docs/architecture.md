@@ -25,6 +25,19 @@ separate API service. Server Components read data directly, Server Actions write
 it. For a single-user tool, a network hop between a frontend and a backend we
 also own buys nothing and costs two deployments.
 
+```
+packages/core/       the interval ladder, tiers, readiness, the daily queue,
+                     grading and the content schema. Pure, and shared by both
+                     clients so neither can disagree about what is due.
+packages/content/    the curriculum itself, its loader and its validator.
+apps/web/            the Next application: Postgres, better-auth and the DOM.
+apps/mobile/         the Expo app.
+```
+
+Database access is written twice, once against Postgres and once against SQLite
+on the device. Only the logic is shared. See
+`docs/decisions/0035-the-repository-is-a-workspace-and-the-logic-is-shared-once.md`.
+
 The one exception is speech. Turning a narration script into audio is not
 something a Next.js process can do, so it is a third container, and the only one
 in the stack that exists because of what it can do rather than what it stores.
@@ -39,7 +52,7 @@ in the stack that exists because of what it can do rather than what it stores.
    better-auth                    healthcheck gates
    drizzle-orm                    app start
         |
-   content/ baked into the image at build time
+   the curriculum baked into the image at build time
         |
    reads and writes ./.speech-cache, mounted at /cache/speech
         |
@@ -84,7 +97,7 @@ content/javascript/closures/
 ```
 
 A topic is a directory. Adding one means adding a directory. No registry to
-update by hand, no seed script to rerun. The loader walks `content/` at build
+update by hand, no seed script to rerun. The loader walks the curriculum at build
 time and validates every file against a Zod schema, so a malformed question
 fails the build rather than the session.
 
@@ -102,7 +115,7 @@ placeholder page, and the interview navigation is hidden while it is open
 because none of it applies there.
 
 ```
-src/app/
+apps/web/src/app/
   (app)/                  the signed-in shell: top bar, progress bar
     page.tsx              dashboard
     topics/               list, then [technology]/[topic]/ with its own layout
@@ -111,13 +124,13 @@ src/app/
   login/                  outside the shell, no chrome
   not-found.tsx
 
-src/components/
+apps/web/src/components/
   chrome/                 top bar, links, breadcrumb and tabs, route progress
   ui/                     Button, Card, ProgressBar, StatusBadge, Skeleton, PageShell
   motion/                 the Rise entrance and the reduced-motion hook
   visuals/                the lesson animation library
 
-src/actions/              server actions, outside the routing tree
+apps/web/src/actions/     server actions, outside the routing tree
 ```
 
 A topic's lesson, questions and exercises share a layout, so the breadcrumb and
@@ -126,13 +139,13 @@ through `AppLink`, which feeds Next's per-link pending state into the global
 progress bar, and every route has a `loading.tsx` skeleton, so a slow page shows
 its frame rather than nothing.
 
-No page names a technology. The dashboard aggregates every topic under
-`content/` and lists tracks as data, and the topic list groups by technology, so
+No page names a technology. The dashboard aggregates every topic in
+`packages/content/` and lists tracks as data, and the topic list groups by technology, so
 adding a track stays what it is at the data layer: adding a directory.
-`src/content/technologies.ts` holds the display spellings and title-cases
+`packages/core/src/technologies.ts` holds the display spellings and title-cases
 anything it has not been told about, so a new track is readable before anyone
 names it. The browser track was the first to exercise that: four directories,
-and no change anywhere in `src/`. A topic's prerequisites carry the technology
+and no change anywhere in `apps/web/`. A topic's prerequisites carry the technology
 in them, so they can point across a track boundary, and nothing checks that the
 topic on the other end exists. See `docs/decisions/0010-interview-prep-focus.md`
 and `docs/decisions/0027-the-browser-is-its-own-track.md`.
@@ -142,7 +155,7 @@ component checks `prefers-reduced-motion` before it moves. See
 `docs/decisions/0009-app-shell-and-motion.md`.
 
 The lesson visuals are a second, heavier motion system with the same rule. Each
-one is a list of steps, and `src/components/visuals/flow.tsx` holds the shared
+one is a list of steps, and `apps/web/src/components/visuals/flow.tsx` holds the shared
 vocabulary they animate with: a token that keeps its identity as it moves
 between regions, a region that lights up when the loop is working on it, an
 output log and a caption. Visuals play themselves the first time they are
@@ -221,8 +234,9 @@ lesson is not tiered and hiding one would put part of a track out of reach.
 Changing the pick brings every topic already marked learned in that track up to
 it: the newly covered questions arrive at the bottom of the ladder and nothing in
 rotation moves. Going back down enrols nothing and unenrols nothing, because a
-question on the ladder is progress somebody made. `src/lib/tiers.ts` holds what a
-pick covers, `src/lib/track-tier.ts` stores it, and `src/lib/progress.ts` is the
+question on the ladder is progress somebody made. `packages/core/src/tiers.ts` holds
+what a pick covers, `apps/web/src/lib/track-tier.ts` stores it, and
+`apps/web/src/lib/progress.ts` is the
 only place that enrols. See
 `docs/decisions/0028-tiers-are-interview-levels.md` and
 `docs/decisions/0031-a-track-remembers-the-tier-you-picked.md`.
@@ -238,8 +252,9 @@ not restrict itself to what somebody chose to enrol. The count is always shown
 beside the share, since senior and staff are thin on purpose.
 
 A track at full readiness offers the tier above it and says how many questions
-accepting enrols. Nothing advances by itself. `src/lib/readiness.ts` is the
-calculation, `getDashboard` feeds it the ladder, and `src/components/step-up.tsx`
+accepting enrols. Nothing advances by itself. `packages/core/src/readiness.ts` is
+the calculation, `getDashboard` feeds it the ladder, and
+`apps/web/src/components/step-up.tsx`
 is the offer. See
 `docs/decisions/0032-readiness-is-measured-over-the-whole-tier.md`.
 
@@ -255,7 +270,7 @@ the top rung, Weak at three days, Failed at the bottom. A Weak on a question
 answered correctly four times is real information, and it should pull the
 question back down.
 
-Nobody rates their own confidence. `src/lib/interval-ladder.ts` derives one from
+Nobody rates their own confidence. `packages/core/src/interval-ladder.ts` derives one from
 the form and the verdict, 3 for a correct choice, 4 for a correct ordering, the
 self grade's worth on an open question, and records it on the attempt so the
 history says what kind of evidence each answer was. On a graded form that is all
@@ -282,7 +297,7 @@ the question is answered, whatever the form. See
 `docs/decisions/0023-every-question-is-answered-never-typed.md`.
 
 **`choice` questions grade themselves.** Choosing an option submits it; the
-server grades it in `src/lib/choice.ts`, records the attempt and returns the
+server grades it in `packages/core/src/choice.ts`, records the attempt and returns the
 answer in full in one round trip. The correct option never reaches the browser
 before an answer arrives. There is no half-right option, so the ladder only ever
 sees a pass or a reset. Anything that can be asked this way is asked this way.
@@ -291,7 +306,7 @@ See `docs/decisions/0011-multiple-choice-grades-itself.md`.
 **`ordering` questions are answered by building the sequence a program prints.**
 The pool holds lines the program never prints as well as the ones it does, so
 the answer is a selection as much as an arrangement. The page submits positions,
-because a program can print the same line twice, and `src/lib/ordering.ts`
+because a program can print the same line twice, and `packages/core/src/ordering.ts`
 compares the text at those positions. A sequence is right or it is not: scoring
 a nearly-right one needs a threshold, and every threshold is arbitrary. See
 `docs/decisions/0024-ordering-questions-carry-distractors.md`.
@@ -322,7 +337,7 @@ play button only works if the voice is up. A laptop still starts the app and the
 database alone. See
 `docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md`.
 
-`src/lib/speech/` is the whole engine. Audio is cached by content, since the
+`apps/web/src/lib/speech/` is the whole engine. Audio is cached by content, since the
 file's name is a hash of the script, so a script is synthesised once and read
 from disk every time after. Recordings are stored as Opus rather than as the WAV
 Piper produces, which is what makes a whole track something a phone can hold.
@@ -342,7 +357,8 @@ correctness.
 **`GET /api/speech/<key>` plays a recording, and makes it first if nobody has
 asked for those words before.** A key with a file behind it is a read. A key with
 nothing behind it is resolved against `content/` by
-`src/lib/speech/spoken-content.ts`, which addresses every narration section and
+`apps/web/src/lib/speech/spoken-content.ts`, which addresses every narration
+section and
 every question script the same way the cache does, and only a key that no script
 hashes to is a 404. Either way the reply is immutable for a year, because the key
 is the hash of the words and the bytes behind one can never change.
@@ -381,7 +397,8 @@ loaded says the voice is unavailable.
 
 **A question is spoken from its own words.** Lessons carry a hand-written script
 and questions do not, because a prompt is already a sentence somebody asks out
-loud. `src/lib/speech/spoken-question.ts` builds two scripts per question, one of
+loud. `apps/web/src/lib/speech/spoken-question.ts` builds two scripts per question,
+one of
 the prompt and its options and one of the answer and its explanation, and each is
 recorded the first time it is played. Code is not read: a paragraph containing an
 indented line is dropped and the script says it is on screen instead. The
@@ -396,7 +413,7 @@ its lesson, an ordered list of titled sections written to be heard. A topic
 without one shows no player rather than falling back to the prose, and the
 content check names the topics that have no script.
 
-`src/components/speech/` is the player. One audio element whose source is
+`apps/web/src/components/speech/` is the player. One audio element whose source is
 swapped per section, because playback permission belongs to the element and a
 new one created mid-narration would be refused. It plays a topic end to end from
 one press, fetches the next section while the current one plays, and remembers

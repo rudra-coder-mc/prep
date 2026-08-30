@@ -30,7 +30,7 @@ rsync -a --delete \
   --exclude coverage \
   --exclude test-results \
   --exclude playwright-report \
-  --exclude e2e/.auth \
+  --exclude apps/web/e2e/.auth \
   --exclude .speech-cache \
   --exclude .speech-cache-e2e \
   --exclude .DS_Store \

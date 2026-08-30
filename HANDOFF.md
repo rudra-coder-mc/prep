@@ -14,12 +14,12 @@ Both are deliberate; see the hard rule in `CLAUDE.md`, which covers every hosted
 service rather than only the company GitLab. That rule now has exactly one named
 exception, and it is new: see the trap on it below.
 
-**`main` was green when task 20 merged, and nothing has touched code since.**
-The last full `npm run verify` ran through lint, format check, typecheck, the
-unit tests, the integration tests against real Postgres and a real speech engine,
-the production build and the Playwright suite. The work after it has been
-documentation only, so that result still stands, but it has not been re-run.
-`e2e/spoken-questions.spec.ts:63` remains the flaky one: it has passed on the
+**`main` was green when task 21 merged.** The full `npm run verify` ran through
+lint, format check, typecheck, the unit tests, the integration tests against
+real Postgres and a real speech engine, the production build and the Playwright
+suite. The production image was built and run separately, since `verify` does
+not cover it and task 21 changed the Dockerfile.
+`apps/web/e2e/spoken-questions.spec.ts:63` remains the flaky one: it has passed on the
 re-run after every failure it has ever had, which is not the same as being fixed,
 and a spec that fails half the time makes the merge rule mean nothing.
 
@@ -53,10 +53,17 @@ recordings, the answers travelling with the questions, and Expo. Three terms wen
 into `docs/glossary.md`: content archive, refresh and sync. `docs/architecture.md`
 gained a mobile client section and the `device_sync` table.
 
-The plan is cut into tasks. Phase 6 in `TASKS.md` is fifteen tasks and two
-low-priority ones, each a slice that can be shown working on its own, and the
-mobile version is gone from Not scheduled. No code has been written against any
-of it yet.
+The plan is cut into tasks. Phase 6 in `TASKS.md` was fifteen tasks and two
+low-priority ones, each a slice that can be shown working on its own. Task 21 is
+done, so fourteen are left and nothing on the phone itself has been started.
+
+**The repository is a workspace.** `packages/core` holds the logic both clients
+share, `packages/content` holds the curriculum with its loader and validator, and
+`apps/web` is the Next application. The packages are consumed as TypeScript
+source rather than a build: npm links them, Next transpiles them, and there is no
+compile step to remember. Two things in the move are worth knowing before you
+touch them, and both are in the traps below: how the loader finds the curriculum,
+and what an old path in a doc means now.
 
 **Every question carries a tier**, one of `swe-1`, `swe-2`, `senior` or `staff`,
 named after the level of interview that asks it. The promise it buys is in
@@ -71,8 +78,9 @@ exists on exercises and means something different there, which
 **A tier is now the path rather than a label.** The pick is a row per user per
 track in `track_tier`, and enrolment reads it: marking a topic learned schedules
 only the questions at or below the pick, and the topic list is the topics that
-pick covers. `src/lib/tiers.ts` holds what a pick covers,
-`src/lib/track-tier.ts` stores it, `src/lib/progress.ts` is the only place that
+pick covers. `packages/core/src/tiers.ts` holds what a pick
+covers, `apps/web/src/lib/track-tier.ts` stores it,
+`apps/web/src/lib/progress.ts` is the only place that
 enrols, and
 `docs/decisions/0031-a-track-remembers-the-tier-you-picked.md` is the argument
 for the default, for what a change of pick does in each direction, and for why a
@@ -83,7 +91,7 @@ A question counts once its schedule reaches step 3 of the ladder, and the share
 is taken over every question the tier covers on the track rather than over the
 ones enrolled so far, because an interview does not restrict itself to the topics
 somebody chose to open. A finished tier offers the tier above it, says how many
-questions accepting enrols, and waits. `src/lib/readiness.ts` is the calculation
+questions accepting enrols, and waits. `packages/core/src/readiness.ts` is the calculation
 and `docs/decisions/0032-readiness-is-measured-over-the-whole-tier.md` is the
 argument. **Expect the number to read as brutal:** every SWE-1 question on the
 JavaScript track has to reach step 3, three correct answers each spread over four
@@ -106,7 +114,7 @@ in practice, modules and the runtime, errors, and memory and performance. Read
 `content/browser/`: the DOM, events and delegation, `fetch` and the network, and
 storage. They are not the language, they belong equally to a future React track,
 and `docs/decisions/0027-the-browser-is-its-own-track.md` is the argument. It
-cost nothing in `src/`: the label is the title cased directory name, the topic
+cost nothing in the app: the label is the title cased directory name, the topic
 list grew a second section by itself, and the dashboard counted two tracks
 without being told. A topic's prerequisites now point across a track boundary,
 and nothing checks that the topic on the other end exists.
@@ -115,8 +123,8 @@ and nothing checks that the topic on the other end exists.
 
 **Nothing is uncommitted.** The mobile planning session landed as six ADRs,
 three glossary entries, a mobile section in `docs/architecture.md`, the Expo
-exception in the hard rule, and Phase 6 in `TASKS.md`. It went through a `docs/`
-branch and a `--no-ff` merge like any other task.
+exception in the hard rule, and Phase 6 in `TASKS.md`. Task 21 landed after it,
+so the repository is now a workspace.
 
 **Some question and narration audio has never been built, and nobody knows how
 much.** A `narration:build` over the four async topics was started and stopped
@@ -144,18 +152,23 @@ in that state.
 
 ## The next action
 
-**Start task 21, the workspace move.** It is the first task of Phase 6 and it
-blocks every other one. `TASKS.md` carries the whole phase, fifteen tasks and two
-low-priority ones, with the blocking edges on each. Take the order from there
-rather than from this file.
+**Take task 22, 24 or 25.** The workspace landed, so all three are unblocked and
+nothing orders them against each other. 22 is the transcode to Opus, 24 is the
+content archive, 25 is the phone's credential. 22 is the one that buys the most
+on its own, since it takes the recording library from 3.6 GB to about 330 MB
+whatever else happens.
 
-Read `0033` before any of the phase and `0035` before task 21 specifically. All
-eight files bound for `packages/core` are already free of `server-only`, the
-database and the DOM, so nothing is owed as a prefactor first.
+`TASKS.md` carries the whole phase with the blocking edges on each task. Take
+the order from there rather than from this file, and read `0033` before any of
+it.
 
-The web app is in daily use for the whole phase, so tasks 21 to 28 have to leave
-it behaving identically. That is the standing constraint on the server half of
-this work and it is worth re-reading before each of those tasks.
+**Prune before transcoding in task 22.** The cache holds 1776 recordings against
+the 1417 scripts the content has, because editing a script orphans the recording
+it used to key. Transcoding first spends the work on several hundred files
+nothing points at.
+
+The web app is in daily use for the whole phase, so tasks 22 to 28 have to leave
+it behaving identically.
 
 ### What Phase 4 finished with
 
@@ -237,7 +250,8 @@ shape a package so it can be shaken.
 **Derive any count you write into `TASKS.md` from the files.** The guidance
 paragraph there cites examples and totals, and one of them was written from
 memory and named the wrong tier for a question. A short script over
-`content/*/*/questions.ts` is how the numbers in it are produced.
+`packages/content/content/*/*/questions.ts` is how the numbers in it are
+produced.
 
 ### What authoring a group has taught
 
@@ -287,9 +301,10 @@ that teaches something, and it is required on nearly every question in the bank.
 
 ## Open items
 
-**The daily queue and the streak disagree about what "today" is.** `src/lib/day.ts`
+**The daily queue and the streak disagree about what "today" is.**
+`packages/core/src/day.ts`
 defines a day as a calendar day in `APP_TIMEZONE`, deliberately, so that
-travelling cannot shift when a streak rolls over. `src/lib/daily-queue.ts`
+travelling cannot shift when a streak rolls over. `packages/core/src/daily-queue.ts`
 computes the start and end of the day with `setHours` on whatever timezone the
 process is in. On one machine those are the same answer and the disagreement is
 invisible. Across a laptop and a phone they are not. It is task 36 in the
@@ -357,7 +372,7 @@ about the shared mutable prototype and shares nothing with `class-syntax`.
 
 **One end-to-end spec is flaky, nobody owns it, and it now blocks the merge
 rule.** "A question can be listened to before it is answered",
-`e2e/spoken-questions.spec.ts:63`, has failed seven times in sixteen full suite
+`apps/web/e2e/spoken-questions.spec.ts:63`, has failed seven times in sixteen full suite
 runs, and passes on a re-run of the same commit every time.
 
 **It has now taken a second spec with it.** In one run,
@@ -420,7 +435,7 @@ has on purpose; see
 **The step-up offer has no end-to-end test and cannot have one.** Reaching it
 means every question a track's tier covers sitting at step 3, which is 74 rows on
 the JavaScript track and nothing a browser session can produce. It is covered by
-`src/lib/dashboard.integration.test.ts`, which places rows on the ladder
+`apps/web/src/lib/dashboard.integration.test.ts`, which places rows on the ladder
 directly, and the end-to-end suite asserts only that nothing is offered while a
 tier is unfinished. If the offer ever renders wrongly, no test will catch it.
 
@@ -443,7 +458,8 @@ line to change.
 is deprecated in favour of `proxy`. Pre-existing, harmless, unowned.
 
 **A Vite warning during unit tests** about the dynamic content imports in
-`src/content/loader.ts`. Cosmetic, only appears under Vitest, pre-existing.
+`packages/content/src/loader.ts`. Cosmetic, only appears under Vitest,
+pre-existing.
 
 ## What verification has caught, and how
 
@@ -477,14 +493,14 @@ one: the middleware redirected every unauthenticated request to the login page,
 silently and got a page of HTML with a 200. Nothing in the suite could see it,
 because the middleware is not in the route's unit test and no end-to-end spec
 called the endpoint. Driving the running container with `curl` is what found it.
-`e2e/speech.spec.ts` now covers the endpoint from inside a real page, and that
+`apps/web/e2e/speech.spec.ts` now covers the endpoint from inside a real page, and that
 spec was checked by reverting the middleware fix and watching it fail. A
 regression test nobody has seen fail is a guess.
 
 **`npm run test` does not typecheck, and the Docker build does.** A `Uint8Array`
 that TypeScript considers possibly backed by a `SharedArrayBuffer` passed every
 unit test and failed the image build. That is the reason for the `Audio` type
-alias in `src/lib/speech/audio.ts` and the warning in its comment. Run
+alias in `apps/web/src/lib/speech/audio.ts` and the warning in its comment. Run
 `npx tsc --noEmit` before believing a green test run.
 
 **Rewriting a topic's content is a platform change, whatever the diff says.**
@@ -525,6 +541,28 @@ keeping a stale colour.
 
 ## Traps
 
+**The loader finds the curriculum by walking up from the working directory, and
+that is deliberate.** `packages/content/src/loader.ts` looks for
+`packages/content/content` above `process.cwd()`, because the web app runs from
+`apps/web`, the scripts run from the repository root and the built server runs
+from the image's root. `import.meta.dirname` is the obvious answer and it is
+wrong: it is undefined once a bundler has compiled the file, which showed up as
+the production build failing to collect page data and nowhere earlier. Anything
+that needs a path beside a topic should call `topicFile` rather than rebuild one.
+
+**The standalone image carries the curriculum because it is told to, not because
+it was traced.** `outputFileTracingIncludes` in `apps/web/next.config.ts` names
+it, and `outputFileTracingRoot` points at the repository root so the workspace
+packages come with it. A file read at request time is invisible to a static
+trace, so removing either line produces an image that builds, starts, and has no
+topics. Check with
+`docker run --rm --entrypoint sh <image> -c 'ls packages/content/content'`.
+
+**A path written in a doc before task 21 is one level out.** `src/lib/x.ts` means
+`apps/web/src/lib/x.ts` unless task 21 moved that file into a package. The ADRs
+were left as they were written, since they record what was decided at the time;
+`README.md` and `docs/architecture.md` are kept current and are where to look.
+
 **Never add a git remote, and never push.** The self-hosted GitLab belongs to
 the company and this is a personal project. `CLAUDE.md` states the rule in full.
 
@@ -562,7 +600,7 @@ invalidate a single key, so the 1776 recordings in `.speech-cache` are
 transcoded in place and nothing is re-synthesised. A session that assumes a
 format change means rebuilding the cache will spend days of CPU it did not need
 to spend. `docs/decisions/0036-recordings-are-stored-compressed.md` says so, and
-`src/lib/speech/cache.ts` is where the key is made.
+`apps/web/src/lib/speech/cache.ts` is where the key is made.
 
 **The cache holds more recordings than there are current scripts, so transcode
 after pruning rather than before.** The content check counts 291 narration
@@ -607,7 +645,7 @@ a test. Do not tidy the wording back into line.
 different fields, and sometimes the same words.** `title` is what the player
 shows a listener; `heading` is what the lesson calls that part of itself, and
 several sections use the same string for both. So those words can appear twice on
-a topic page: select the lesson's by role heading, as `e2e/topic.spec.ts` does,
+a topic page: select the lesson's by role heading, as `apps/web/e2e/topic.spec.ts` does,
 because plain `getByText` matches both. Do not be tempted to derive one field
 from the other - "Truthiness, and the list worth memorising" is a good thing to
 hear and a bad heading.
@@ -618,12 +656,13 @@ permission belongs to the element that the user gesture reached. A narration
 that stops after its first section is this rule being broken.
 
 **The first play of a section takes tens of seconds and every play after it is
-instant.** That is the engine, not a bug. `e2e/topic-reader.spec.ts` raises its
+instant.** That is the engine, not a bug. `apps/web/e2e/topic-reader.spec.ts` raises its
 own timeout for exactly this reason, since the suite empties its speech cache at
 the start of every run.
 
 **A lesson heading's `id` is generated from its own words**, by `headingSlug`
-in `src/content/headings.ts`, and it is what a narration section points at.
+in `packages/core/src/headings.ts`, and it is what a narration section points
+at.
 Rename a heading in `lesson.mdx` and the anchor breaks - but it breaks loudly:
 `npm run content:check` runs before every build, names the heading that no longer
 exists and suggests the one it probably became. Fix the narration, do not weaken
@@ -669,16 +708,18 @@ same way it does for `matchMedia`. Anything that remembers a preference in a
 test depends on that shim.
 
 **`server-only` throws inside the test runner, so a module that imports it
-cannot be imported by a _unit_ test.** That is why `src/lib/speech/` puts the
+cannot be imported by a _unit_ test.** That is why `apps/web/src/lib/speech/`
+puts the
 marker on `index.ts` alone and leaves the parts unmarked. Adding
 `import 'server-only'` to `narrate.ts` would take the engine's own tests with it.
 The integration project aliases the marker away, so a server module can be
 imported there.
 
 **An integration test can now call the real module rather than restating its
-SQL.** `src/db/index.ts` binds the shared connection to `DATABASE_URL` on first
+SQL.** `apps/web/src/db/index.ts` binds the shared connection to `DATABASE_URL` on first
 use, which is why `attempts.integration.test.ts` re-writes the SQL it is testing
-instead of importing `recordAttempt`. `useTestDatabase` in `src/db/testing.ts`
+instead of importing `recordAttempt`. `useTestDatabase` in
+`apps/web/src/db/testing.ts`
 closes that connection, points the variable at the throwaway database and hands
 back the undo, so `progress.integration.test.ts` runs `markTopicLearned` itself.
 Two rules come with it: call it in `beforeAll` before anything touches `db`, and
@@ -720,16 +761,16 @@ end-to-end suite needs it too, through `scripts/e2e.sh`.
 **The end-to-end suite empties its speech cache at the start of every run**, at
 `.speech-cache-e2e`. That is what lets a spec assert a script had to be
 synthesised. A spec that reuses another spec's words is asserting nothing, so
-every test in `e2e/speech.spec.ts` brings its own sentence.
+every test in `apps/web/e2e/speech.spec.ts` brings its own sentence.
 
-**Which is why `e2e/spoken-questions.spec.ts` stubs the audio.** Question
+**Which is why `apps/web/e2e/spoken-questions.spec.ts` stubs the audio.** Question
 recordings are never built for an e2e run, so the specs route `/api/speech/*` to
 a WAV they construct themselves. Construct it, do not paste a truncated header:
 the browser really decodes this, and `play()` rejecting on a malformed fixture
 reads exactly like the button being broken. One spec deliberately does not stub,
 so the real 404 and its message are covered.
 
-**`e2e/speaking.ts` calls the endpoint with the browser's own `fetch`**, not
+**`apps/web/e2e/speaking.ts` calls the endpoint with the browser's own `fetch`**, not
 Playwright's request fixture, because the fixture would not reproduce the
 failure that matters: a browser follows a redirect silently and hands whatever
 comes back to the caller as a success.
@@ -739,7 +780,7 @@ comes back to the caller as a success.
 **End-to-end runs with reduced motion forced on**, through
 `contextOptions: { reducedMotion: 'reduce' }` in `playwright.config.ts`. A
 visual that starts itself races every assertion about which step is showing. One
-spec in `e2e/topic.spec.ts` opts back in with `test.use` and asserts that
+spec in `apps/web/e2e/topic.spec.ts` opts back in with `test.use` and asserts that
 autoplay happens; leave that one alone. In this version of Playwright
 `reducedMotion` is not a top level test option, so it has to go through
 `contextOptions` or it will not typecheck.
@@ -780,7 +821,7 @@ down the margin, only appear in a narrow window or at high zoom. Check both.
 **A question animates out before the next one mounts.** During that gap the
 previous question's controls are still in the document. Any end-to-end check that
 reads which form is on screen without waiting will act on the question that just
-left. `e2e/answering.ts` exists for exactly this: use `answerable(page)` to wait,
+left. `apps/web/e2e/answering.ts` exists for exactly this: use `answerable(page)` to wait,
 and `walkToForm` rather than a hand-rolled loop, or the loop will consume the very
 question it is looking for. `walkToForm` takes `choice`, `ordering` or `open`.
 
@@ -863,7 +904,7 @@ then do other work.
 journal in a schema called `drizzle`, separate from `public`. Dropping only
 `public` leaves the journal behind, the next migration decides there is nothing
 to do, and you get an empty database with no tables and a confusing seed failure.
-`src/db/reset.ts` drops both and says why.
+`apps/web/src/db/reset.ts` drops both and says why.
 
 **The commit guard reads the whole shell command, not just the message.** The
 PreToolUse hook in `~/.claude/hooks/` that keeps assistant references out of
@@ -874,11 +915,12 @@ that filename while writing about it.
 
 **Integration tests can import `server-only` modules; unit tests cannot.**
 `vitest.config.ts` aliases `server-only` to the package's own empty build for the
-integration project, so `src/lib/attempts.ts` and anything else marked server
+integration project, so `apps/web/src/lib/attempts.ts` and anything else marked
+server
 only can be tested there. The unit project runs in jsdom and deliberately has no
 such alias. Put a test for a server module in a `.integration.test.ts` file.
 
-**`src/db/index.ts` exports a `Proxy`, on purpose.** Next imports route modules
+**`apps/web/src/db/index.ts` exports a `Proxy`, on purpose.** Next imports route modules
 during the build, when `DATABASE_URL` is absent. Collapsing it into a top level
 connection makes the build fail rather than the request.
 
@@ -912,14 +954,15 @@ Playwright server, and the tests it had left then fail in ways that read as
 application bugs. This has already produced a five-failure run that meant
 nothing. Run `verify` in the foreground and wait.
 
-**The development profile only bind mounts `src/`, `content/` and `public/`.**
-Everything else, including `package.json`, `next.config.ts` and the Dockerfile,
-is baked into the image. Change one of those and the stack needs
-`npm run dev:docker -- --build`.
+**The development profile only bind mounts the source directories:**
+`apps/web/src`, `apps/web/public`, `packages/core/src`, `packages/content/src`
+and the curriculum. Everything else, including the manifests,
+`apps/web/next.config.ts` and the Dockerfile, is baked into the image. Change one
+of those and the stack needs `npm run dev:docker -- --build`.
 
 **Plain `docker compose up` mounts none of them, so it serves the image as it was
-last built.** A change to `src/` is simply absent until `docker compose up
---build`. This has already cost an afternoon: a feature that had shipped, been
+last built.** A change to the sources is simply absent until
+`docker compose up --build`. This has already cost an afternoon: a feature that had shipped, been
 merged and been verified was reported missing from the running application,
 because the image predated it. Both profiles do mount `.speech-cache`, since
 compose merges volume lists by target.
@@ -939,7 +982,7 @@ there looks nothing like a failing test.
 
 **Internal links go through `AppLink`, not `next/link`.** `AppLink` is what
 feeds the global progress bar. The only deliberate exception is
-`src/app/not-found.tsx`, which renders outside the signed-in shell.
+`apps/web/src/app/not-found.tsx`, which renders outside the signed-in shell.
 
 ## Conventions
 

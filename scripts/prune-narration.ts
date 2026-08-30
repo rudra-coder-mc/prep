@@ -1,5 +1,5 @@
-import { cacheDirectory } from '@/lib/speech/cache'
-import { pruneRecordings } from '@/lib/speech/prune'
+import { cacheDirectory } from '../apps/web/src/lib/speech/cache'
+import { pruneRecordings } from '../apps/web/src/lib/speech/prune'
 
 /**
  * Deletes every recording no script in `content/` hashes to any more.

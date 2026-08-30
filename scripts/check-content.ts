@@ -1,10 +1,14 @@
 import { readFile } from 'node:fs/promises'
-import path from 'node:path'
-import { getAllTopics, type Topic } from '@/content/loader'
-import { collidingHeadings, unknownHeadings } from '@/content/headings'
-import { TIER_LABELS, TIERS } from '@/content/schema'
-import { checkScript, MAX_SCRIPT_LENGTH } from '@/lib/speech/script'
-import { answerScript, questionScript } from '@/lib/speech/spoken-question'
+import { getAllTopics, topicFile, type Topic } from '@prep/content'
+import {
+  collidingHeadings,
+  unknownHeadings,
+  TIER_LABELS,
+  TIERS,
+  checkScript,
+  MAX_SCRIPT_LENGTH,
+} from '@prep/core'
+import { answerScript, questionScript } from '../apps/web/src/lib/speech/spoken-question'
 
 /**
  * Runs before the build so malformed content fails there rather than during a
@@ -91,7 +95,7 @@ async function checkNarrationAnchors(spoken: Topic[]) {
 
   for (const topic of spoken) {
     const lesson = await readFile(
-      path.join(process.cwd(), 'content', topic.technology, topic.directory, 'lesson.mdx'),
+      topicFile(topic.technology, topic.directory, 'lesson.mdx'),
       'utf8',
     )
 
