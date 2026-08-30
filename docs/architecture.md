@@ -18,7 +18,9 @@ streak, the weak-topic list, the dashboard.
 
 ## Shape
 
-One Next.js application (App Router) talking to one Postgres database. No
+The repository is an npm workspace: `apps/web`, `apps/mobile`, and the
+`packages/core` and `packages/content` that both of them read. The web half is
+one Next.js application (App Router) talking to one Postgres database. No
 separate API service. Server Components read data directly, Server Actions write
 it. For a single-user tool, a network hop between a frontend and a backend we
 also own buys nothing and costs two deployments.
@@ -172,7 +174,7 @@ engineering work.
 
 ## Data model
 
-Seven tables. Deliberately small.
+Eight tables. Deliberately small.
 
 | Table               | Holds                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------- |
@@ -183,6 +185,7 @@ Seven tables. Deliberately small.
 | `review_schedule`   | Per user per question: when it is next due, and where it sits on the interval ladder. |
 | `exercise_progress` | Practical exercises: status, notes, completion.                                       |
 | `daily_activity`    | One row per user per day: how much was reviewed, whether the queue was cleared.       |
+| `device_sync`       | One row per device: its name, and when it last synced. Feeds the sync reminder.       |
 
 Two things are computed rather than stored:
 
@@ -321,8 +324,11 @@ database alone. See
 
 `src/lib/speech/` is the whole engine. Audio is cached by content, since the
 file's name is a hash of the script, so a script is synthesised once and read
-from disk every time after. Editing a script is therefore a new recording rather
-than a stale one, and the old entry is orphaned rather than served.
+from disk every time after. Recordings are stored as Opus rather than as the WAV
+Piper produces, which is what makes a whole track something a phone can hold.
+See `docs/decisions/0036-recordings-are-stored-compressed.md`. Editing a script
+is therefore a new recording rather than a stale one, and the old entry is
+orphaned rather than served.
 
 Two commands act on the cache from outside, and nothing in the application
 depends on either. `npm run narration:build -- javascript/closures` records one
@@ -411,10 +417,48 @@ player, `docs/decisions/0029-audio-is-synthesised-when-it-is-asked-for.md` for
 when the audio is made, and `docs/decisions/0018-the-lesson-follows-the-voice.md`
 for how a section of speech finds its section of lesson.
 
+## The mobile client
+
+`apps/mobile` is an Expo app for Android, and it is offline first: it holds
+everything it needs and works with the server switched off, because the machine
+that serves the platform usually is. See
+`docs/decisions/0033-the-mobile-client-is-offline-first.md`.
+
+Lessons are the one thing it does not render natively. Each one is compiled
+ahead of time into a self-contained HTML page, bundled with the same visual
+components the web uses, and shown in a WebView. React Native sends in the
+heading the narration is on and the colour theme; the page sends back taps on
+internal links. Everything else, the queue, the three question forms, the
+player, the dashboard, is native. See
+`docs/decisions/0034-lessons-are-pre-rendered-and-shown-in-a-webview.md`.
+
+It talks to the server in two exchanges, both started by the device.
+
+```
+   refresh                                sync
+   content archive, one artefact,         attempts by id, learned marks and
+   versioned by a hash of the             tier picks by timestamp. Both ways.
+   files it was built from                Failure is silent.
+        |                                          |
+        v                                          v
+   +--------------------------------------------------------+
+   |  device: SQLite mirroring the server's tables,          |
+   |  the same packages/core functions over the same shapes  |
+   +--------------------------------------------------------+
+        ^
+        |  a track's recordings, one file per key, downloaded
+        |  when asked for and never synthesised on demand
+```
+
+The archive carries every question in full, correct options included, so the
+phone grades locally. That is a real weakening of the guarantee the web keeps,
+and it is accepted rather than worked around. See
+`docs/decisions/0037-the-mobile-archive-carries-the-answers.md`.
+
 ## Not in V1
 
-AI tutoring, multi-user support, social login, mobile, gamification beyond the
-streak, SM-2, and any service beyond the three containers. The schema is
+AI tutoring, multi-user support, social login, gamification beyond the streak,
+SM-2, and any service beyond the three containers. The schema is
 multi-user-shaped (`userId` on every progress row) so that adding users later is
 an auth change, not a data migration. Nothing else anticipates features that do
 not exist yet.
