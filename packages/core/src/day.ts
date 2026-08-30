@@ -15,11 +15,26 @@ export function toDayString(date: Date, timeZone: string = APP_TIMEZONE): string
   }).format(date)
 }
 
-export function addDays(day: string, delta: number): string {
+/**
+ * A day string as a Date at UTC midnight. Every day is exactly 24 hours apart
+ * there, so arithmetic over these cannot be bent by a summer time change.
+ */
+function parseDay(day: string): Date {
   const [year, month, date] = day.split('-').map(Number)
-  const shifted = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, date ?? 1))
+  return new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, date ?? 1))
+}
+
+export function addDays(day: string, delta: number): string {
+  const shifted = parseDay(day)
   shifted.setUTCDate(shifted.getUTCDate() + delta)
   return shifted.toISOString().slice(0, 10)
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+/** Whole days from one day to another, negative when `to` is the earlier one. */
+export function daysBetween(from: string, to: string): number {
+  return (parseDay(to).getTime() - parseDay(from).getTime()) / MS_PER_DAY
 }
 
 export type ActivityDay = { day: string; reviewed: number; queueCleared: boolean }

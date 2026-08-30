@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, currentStreak, longestStreak, toDayString, type ActivityDay } from './day'
+import {
+  addDays,
+  currentStreak,
+  daysBetween,
+  longestStreak,
+  toDayString,
+  type ActivityDay,
+} from './day'
 
 const day = (d: string, overrides: Partial<ActivityDay> = {}): ActivityDay => ({
   day: d,
@@ -33,6 +40,35 @@ describe('addDays', () => {
 
   it('handles a leap day', () => {
     expect(addDays('2028-02-28', 1)).toBe('2028-02-29')
+  })
+})
+
+describe('daysBetween', () => {
+  it('counts whole days forward', () => {
+    expect(daysBetween('2026-08-17', '2026-08-20')).toBe(3)
+  })
+
+  it('is zero for the same day', () => {
+    expect(daysBetween('2026-08-17', '2026-08-17')).toBe(0)
+  })
+
+  it('goes negative when the later day comes first', () => {
+    expect(daysBetween('2026-08-20', '2026-08-17')).toBe(-3)
+  })
+
+  it('crosses a month, a year and a leap day without drifting', () => {
+    expect(daysBetween('2026-08-31', '2026-09-01')).toBe(1)
+    expect(daysBetween('2026-12-31', '2027-01-01')).toBe(1)
+    expect(daysBetween('2028-02-28', '2028-03-01')).toBe(2)
+  })
+
+  /**
+   * The dates are parsed as UTC rather than local, so a run in a timezone with
+   * a summer time change cannot produce a 23 or 25 hour day and round wrong.
+   */
+  it('is unaffected by a daylight saving change between the two days', () => {
+    expect(daysBetween('2026-03-28', '2026-03-30')).toBe(2)
+    expect(daysBetween('2026-10-24', '2026-10-26')).toBe(2)
   })
 })
 
