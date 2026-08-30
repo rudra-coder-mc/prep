@@ -1,6 +1,5 @@
-import { createLocalAccountIssuer } from 'better-auth'
 import { eq } from 'drizzle-orm'
-import { auth } from '@/lib/auth'
+import { createAccount } from '@/lib/account'
 import { closeConnection, db } from '@/db'
 import { user } from '@/db/schema'
 
@@ -26,20 +25,7 @@ async function main() {
     return
   }
 
-  // Signup is disabled on the public API, so the account is created through
-  // better-auth's internals to get the same password hashing.
-  const ctx = await auth.$context
-  const created = await ctx.internalAdapter.createUser(
-    { email, name: email.split('@')[0] ?? 'user', emailVerified: true },
-    { method: 'email-password' },
-  )
-  await ctx.internalAdapter.linkAccount({
-    userId: created.id,
-    providerId: 'credential',
-    issuer: createLocalAccountIssuer('credential'),
-    accountId: created.id,
-    password: await ctx.password.hash(password),
-  })
+  await createAccount(email, password)
 
   console.log(`seed user created: ${email}`)
 }

@@ -208,6 +208,16 @@ Not to be confused with: the audio, which is addressed one recording at a time
 and downloaded separately, because it is two orders of magnitude larger than the
 archive and grows with every track.
 
+## Device session
+
+The credential a phone holds instead of a cookie: a thirty-day better-auth
+session, sent as a bearer token on every request and given a fresh thirty days
+whenever the device reaches the server. One login covers a phone in daily use
+for as long as it stays in daily use.
+
+Not to be confused with: a sync or a refresh, which are things a signed-in
+device does. The session is what lets it do them.
+
 ## Refresh
 
 Replacing the content archive on a device with a newer one from the server. One

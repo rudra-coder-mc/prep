@@ -125,7 +125,14 @@ and nothing checks that the topic on the other end exists.
 three glossary entries, a mobile section in `docs/architecture.md`, the Expo
 exception in the hard rule, and Phase 6 in `TASKS.md`. Task 21 landed after it,
 so the repository is now a workspace, task 22 after that, so recordings are
-Opus, then task 23, then task 24.
+Opus, then task 23, then task 24, then task 25.
+
+**A device authenticates with a bearer token and nothing else changed.**
+`/api/device/session` signs one in and reports whether its token is still good;
+better-auth's `bearer` plugin turns the header into the session every endpoint
+already checks. The browser still gets an httpOnly cookie, and
+`apps/web/src/app/api/auth/[...all]/route.ts` strips the `set-auth-token` header
+the plugin would otherwise put on the browser's login response.
 
 **The content archive is built by `npm run content:archive`.** It writes
 `.content-archive/`: `content.json` holding every topic in full with the audio key
@@ -188,8 +195,9 @@ in that state.
 
 ## The next action
 
-**Take task 25**, the phone's credential. It was never blocked, and it is now the
-only thing 26 is waiting for, since task 24 built the archive.
+**Take task 26 or task 27.** Both are unblocked and neither blocks the other, so
+either order works. 26 is the three endpoints a device reads from, and 27 is the
+two-way progress exchange.
 
 Task 23 closed the oldest unknown in this file rather than finding work: nothing
 was missing. See the note on the backlog above before planning around any audio
@@ -204,6 +212,16 @@ web Next drops it again and nothing shows; in a plain browser it was 320 KB of a
 else that gets bundled for the phone should reach for a leaf module rather than
 the barrel**, and should be opened in a browser rather than trusted to a build
 that passed.
+
+Task 25 left the shape every endpoint after it should follow. A device sends
+`Authorization: Bearer <token>`, better-auth's `bearer` plugin turns that into
+the session the server already checks, and an endpoint therefore writes the
+`auth.api.getSession({ headers })` check it would have written anyway. **Do not
+add a device-specific authentication path to a new endpoint.** The one thing to
+know is that the middleware no longer refuses an API request for want of a
+cookie when it carries an `Authorization` header, so a new API route has to
+verify its own session rather than assume the gate did it. Every route that
+exists does. See `docs/decisions/0040-a-device-carries-its-session-in-a-header.md`.
 
 `TASKS.md` carries the whole phase with the blocking edges on each task. Take
 the order from there rather than from this file, and read `0033` before any of
@@ -604,6 +622,22 @@ topics. Check with
 `apps/web/src/lib/x.ts` unless task 21 moved that file into a package. The ADRs
 were left as they were written, since they record what was decided at the time;
 `README.md` and `docs/architecture.md` are kept current and are where to look.
+
+**The token a device holds is not the string in `session.token`.** better-auth
+stores the raw token in that column and hands out the signed form, which is the
+raw token, a dot, and an HMAC. A query matching the column against the token a
+device sent matches nothing, and an `update` written that way reports success
+having changed no rows. It cost an hour in the task 25 tests, where a session
+that should have been rewound to look expired was left untouched and the test
+failed saying the expiry logic was broken. Address the session by user, or split
+the token on the dot.
+
+**`npm run test:e2e` serves the last build, so a route or middleware change
+needs `npm run build` first.** The script migrates, seeds and starts the built
+server; it does not compile. A spec run without the build tests the previous
+commit's app and fails in ways that look like the new code is wrong. `verify`
+gets this right because it builds first, so the trap is only in running the e2e
+suite on its own.
 
 **Never add a git remote, and never push.** The self-hosted GitLab belongs to
 the company and this is a personal project. `CLAUDE.md` states the rule in full.
