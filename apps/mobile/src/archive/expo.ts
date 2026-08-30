@@ -28,6 +28,13 @@ export function createFileStore(): FileStore {
     async exists(path) {
       return file(path).exists || directory(path).exists
     },
+    async size(path) {
+      const target = file(path)
+      // `size` is null for a file that is not there, and the app wants that
+      // answer rather than a throw: a recording it does not hold is the
+      // ordinary case.
+      return target.exists ? (target.size ?? null) : null
+    },
     async makeDirectory(path) {
       directory(path).create({ intermediates: true, idempotent: true })
     },

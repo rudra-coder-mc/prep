@@ -20,7 +20,7 @@ import { readTrackTiers } from '../db/progress'
 import type { Database } from '../db/sqlite'
 import { readDeviceIdentity } from '../device/expo'
 import type { DeviceIdentity } from '../device/identity'
-import { createServerClient } from '../server/client'
+import { createServerClient, type ServerClient } from '../server/client'
 import { createSecretStore } from '../session/expo'
 import { restoreSession, signIn, signOut, type StoredSession } from '../session/session'
 
@@ -45,6 +45,10 @@ export type AppState = {
   content: ArchiveContent | null
   tiers: Map<string, Tier>
   db: Database | null
+  /** The device's storage, which holds the archive and the audio library. */
+  files: FileStore | null
+  /** The client for this session, or null while signed out. */
+  client: ServerClient | null
   refreshing: boolean
   /** The last thing that went wrong, shown once and cleared by the next action. */
   problem: string | null
@@ -131,6 +135,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [loadLocal])
 
+  // One client per session rather than one per action, so a screen that
+  // downloads a track for a minute is not rebuilding it between recordings.
+  const client = useMemo(
+    () =>
+      session
+        ? createServerClient({ baseUrl: session.address, token: session.token, fetch })
+        : null,
+    [session],
+  )
+
   const value = useMemo<AppState>(
     () => ({
       status,
@@ -139,6 +153,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       content,
       tiers,
       db: stores?.db ?? null,
+      files: stores?.files ?? null,
+      client,
       refreshing,
       problem,
 
@@ -167,16 +183,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
 
       async refresh() {
-        if (!stores || !session) return null
+        if (!stores || !client) return null
 
         setRefreshing(true)
         setProblem(null)
         try {
-          const client = createServerClient({
-            baseUrl: session.address,
-            token: session.token,
-            fetch,
-          })
           const result = await refreshArchive({ ...stores, client })
           await loadLocal(stores)
           return result
@@ -188,7 +199,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [status, session, device, content, tiers, refreshing, problem, stores, loadLocal],
+    [status, session, device, content, tiers, refreshing, problem, stores, client, loadLocal],
   )
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

@@ -9,6 +9,7 @@ import { useApp } from '../../src/ui/app-state'
 import { Muted, Problem, Waiting } from '../../src/ui/components'
 import { STATUS_LABELS, statusColour } from '../../src/ui/status'
 import { colors, radius, space } from '../../src/ui/theme'
+import { TrackAudio } from '../../src/ui/track-audio'
 
 /**
  * A track's topics, where each one stands, and the act that puts one into
@@ -22,9 +23,13 @@ import { colors, radius, space } from '../../src/ui/theme'
  * Marking a topic learned enrols the questions the track's tier covers, and
  * doing it again is free. Until task 32 the lesson itself is on the laptop, so
  * this is where the mark is made rather than at the end of a lesson.
+ *
+ * The audio card at the top is the track's recordings, which are downloaded a
+ * track at a time rather than with the archive: see
+ * docs/decisions/0044-a-device-is-told-what-a-track-of-audio-weighs.md.
  */
 export default function TrackScreen() {
-  const { content, db, tiers } = useApp()
+  const { client, content, db, files, tiers } = useApp()
   const { technology } = useLocalSearchParams<{ technology: string }>()
   const [topics, setTopics] = useState<TopicSummary[] | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
@@ -91,6 +96,9 @@ export default function TrackScreen() {
       <Stack.Screen options={{ title }} />
       <ScrollView contentContainerStyle={styles.page}>
         {problem ? <Problem>{problem}</Problem> : null}
+        {content && files && technology ? (
+          <TrackAudio content={content} files={files} client={client} technology={technology} />
+        ) : null}
         {topics.length === 0 ? <Muted>This track has no topics in the archive.</Muted> : null}
         {topics.map((topic) => (
           <View key={topic.slug} style={styles.row}>

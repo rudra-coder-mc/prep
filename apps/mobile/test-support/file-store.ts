@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import type { FileStore } from '../src/archive/files'
@@ -37,6 +37,14 @@ export async function createTestFileStore(): Promise<FileStore & { root: string 
         // A directory is a thing that exists and is not a file to read.
         if (code === 'EISDIR') return true
         if (code === 'ENOENT') return false
+        throw error
+      }
+    },
+    async size(relative) {
+      try {
+        return (await stat(resolve(relative))).size
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
         throw error
       }
     },

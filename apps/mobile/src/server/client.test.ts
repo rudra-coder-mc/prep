@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createServerClient, ServerError } from './client'
 
 /**
- * The wire between the phone and the four device endpoints.
+ * The wire between the phone and the device endpoints.
  *
  * What matters here is the failure telling, not the happy path: an unreachable
  * server and a refused password have to stay different answers, because one of
@@ -139,6 +139,71 @@ describe('the archive', () => {
     const { client } = clientWith(() => json({ error: 'No content archive has been built' }, 503))
 
     await expect(client.archiveVersion()).rejects.toMatchObject({ kind: 'unavailable' })
+  })
+})
+
+describe('the audio', () => {
+  const key = (character: string) => character.repeat(64)
+
+  it('asks what a set of keys weighs and reads the answer back as a map', async () => {
+    const { client, seen } = clientWith(() => json({ recordings: [{ key: key('a'), bytes: 100 }] }))
+
+    const sizes = await client.audioSizes([key('a'), key('b')])
+
+    expect(sizes.get(key('a'))).toBe(100)
+    // Absent, rather than zero: nothing has been recorded for it.
+    expect(sizes.has(key('b'))).toBe(false)
+
+    const request = seen[0]!
+    expect(request.url).toBe(`${BASE}/api/device/audio`)
+    expect(request.method).toBe('POST')
+    expect(await request.json()).toEqual({ keys: [key('a'), key('b')] })
+  })
+
+  /**
+   * A track is thousands of recordings, and a body naming all of them at once
+   * would be most of the size of a recording. The endpoint takes twice a batch,
+   * so the two can move apart without this breaking.
+   */
+  it('asks about a whole track in batches', async () => {
+    const keys = Array.from({ length: 1200 }, (_, at) => key('a').slice(0, 60) + String(1000 + at))
+    const { client, seen } = clientWith(() => json({ recordings: [] }))
+
+    await client.audioSizes(keys)
+
+    expect(seen).toHaveLength(3)
+    expect((await seen[0]!.json()).keys).toHaveLength(500)
+    expect((await seen[2]!.json()).keys).toHaveLength(200)
+  })
+
+  it('asks nothing when there are no keys to ask about', async () => {
+    const { client, seen } = clientWith(() => json({ recordings: [] }))
+
+    expect(await client.audioSizes([])).toEqual(new Map())
+    expect(seen).toHaveLength(0)
+  })
+
+  it('downloads one recording', async () => {
+    const { client, seen } = clientWith(() => new Response(new Uint8Array([1, 2, 3])))
+
+    expect(await client.downloadAudio(key('a'))).toEqual(new Uint8Array([1, 2, 3]))
+    expect(seen[0]!.url).toBe(`${BASE}/api/device/audio/${key('a')}`)
+  })
+
+  /**
+   * A key with no recording is an ordinary answer rather than a failure: the
+   * track has not been narrated yet and the run carries on to the next key.
+   */
+  it('reads a recording that has not been made as nothing rather than as an error', async () => {
+    const { client } = clientWith(() => json({ error: 'That has not been recorded yet' }, 404))
+
+    expect(await client.downloadAudio(key('a'))).toBeNull()
+  })
+
+  it('still fails on anything other than a missing recording', async () => {
+    const { client } = clientWith(() => json({ error: 'Sign in first' }, 401))
+
+    await expect(client.downloadAudio(key('a'))).rejects.toMatchObject({ kind: 'unauthorised' })
   })
 })
 

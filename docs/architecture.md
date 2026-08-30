@@ -573,7 +573,7 @@ phone grades locally. That is a real weakening of the guarantee the web keeps,
 and it is accepted rather than worked around. See
 `docs/decisions/0037-the-mobile-archive-carries-the-answers.md`.
 
-**Three endpoints serve a device, and all three only read.** The build writes
+**Four endpoints serve a device, and all four only read.** The build writes
 the archive and the server hands it over; nothing is assembled per request, so
 the version a device is told about and the bytes it downloads come out of one
 build. The archive directory is a bind mount named by `CONTENT_ARCHIVE_DIR`, the
@@ -596,9 +596,35 @@ one.
 whole difference between it and `/api/speech/<key>`, which synthesises on a miss:
 a reader waiting on one section can wait, and a phone asking for a track's worth
 of keys cannot be allowed to. What is missing is reported, and
-`npm run narration:build` is what makes it. Either endpoint that finds nothing
-built answers 503, so a device can never read an empty answer as being up to
-date.
+`npm run narration:build` is what makes it. Either archive endpoint that finds
+nothing built answers 503, so a device can never read an empty answer as being
+up to date.
+
+`POST /api/device/audio` prices a set of keys: each one that has a recording,
+and how many bytes it is. A key nothing has been recorded for is left out, so one
+answer says both what a download costs and how much of the track has never been
+narrated. It is a POST that only reads, because a track is a few thousand sha256
+keys and that does not fit in a URL. The phone asks in batches of 500 and the
+endpoint takes 1000. See
+`docs/decisions/0044-a-device-is-told-what-a-track-of-audio-weighs.md`.
+
+**A track's audio is downloaded from the track screen, and the price is shown
+first.** The library is 301 MB on this machine, so a screen that started
+downloading without saying what it costs would be the wrong shape. What the
+phone holds is counted locally by listing `audio/` and reading file sizes, so
+that half of the line is there with the server switched off. What is missing is
+priced by the endpoint above, and shown when the server answers.
+
+The download is one request per key, written to `audio/<key>.opus` only once
+every byte has arrived. There is no resume logic and none is needed: a run that
+is killed leaves whole recordings behind, and the next one asks for the rest.
+The audio library sits beside the archive rather than inside it, so replacing the
+curriculum does not throw the recordings away. A key is the hash of the words,
+so an unedited script keeps its recording across a refresh.
+
+A question's prompt can be played in a review session when its recording is on
+the device, and no control is shown at all when it is not. The lesson's own
+player is task 32.
 
 **`POST /api/device/sync` is the one device endpoint that writes**, and the whole
 of the exchange: everything the device has that the server does not goes up, and

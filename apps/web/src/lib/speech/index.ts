@@ -12,7 +12,7 @@ import 'server-only'
 
 export { InvalidScriptError, narrate, type Narration } from './narrate'
 export type { Audio } from './audio'
-export { hasCachedAudio, readCachedAudio, scriptKey } from './cache'
+export { cachedAudioSize, hasCachedAudio, readCachedAudio, scriptKey } from './cache'
 export { SpeechServiceError } from './piper'
 export { MAX_SCRIPT_LENGTH } from '@prep/core'
 export { warmRecording, type Warmed } from './warming'

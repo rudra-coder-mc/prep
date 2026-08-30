@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
   cacheDirectory,
+  cachedAudioSize,
   hasCachedAudio,
   readCachedAudio,
   scriptKey,
@@ -31,6 +32,22 @@ describe('readCachedAudio', () => {
 
   it('returns null when the directory does not exist at all', async () => {
     expect(await readCachedAudio(KEY, join(directory, 'never-written'))).toBeNull()
+  })
+})
+
+describe('cachedAudioSize', () => {
+  it('measures a recording without reading it', async () => {
+    await writeCachedAudio(KEY, AUDIO, directory)
+
+    expect(await cachedAudioSize(KEY, directory)).toBe(AUDIO.byteLength)
+  })
+
+  it('returns null for a key nothing has been written for', async () => {
+    expect(await cachedAudioSize(KEY, directory)).toBeNull()
+  })
+
+  it('returns null when the directory does not exist at all', async () => {
+    expect(await cachedAudioSize(KEY, join(directory, 'never-written'))).toBeNull()
   })
 })
 
