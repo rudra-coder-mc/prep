@@ -488,6 +488,38 @@ and the swap is one settings row, so no directory is ever half replaced and the
 app never has to be sure what renaming one does on a platform it cannot test
 here.
 
+**The daily queue is the device's own, and so is the grade.** The queue is
+`buildDailyQueue` over the ladder rows in SQLite, which is the function the
+server runs over the rows in Postgres, so the two offer the same questions in the
+same order for the same schedule. A row naming a question the archive does not
+hold is dropped from both the queue and the count of what is due: an archive is
+replaced whole and can lag behind a sync, and a screen must not promise a
+question the device cannot ask.
+
+Answering grades locally with `gradeChoice` and `gradeOrdering`, and an open
+question is self graded as it is on the web. The answer in full is on the device
+the whole time, so what survives of the web's guarantee is the order of events:
+nothing renders an answer until the attempt has been written, and `revealAnswer`
+refuses the two forms whose answer names the correct option or sequence.
+
+One answer writes four things: the attempt, the ladder row, when the topic was
+last reviewed, and the day's count. They go in one transaction. The server makes
+the last of those a separate call that a request composes, and a failure between
+the two costs a count somebody can repair; here there is no request to retry and
+no second copy until a sync runs, so an answer is recorded whole or not at all
+and the screen can offer the question again knowing which. The attempt is left
+unsynced, which is the whole of what a sync has to find.
+
+Marking a topic learned is what enrols its questions, at the tier the track is
+on, exactly as it is on the server. It is done from the track screen until the
+lesson is on the phone.
+
+`apps/web/src/lib/schedule-agreement.integration.test.ts` is the second test
+holding both ends at once. It runs the real `recordAttempt` from each side over
+the same history, against real Postgres and real SQLite, and compares the rung
+and the due date after every answer. Each side is covered against its own store
+elsewhere; this is what would notice them parting.
+
 Lessons are the one thing it does not render natively. Each one is compiled
 ahead of time into a self-contained HTML page, bundled with the same visual
 components the web uses, and shown in a WebView. React Native sends in the

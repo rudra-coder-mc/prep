@@ -1,19 +1,43 @@
-import { Link, Redirect } from 'expo-router'
-import { useMemo, useState } from 'react'
+import { Link, Redirect, useFocusEffect, useRouter } from 'expo-router'
+import { useCallback, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { readSchedule } from '../src/db/schedule'
 import { trackSummaries } from '../src/library/tracks'
+import { buildReviewQueue } from '../src/review/queue'
 import { useApp } from '../src/ui/app-state'
 import { Button, Card, Heading, Muted, Problem, Waiting } from '../src/ui/components'
 import { colors, radius, space } from '../src/ui/theme'
 
 /**
- * What this device holds, which is the whole of what it can tell you before the
- * queue exists. It reads nothing over the network: the tracks, their tiers and
- * their question counts all come from the archive and the mirrored tables.
+ * The day, and what this device holds. It reads nothing over the network: the
+ * queue, the tracks, their tiers and their question counts all come from the
+ * archive and the mirrored tables.
  */
 export default function HomeScreen() {
   const app = useApp()
+  const router = useRouter()
   const [refreshed, setRefreshed] = useState<string | null>(null)
+  const [today, setToday] = useState<{ dueToday: number; asking: number } | null>(null)
+
+  const { content, db } = app
+
+  // On focus rather than on mount, so finishing a session leaves a count that
+  // has moved rather than the one the screen was built with.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false
+      if (!content || !db) return
+
+      void (async () => {
+        const { items, dueToday } = buildReviewQueue(content, await readSchedule(db), new Date())
+        if (!cancelled) setToday({ dueToday, asking: items.length })
+      })()
+
+      return () => {
+        cancelled = true
+      }
+    }, [content, db]),
+  )
 
   const tracks = useMemo(
     () => (app.content ? trackSummaries(app.content, app.tiers) : []),
@@ -38,6 +62,18 @@ export default function HomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.page}>
+      {app.content && today ? (
+        <Card>
+          <Heading>{today.dueToday > 0 ? `${today.dueToday} due today` : 'Nothing due'}</Heading>
+          <Muted>{describeToday(today)}</Muted>
+          {today.asking > 0 ? (
+            <View style={styles.actions}>
+              <Button label="Start review" onPress={() => router.push('/review')} />
+            </View>
+          ) : null}
+        </Card>
+      ) : null}
+
       <Card>
         <Heading>{app.content ? 'Content' : 'Nothing downloaded yet'}</Heading>
         <Muted>
@@ -88,6 +124,18 @@ export default function HomeScreen() {
       </View>
     </ScrollView>
   )
+}
+
+/**
+ * The queue is not only what is due. Once everything due fits, it fills up with
+ * the questions that have been going badly, so a day with nothing due still has
+ * something worth doing and the card has to say which it is offering.
+ */
+function describeToday({ dueToday, asking }: { dueToday: number; asking: number }): string {
+  if (asking === 0) return 'Mark a topic learned to put its questions into recall.'
+  if (dueToday === 0) return `The queue offers ${asking} of your weakest, to keep them warm.`
+  if (asking < dueToday) return `Today's queue asks ${asking} of them.`
+  return 'Everything due is in the queue.'
 }
 
 const styles = StyleSheet.create({

@@ -34,6 +34,8 @@ export type TopicSummary = {
   questions: number
   status: TopicStatus
   progress: number
+  /** When it was marked learned, which is what enrolled its questions. */
+  learnedAt: Date | null
 }
 
 export function trackSummaries(content: ArchiveContent, tiers: Map<string, Tier>): TrackSummary[] {
@@ -70,11 +72,8 @@ export function topicSummaries(
     // whose SWE-1 questions are all passing is finished for somebody preparing
     // for SWE-1, and counting the senior ones in would say otherwise forever.
     const questions = questionsUpTo(topic.questions, tier)
-    const summary = summariseTopic(
-      questions.length,
-      attempts.get(topic.slug) ?? [],
-      learned.get(topic.slug) ?? null,
-    )
+    const learnedAt = learned.get(topic.slug) ?? null
+    const summary = summariseTopic(questions.length, attempts.get(topic.slug) ?? [], learnedAt)
 
     return {
       slug: topic.slug,
@@ -83,6 +82,7 @@ export function topicSummaries(
       questions: questions.length,
       status: summary.status,
       progress: summary.progress,
+      learnedAt,
     }
   })
 }
