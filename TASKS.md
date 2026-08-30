@@ -113,30 +113,30 @@ reminds about any quiet for three days or more, which is the only thing
 `device_sync` is read for. The threshold and why it is three days are in
 `docs/architecture.md`.
 
-## 29. The app logs in, refreshes and works with the server off
+Task 29 is done: `apps/mobile` is an Expo app that signs in at
+`/api/device/session`, downloads and unpacks the archive, mirrors the server's
+progress tables in SQLite, and reads its tracks and topic statuses out of both
+with nothing switched on. The screens it has are sign in, what this device holds,
+and a track's topics.
 
-Blocked by nothing. This is where offline first becomes real.
+Three things it settled that the tasks below inherit. The curriculum stays a
+directory of files and only progress goes into SQLite, which is
+`docs/decisions/0043-the-phone-keeps-content-in-a-file-and-progress-in-sqlite.md`.
+Every platform module sits behind an interface with a Node-backed twin in
+`apps/mobile/test-support/`, so anything written in `src/` is testable without a
+phone, and `apps/mobile/tsconfig.app.json` typechecks the app with no `node` and
+no `dom` libraries to keep it that way. And
+`apps/web/src/app/api/device/device-client.integration.test.ts` runs the phone's
+client against the real endpoints and a real archive build, which is the test to
+extend when an endpoint grows.
 
-An Expo app that logs in on first run, pulls the archive, mirrors the server's
-tables in SQLite, and then opens and works with the stack stopped. It runs the
-same `packages/core` functions over the same shapes, so both sides reach the
-same answer about what is due. Database access is the only thing written twice,
-once against Postgres and once against SQLite.
-
-The address is a tailnet hostname, which is fixed across networks and carries a
-real certificate. Whichever machine is serving the stack is the one the app
-points at.
-
-Development is Expo Go, not a development build.
-
-Read `0038`.
-
-Done when the app is opened with everything switched off and every screen it has
-by then works.
+The one thing nobody has verified is the app running on a phone. Every piece of
+its logic is under test, and the rendering is not, because it needs Expo Go and a
+device. Open it before building on it.
 
 ## 30. The daily queue on the phone
 
-Blocked by 29.
+Blocked by nothing now that 29 has landed.
 
 The queue and the three question forms, graded locally with the same choice and
 ordering functions the server runs. An attempt is written to SQLite and waits
@@ -148,7 +148,7 @@ schedule the phone computes for a question matches what the server would.
 
 ## 31. Downloading a track's audio
 
-Blocked by 29.
+Blocked by nothing now that 29 has landed.
 
 A track at a time, one file per key. The app says how much it is about to
 download and how much it already holds, because the library is hundreds of

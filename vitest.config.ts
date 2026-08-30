@@ -28,7 +28,11 @@ export default defineConfig({
           name: 'unit',
           environment: 'jsdom',
           setupFiles: ['./apps/web/vitest.setup.ts'],
-          include: ['apps/web/src/**/*.test.{ts,tsx}', 'packages/*/src/**/*.test.ts'],
+          include: [
+            'apps/web/src/**/*.test.{ts,tsx}',
+            'apps/mobile/src/**/*.test.ts',
+            'packages/*/src/**/*.test.ts',
+          ],
           exclude: ['apps/web/src/**/*.integration.test.ts'],
         },
       },

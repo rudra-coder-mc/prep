@@ -132,9 +132,29 @@ directories are mounted:
 npm run dev:docker -- --build
 ```
 
+## Running the phone app
+
+```bash
+npm run mobile
+```
+
+Starts the Expo development server. Open Expo Go on the phone and scan the code;
+both have to be on the same network, or on the tailnet.
+
+On first run it asks for the address of whichever machine is serving the stack
+and for the login. After that it holds the curriculum, the progress and the
+session itself, and works with everything switched off, which is the point of it.
+Sign in while the server is up, download the curriculum once, and the phone needs
+nothing afterwards.
+
+The app is developed in Expo Go rather than a development build, and the APK is
+built by EAS Build on a personal Expo account. That is the one hosted service
+this project uses and the reasoning is in
+`docs/decisions/0038-expo-is-the-one-hosted-service.md`.
+
 ## How it fits together
 
-The repository is an npm workspace with three members, so the phone can share
+The repository is an npm workspace with four members, so the phone can share
 the logic that decides when a question is due rather than reimplementing it. See
 `docs/decisions/0035-the-repository-is-a-workspace-and-the-logic-is-shared-once.md`.
 
@@ -147,6 +167,10 @@ the logic that decides when a question is due rather than reimplementing it. See
   exercises beside it, version-controlled rather than stored in the database.
 - `apps/web/` is the Next application: everything that touches Postgres,
   better-auth or the DOM.
+- `apps/mobile/` is the Expo app for Android, which holds everything it needs and
+  works with the server switched off. Its screens are in `app/`, its logic in
+  `src/`, and every platform module it uses sits behind an interface with a
+  Node-backed twin in `test-support/`, so the logic is tested without a phone.
 - `packages/content/src/archive/` builds the content archive: the curriculum as
   data, and every lesson compiled into a page that opens on its own. It bundles
   the web app's own lesson components rather than a copy of them, so a lesson

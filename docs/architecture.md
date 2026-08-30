@@ -451,6 +451,43 @@ everything it needs and works with the server switched off, because the machine
 that serves the platform usually is. See
 `docs/decisions/0033-the-mobile-client-is-offline-first.md`.
 
+**Inside the app, two stores rather than one.** Progress goes into SQLite,
+mirroring the server's tables with the user column dropped, because a device
+holds one account. The curriculum stays a directory of files, because that is
+what it is on the server too: content is files in git, and Postgres has never
+held a question. `content.json` is parsed once per launch and held for as long as
+the app runs; the lesson pages stay as files for the WebView to open. See
+`docs/decisions/0043-the-phone-keeps-content-in-a-file-and-progress-in-sqlite.md`.
+
+```
+apps/mobile/app/          the screens, routed by expo-router
+apps/mobile/src/          the logic, which is what is tested
+apps/mobile/test-support/ the Node-backed stores those tests run against
+```
+
+Everything in `src/` that touches a platform does so through an interface with
+two implementations: `expo-sqlite` and `node:sqlite` behind `db/sqlite.ts`,
+`expo-file-system` and `node:fs` behind `archive/files.ts`, `expo-secure-store`
+and a map behind `session/secrets.ts`. The `expo-*` implementations are one thin
+file each and hold no logic. That is what lets the queries, the migration, the
+archive install and the whole server client be tested against real SQLite and
+real files off a phone, and it is why `apps/mobile/tsconfig.app.json` typechecks
+the app with neither `dom` nor `node` libraries: a Node import in `src/` is a
+bundle that fails on the phone, and it should fail in the terminal instead.
+
+`apps/web/src/app/api/device/device-client.integration.test.ts` is the one test
+that holds both ends of the wire, running the phone's client against the real
+endpoints, the real better-auth and an archive built from `content/`. Every other
+test on either side uses a stand-in for the other, so that one is what would
+notice the two drifting apart.
+
+An install checks everything it can refuse in memory before it writes anything,
+so a refresh that fails leaves the device holding the archive it was already
+working from. Each version is then unpacked into a directory named after itself
+and the swap is one settings row, so no directory is ever half replaced and the
+app never has to be sure what renaming one does on a platform it cannot test
+here.
+
 Lessons are the one thing it does not render natively. Each one is compiled
 ahead of time into a self-contained HTML page, bundled with the same visual
 components the web uses, and shown in a WebView. React Native sends in the

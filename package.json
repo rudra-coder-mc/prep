@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "npm run dev --workspace @prep/web",
     "dev:docker": "docker compose -f compose.yaml -f compose.dev.yaml up",
+    "mobile": "npm run start --workspace @prep/mobile",
     "build": "npm run content:check && npm run build --workspace @prep/web",
     "start": "npm run start --workspace @prep/web",
     "deploy": "./scripts/deploy.sh",
