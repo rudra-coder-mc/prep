@@ -154,25 +154,26 @@ it owns them.
 Marking a topic learned is done from the track screen, because the lesson is not
 on the phone until task 32. Move it when the lesson arrives.
 
-## 31. Downloading a track's audio
+Task 31 is done: a track's audio downloads onto the phone and plays there with
+nothing switched on. `POST /api/device/audio` prices a set of keys, which is the
+only thing a device cannot work out for itself: the archive already carries every
+key, and what no key says is what it costs or whether it has been recorded at
+all. See `docs/decisions/0044-a-device-is-told-what-a-track-of-audio-weighs.md`.
 
-Blocked by nothing now that 29 has landed.
+Two things it settled. The audio library lives beside the archive rather than
+inside it, so replacing the curriculum keeps every recording whose script did not
+change, and a download is one request per key written only once its bytes have
+all arrived, which is why an interrupted run needs no resume logic. And the phone
+now has a `ServerClient` on the app state rather than one built per action, which
+is what a screen downloading for a minute needs.
 
-A track at a time, one file per key. The app says how much it is about to
-download and how much it already holds, because the library is hundreds of
-megabytes and the phone's storage is the constraint that made task 22 worth
-doing.
-
-`/api/device/audio/<key>` answers one key, so nothing yet says how large a whole
-track is without asking key by key. Decide here whether that is a listing
-endpoint or an estimate from what the archive already knows.
-
-Done when a track's audio is on the phone and plays with nothing switched on,
-and an interrupted download continues rather than starting again.
+Listening is on the question prompt in a review session, and the control is
+absent rather than dead when the recording is not on the device. The lesson's own
+player is task 32.
 
 ## 32. The lesson on the phone
 
-Blocked by 31.
+Blocked by nothing now that 31 has landed.
 
 The pre-rendered page in a WebView, with the player and everything else native
 around it. The bridge carries four messages and no state: React Native sends in
@@ -300,6 +301,21 @@ nothing is found and the command says so.
 
 Done when one function has one home that both packages can reach, with the
 behaviour on "no lockfile above here" decided once.
+
+## 40. The phone has no way to drop a recording it no longer needs
+
+A key is the hash of the words, so editing a narration script leaves the old
+recording on the phone forever. The server has `npm run speech:prune` for exactly
+this, and the phone has nothing: the audio library sits beside the archive and
+survives every refresh, deliberately, because that is what stops an unedited
+track being downloaded twice.
+
+It stays low priority because the leak is slow. It costs the size of the scripts
+that were edited since the track was downloaded, and a person who cared could
+clear the app's storage and download the track again.
+
+Done when a refresh drops the recordings no current key names, and a test proves
+a script that did not change keeps its recording across one.
 
 ---
 

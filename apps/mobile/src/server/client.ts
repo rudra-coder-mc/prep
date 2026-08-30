@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 /**
- * The four device endpoints, and the only place in the app that knows their
+ * The device endpoints, and the only place in the app that knows their
  * shapes. Everything here is passed its `fetch` rather than reaching for the
  * global one, so the whole client runs off a device.
  *
@@ -23,6 +23,8 @@ export class ServerError extends Error {
   constructor(
     readonly kind: ServerFailure,
     message: string,
+    /** What the server answered, or null when it was never reached. */
+    readonly status: number | null = null,
   ) {
     super(message)
     this.name = 'ServerError'
@@ -46,6 +48,10 @@ const versionSchema = z.object({
   narrationSections: z.number().int().nonnegative(),
 })
 
+const recordingsSchema = z.object({
+  recordings: z.array(z.object({ key: z.string().min(1), bytes: z.number().int().nonnegative() })),
+})
+
 export type DeviceSession = {
   token: string
   expiresAt: Date
@@ -66,7 +72,21 @@ export type ServerClient = {
   checkSession(): Promise<Omit<DeviceSession, 'token'>>
   archiveVersion(): Promise<ArchiveVersion>
   downloadArchive(): Promise<Uint8Array>
+  /**
+   * What each key's recording weighs, leaving out the keys nothing has been
+   * recorded for. The caller asks about a whole track at once.
+   */
+  audioSizes(keys: string[]): Promise<Map<string, number>>
+  /** One recording, or null when the server has not made it yet. */
+  downloadAudio(key: string): Promise<Uint8Array | null>
 }
+
+/**
+ * How many keys go in one question. The endpoint takes twice this, so a track
+ * of a few thousand recordings is a handful of small requests rather than one
+ * body the size of the answer.
+ */
+const KEYS_PER_REQUEST = 500
 
 export function createServerClient({ baseUrl, token, fetch }: ServerClientOptions): ServerClient {
   async function send(path: string, init: RequestInit = {}): Promise<Response> {
@@ -139,6 +159,41 @@ export function createServerClient({ baseUrl, token, fetch }: ServerClientOption
       const response = await send('/api/device/archive')
       return new Uint8Array(await response.arrayBuffer())
     },
+
+    async audioSizes(keys) {
+      const sizes = new Map<string, number>()
+
+      for (let at = 0; at < keys.length; at += KEYS_PER_REQUEST) {
+        const batch = keys.slice(at, at + KEYS_PER_REQUEST)
+        const response = await send('/api/device/audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keys: batch }),
+        })
+
+        const parsed = recordingsSchema.safeParse(await response.json().catch(() => null))
+        if (!parsed.success) throw notOurServer('/api/device/audio')
+
+        for (const { key, bytes } of parsed.data.recordings) sizes.set(key, bytes)
+      }
+
+      return sizes
+    },
+
+    async downloadAudio(key) {
+      let response: Response
+      try {
+        response = await send(`/api/device/audio/${key}`)
+      } catch (error) {
+        // A key with no recording is the ordinary answer to this question
+        // rather than a failure: the track has not been narrated yet, and the
+        // caller carries on to the next key.
+        if (error instanceof ServerError && error.status === 404) return null
+        throw error
+      }
+
+      return new Uint8Array(await response.arrayBuffer())
+    },
   }
 }
 
@@ -161,7 +216,7 @@ async function failure(response: Response): Promise<ServerError> {
     // Falls through to the status line above.
   }
 
-  return new ServerError(kind, message)
+  return new ServerError(kind, message, response.status)
 }
 
 function describe(error: unknown): string {

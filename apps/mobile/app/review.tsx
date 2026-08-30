@@ -17,6 +17,7 @@ import {
 import { buildReviewQueue, type QueuedItem } from '../src/review/queue'
 import { useApp } from '../src/ui/app-state'
 import { Button, Card, Heading, Muted, Problem, Waiting } from '../src/ui/components'
+import { Listen } from '../src/ui/listen'
 import { colors, radius, space } from '../src/ui/theme'
 
 /**
@@ -30,6 +31,9 @@ import { colors, radius, space } from '../src/ui/theme'
  * The one part of the web's guarantee that survives offline is the order of
  * events: the answer in full is on this device the whole time, and it is not
  * rendered until the question has been answered.
+ *
+ * The prompt can be listened to when this track's audio has been downloaded,
+ * which is the track screen's job. There is no control at all when it has not.
  */
 
 const RESULTS: Result[] = ['passed', 'weak', 'failed']
@@ -53,7 +57,7 @@ export default function ReviewScreen() {
   const [problem, setProblem] = useState<string | null>(null)
   const scroller = useRef<ScrollView>(null)
 
-  const { content, db } = app
+  const { content, db, files } = app
 
   useEffect(() => {
     let cancelled = false
@@ -145,6 +149,7 @@ export default function ReviewScreen() {
         <Chip>{TIER_LABELS[item.question.tier]}</Chip>
       </View>
       <Text style={styles.prompt}>{item.question.prompt}</Text>
+      <Listen key={item.key} files={files} audioKey={item.question.promptAudioKey} />
       {item.question.code ? <Text style={styles.code}>{item.question.code}</Text> : null}
 
       <Question

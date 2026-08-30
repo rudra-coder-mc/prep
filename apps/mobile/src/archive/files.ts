@@ -10,6 +10,8 @@ export type FileStore = {
   writeBytes(path: string, bytes: Uint8Array): Promise<void>
   readText(path: string): Promise<string | null>
   exists(path: string): Promise<boolean>
+  /** How many bytes a file holds, or null when it is not there. */
+  size(path: string): Promise<number | null>
   /** Creates parents too, and does nothing when the directory is already there. */
   makeDirectory(path: string): Promise<void>
   /** Removes a directory and everything in it. A path that is not there is not an error. */

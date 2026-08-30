@@ -82,9 +82,15 @@ The version it prints is a hash of the files it was built from, and that is what
 a device compares to decide whether to refresh. Audio is not in it.
 
 The server serves what this wrote and never builds it itself, at
-`/api/device/archive/version`, `/api/device/archive` and
-`/api/device/audio/<key>`. So content edited and not rebuilt is invisible to a
-phone. `npm run deploy` runs this first for that reason.
+`/api/device/archive/version` and `/api/device/archive`. So content edited and
+not rebuilt is invisible to a phone. `npm run deploy` runs this first for that
+reason.
+
+Audio has two endpoints of its own, because a device downloads it a track at a
+time rather than with the archive. `POST /api/device/audio` says what a set of
+keys weighs and which of them have been recorded, and
+`GET /api/device/audio/<key>` sends one recording. Neither ever synthesises:
+`npm run narration:build` makes recordings ahead of being asked for them.
 
 ## Running it on the machine that serves it
 

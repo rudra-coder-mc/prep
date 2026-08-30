@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { existsSync } from 'node:fs'
-import { access, mkdir, readFile, rename, unlink, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join } from 'node:path'
 import type { Audio } from './audio'
 import { normaliseScript } from '@prep/core'
@@ -72,6 +72,27 @@ export async function hasCachedAudio(key: string, directory = cacheDirectory()):
     return true
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+}
+
+/**
+ * How many bytes a key's recording is, or null when it has not been made.
+ *
+ * A phone about to download a track asks this about every key in it, so that it
+ * can say how large the download is before it starts. Reading each recording to
+ * find out would move the whole track through memory to answer a question about
+ * its size. See
+ * docs/decisions/0044-a-device-is-told-what-a-track-of-audio-weighs.md.
+ */
+export async function cachedAudioSize(
+  key: string,
+  directory = cacheDirectory(),
+): Promise<number | null> {
+  try {
+    return (await stat(audioPath(directory, key))).size
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
     throw error
   }
 }
