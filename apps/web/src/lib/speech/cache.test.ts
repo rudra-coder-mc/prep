@@ -64,7 +64,7 @@ describe('writeCachedAudio', () => {
 
   it('leaves no partial file behind, so a reader never sees half a recording', async () => {
     await writeCachedAudio(KEY, AUDIO, directory)
-    expect(await readdir(directory)).toEqual([`${KEY}.wav`])
+    expect(await readdir(directory)).toEqual([`${KEY}.opus`])
   })
 
   it('overwrites an entry rather than refusing, so a rebuild can replace one', async () => {
@@ -80,7 +80,7 @@ describe('writeCachedAudio', () => {
       writeCachedAudio(KEY, AUDIO, directory),
       writeCachedAudio(KEY, AUDIO, directory),
     ])
-    expect(await readdir(directory)).toEqual([`${KEY}.wav`])
+    expect(await readdir(directory)).toEqual([`${KEY}.opus`])
     expect(await readCachedAudio(KEY, directory)).toEqual(AUDIO)
   })
 })

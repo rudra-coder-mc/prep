@@ -4,7 +4,7 @@ import { InvalidScriptError, narrate, SpeechServiceError } from '@/lib/speech'
 /**
  * Turns a script that `content/` does not own into audio.
  *
- * `POST { "text": "..." }` answers with a WAV body, `X-Speech-Cache` saying
+ * `POST { "text": "..." }` answers with an Ogg Opus body, `X-Speech-Cache` saying
  * whether it had been synthesised before, and `X-Speech-Key` naming the cache
  * entry so a slow response can be traced to a file. The script arrives in the
  * body rather than the query string because a section of narration is longer
@@ -34,7 +34,7 @@ export async function POST(request: Request): Promise<Response> {
 
     return new Response(narration.audio, {
       headers: {
-        'Content-Type': 'audio/wav',
+        'Content-Type': 'audio/ogg',
         'Content-Length': String(narration.audio.byteLength),
         // Audio is already cached on the server by content, and a POST is not
         // cacheable by the browser anyway. Saying so keeps proxies out of it.

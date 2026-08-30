@@ -328,7 +328,10 @@ worth as evidence is the schedule's business; see Recall scheduling above.
 
 A topic can be listened to rather than read. The voice is Piper, a neural text to
 speech engine in the `tts` container with its voice model baked into the image,
-so narration works offline and no lesson text leaves the machine.
+so narration works offline and no lesson text leaves the machine. The container
+runs `services/tts/server.py` rather than Piper's own HTTP server, because Piper
+only writes WAV and a recording is stored compressed. Synthesising and encoding
+in the same place is what keeps the encoder out of the app image.
 
 That container is behind a compose profile, and the machine that serves the
 platform turns the profile on. It is a service the reader depends on there, not a
@@ -345,14 +348,16 @@ See `docs/decisions/0036-recordings-are-stored-compressed.md`. Editing a script
 is therefore a new recording rather than a stale one, and the old entry is
 orphaned rather than served.
 
-Two commands act on the cache from outside, and nothing in the application
-depends on either. `npm run narration:build -- javascript/closures` records one
-topic before anybody asks, which is what the e2e suite needs to prepare a cache
-and what the mobile client will need before a journey. `npm run speech:prune`
-deletes every recording no current script hashes to, which is what stops the
-orphans accumulating. Neither is a build step, and a deploy carries no
-recordings: the cache is a cache, so losing it costs latency rather than
-correctness.
+Three commands act on the cache from outside, and nothing in the application
+depends on any of them. `npm run narration:build -- javascript/closures` records
+one topic before anybody asks, which is what the e2e suite needs to prepare a
+cache and what the mobile client will need before a journey. `npm run
+speech:prune` deletes every recording no current script hashes to, which is what
+stops the orphans accumulating. `npm run speech:transcode` converts a cache made
+before recordings were compressed, and is a migration rather than a routine: run
+prune first, or the engine is spent on recordings nothing points at. None is a
+build step, and a deploy carries no recordings: the cache is a cache, so losing
+it costs latency rather than correctness.
 
 **`GET /api/speech/<key>` plays a recording, and makes it first if nobody has
 asked for those words before.** A key with a file behind it is a read. A key with
@@ -382,7 +387,8 @@ waits for a turn, because Piper saturates the machine and speculative work must
 never be in a reader's way. See
 `docs/decisions/0030-warming-makes-a-recording-without-sending-it.md`.
 
-**`POST /api/speech` is the engine's own door**, a script in and a WAV out. No
+**`POST /api/speech` is the engine's own door**, a script in and a recording
+out. No
 page uses it. It exists so the speech specs can put arbitrary words through the
 engine without borrowing a lesson's, and so a script that `content/` does not own
 can still be spoken.

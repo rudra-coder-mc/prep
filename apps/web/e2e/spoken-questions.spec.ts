@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { revealButton, walkToForm } from './answering'
 
@@ -13,34 +14,14 @@ import { revealButton, walkToForm } from './answering'
  */
 
 /**
- * A tenth of a second of silence, built rather than pasted, because the browser
- * really does decode this. A truncated header looks fine in a fixture and makes
- * play() reject, which reads as the button being broken.
+ * Half a second of silence as Ogg Opus, made once with the same encoder the
+ * engine uses and kept as a file rather than built here.
+ *
+ * The browser really does decode this, and an Opus stream cannot be assembled
+ * by hand the way a WAV header can: its pages are checksummed. A fixture that
+ * looks fine and fails to decode reads as the button being broken.
  */
-function silentWav(): Buffer {
-  const rate = 8000
-  const samples = rate / 10
-  const data = Buffer.alloc(samples * 2)
-  const header = Buffer.alloc(44)
-
-  header.write('RIFF', 0)
-  header.writeUInt32LE(36 + data.length, 4)
-  header.write('WAVE', 8)
-  header.write('fmt ', 12)
-  header.writeUInt32LE(16, 16)
-  header.writeUInt16LE(1, 20) // PCM
-  header.writeUInt16LE(1, 22) // mono
-  header.writeUInt32LE(rate, 24)
-  header.writeUInt32LE(rate * 2, 28)
-  header.writeUInt16LE(2, 32)
-  header.writeUInt16LE(16, 34)
-  header.write('data', 36)
-  header.writeUInt32LE(data.length, 40)
-
-  return Buffer.concat([header, data])
-}
-
-const WAV = silentWav()
+const SILENCE = readFileSync(new URL('./fixtures/silence.opus', import.meta.url))
 
 /**
  * Stands in for the engine, and records which recordings the page asked to play.
@@ -52,7 +33,7 @@ const WAV = silentWav()
 async function serveAudio(page: Page, asked: string[]) {
   await page.route('**/api/speech/*', async (route) => {
     asked.push(new URL(route.request().url()).pathname.split('/').pop() ?? '')
-    await route.fulfill({ status: 200, contentType: 'audio/wav', body: WAV })
+    await route.fulfill({ status: 200, contentType: 'audio/ogg', body: SILENCE })
   })
 
   // Added second on purpose: Playwright consults the handler added last first,

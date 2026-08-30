@@ -27,14 +27,14 @@ export async function GET(
 
   // Read first, so the ordinary case is a file and never a walk of content.
   const recorded = await readCachedAudio(key)
-  if (recorded) return wav(recorded, 'hit')
+  if (recorded) return opus(recorded, 'hit')
 
   const script = await scriptFor(key)
   if (!script) return problem(404, 'No narration has that name')
 
   try {
     const narration = await narrate(script)
-    return wav(narration.audio, narration.source === 'cache' ? 'hit' : 'miss')
+    return opus(narration.audio, narration.source === 'cache' ? 'hit' : 'miss')
   } catch (error) {
     if (error instanceof SpeechServiceError) {
       // The engine runs alongside the app, so it not answering is a broken
@@ -46,10 +46,10 @@ export async function GET(
   }
 }
 
-function wav(audio: Audio, cache: 'hit' | 'miss'): Response {
+function opus(audio: Audio, cache: 'hit' | 'miss'): Response {
   return new Response(audio, {
     headers: {
-      'Content-Type': 'audio/wav',
+      'Content-Type': 'audio/ogg',
       'Content-Length': String(audio.byteLength),
       'Cache-Control': 'private, max-age=31536000, immutable',
       'X-Speech-Cache': cache,

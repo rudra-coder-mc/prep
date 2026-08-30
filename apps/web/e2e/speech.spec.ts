@@ -29,11 +29,11 @@ test('a signed-in page can fetch audio it could play', async ({ page }) => {
   const spoken = await speak(page, 'This is what a lesson sounds like when it is read aloud.')
 
   expect(spoken.status).toBe(200)
-  expect(spoken.contentType).toBe('audio/wav')
-  expect(spoken.header).toMatch(/^RIFF.{4}WAVE$/)
-  // Roughly 44 KB per second of speech. The floor only has to rule out a header
+  expect(spoken.contentType).toBe('audio/ogg')
+  expect(spoken.header).toMatch(/^OggS.{24}OpusHead$/)
+  // Roughly 4 KB per second of speech. The floor only has to rule out a header
   // with no recording behind it.
-  expect(spoken.byteLength).toBeGreaterThan(44_100)
+  expect(spoken.byteLength).toBeGreaterThan(4_000)
 })
 
 test('the second request for a script is served from the cache', async ({ page }) => {
@@ -84,7 +84,7 @@ test('a recording that already exists is served by its key', async ({ page }) =>
   const played = await playBuilt(page, built.key ?? '')
 
   expect(played.status).toBe(200)
-  expect(played.contentType).toBe('audio/wav')
+  expect(played.contentType).toBe('audio/ogg')
   expect(played.byteLength).toBe(built.byteLength)
   // A key is the hash of the words, so the browser can hold on to it for good.
   expect(played.cacheControl).toContain('immutable')
@@ -115,7 +115,7 @@ test.describe('signed out', () => {
     expect(spoken.contentType).toContain('application/json')
     // The failure this guards against is not a wrong status. It is the login
     // page arriving with a 200 and being handed to an audio element.
-    expect(spoken.header).not.toMatch(/^RIFF/)
+    expect(spoken.header).not.toMatch(/^OggS/)
   })
 
   test('a request for a built recording is refused the same way', async ({ page }) => {
@@ -124,6 +124,6 @@ test.describe('signed out', () => {
     const played = await playBuilt(page, 'c'.repeat(64))
 
     expect(played.status).toBe(401)
-    expect(played.header).not.toMatch(/^RIFF/)
+    expect(played.header).not.toMatch(/^OggS/)
   })
 })
