@@ -53,7 +53,9 @@ beforeEach(() => {
   URL.revokeObjectURL = vi.fn()
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => new Response('RIFF....WAVE', { headers: { 'Content-Type': 'audio/wav' } })),
+    vi.fn(
+      async () => new Response('OggS....OpusHead', { headers: { 'Content-Type': 'audio/ogg' } }),
+    ),
   )
   stubIntersectionObserver()
 })

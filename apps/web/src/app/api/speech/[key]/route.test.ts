@@ -17,7 +17,8 @@ const readCached = vi.mocked(readCachedAudio)
 const resolveScript = vi.mocked(scriptFor)
 const synthesise = vi.mocked(narrate)
 
-const WAV = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45])
+/** Opaque here: the route is mocked at `narrate` and never reads the bytes. */
+const OPUS = new Uint8Array([0x4f, 0x67, 0x67, 0x53, 0, 0, 0, 0])
 const KEY = 'a'.repeat(64)
 const SCRIPT = 'A closure remembers where it was born.'
 
@@ -30,9 +31,9 @@ function get(key: string) {
 beforeEach(() => {
   vi.clearAllMocks()
   getSession.mockResolvedValue({ user: { id: 'u1' } } as never)
-  readCached.mockResolvedValue(WAV)
+  readCached.mockResolvedValue(OPUS)
   resolveScript.mockResolvedValue(SCRIPT)
-  synthesise.mockResolvedValue({ audio: WAV, key: KEY, source: 'engine' })
+  synthesise.mockResolvedValue({ audio: OPUS, key: KEY, source: 'engine' })
 })
 
 describe('GET /api/speech/[key]', () => {
@@ -40,10 +41,10 @@ describe('GET /api/speech/[key]', () => {
     const response = await get(KEY)
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toBe('audio/wav')
-    expect(response.headers.get('Content-Length')).toBe(String(WAV.byteLength))
+    expect(response.headers.get('Content-Type')).toBe('audio/ogg')
+    expect(response.headers.get('Content-Length')).toBe(String(OPUS.byteLength))
     expect(response.headers.get('X-Speech-Cache')).toBe('hit')
-    expect(new Uint8Array(await response.arrayBuffer())).toEqual(WAV)
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(OPUS)
     expect(readCached).toHaveBeenCalledWith(KEY)
     expect(resolveScript).not.toHaveBeenCalled()
   })
@@ -54,9 +55,9 @@ describe('GET /api/speech/[key]', () => {
     const response = await get(KEY)
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toBe('audio/wav')
+    expect(response.headers.get('Content-Type')).toBe('audio/ogg')
     expect(response.headers.get('X-Speech-Cache')).toBe('miss')
-    expect(new Uint8Array(await response.arrayBuffer())).toEqual(WAV)
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(OPUS)
     // Resolved on this side of the wire, so a question's script is never
     // something the browser has to hold or send back.
     expect(synthesise).toHaveBeenCalledWith(SCRIPT)
@@ -97,7 +98,7 @@ describe('GET /api/speech/[key]', () => {
   })
 
   it('never lets a key name a file, since it is used as one', async () => {
-    for (const key of ['../../etc/passwd', `${KEY}.wav`, 'ABC', '', 'a'.repeat(63)]) {
+    for (const key of ['../../etc/passwd', `${KEY}.opus`, 'ABC', '', 'a'.repeat(63)]) {
       expect((await get(key)).status).toBe(404)
     }
 

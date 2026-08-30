@@ -64,32 +64,16 @@ The workspace that was task 21 is in place: `packages/core` holds the logic both
 clients share, `packages/content` holds the curriculum, and the Next app is
 `apps/web`.
 
-## 22. Recordings are stored as Opus
-
-Blocked by nothing.
-
-Piper writes 22 kHz mono WAV. The cache is 1776 files and 3.6 GB, about 78 MB
-for one topic, and a phone cannot hold a track at that size. Opus at 32 kbps
-mono takes a topic to about 7 MB and the library to about 330 MB.
-
-**Prune before transcoding.** Those 1776 recordings answer 1417 scripts the
-content actually has, because editing a script orphans the recording it used to
-key. `npm run speech:prune` removes them. Transcoding first spends the work on
-several hundred files nothing points at.
-
-Transcode in place rather than re-synthesising: the cache key is a hash of the
-script and not of the bytes, so every key survives the format change and the 23
-hours of speech already made are kept. Compression runs in the `tts` container,
-where audio is made, so the app container gains no new dependency.
-
-Read `0036`.
-
-Done when the cache is Opus with no WAV left, and the player still plays every
-form of recording in the browser.
+Task 22 is done too: recordings are Ogg Opus at 32 kbps mono, the `tts`
+container runs `services/tts/server.py` rather than Piper's own server, and
+`npm run speech:transcode` is the migration that converts a cache made before
+that. The library on this machine went from 3.6 GB to 301 MB. The server's cache
+is still WAV, which the app reads as an empty cache and re-records from: see
+`HANDOFF.md`.
 
 ## 23. Build a whole track's recordings ahead of time
 
-Blocked by 22.
+Blocked by nothing.
 
 `narration:build` takes a whole track and builds every narration section and
 every question script in it.

@@ -17,7 +17,10 @@ export type SpokenResponse = {
   cacheControl: string | null
   key: string | null
   byteLength: number
-  /** The first twelve bytes as ASCII, which is where a WAV says `RIFF....WAVE`. */
+  /**
+   * The first thirty-six bytes as ASCII. Ogg Opus says `OggS` at the start and
+   * `OpusHead` where the first packet begins, twenty-eight bytes in.
+   */
   header: string
 }
 
@@ -38,7 +41,7 @@ export async function speak(page: Page, text: string): Promise<SpokenResponse> {
       cacheControl: response.headers.get('cache-control'),
       key: response.headers.get('x-speech-key'),
       byteLength: bytes.byteLength,
-      header: new TextDecoder('ascii').decode(bytes.subarray(0, 12)),
+      header: new TextDecoder('ascii').decode(bytes.subarray(0, 36)),
     }
   }, text)
 }
@@ -60,7 +63,7 @@ export async function playBuilt(page: Page, key: string): Promise<SpokenResponse
       cacheControl: response.headers.get('cache-control'),
       key: address,
       byteLength: bytes.byteLength,
-      header: new TextDecoder('ascii').decode(bytes.subarray(0, 12)),
+      header: new TextDecoder('ascii').decode(bytes.subarray(0, 36)),
     }
   }, key)
 }

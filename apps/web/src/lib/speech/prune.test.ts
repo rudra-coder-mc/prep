@@ -13,7 +13,7 @@ import { scriptKey } from './cache'
  * would ask for. A fixture would prove the set difference works and not that
  * the two sides agree on what a current recording is.
  */
-const STALE = `${'a'.repeat(64)}.wav`
+const STALE = `${'a'.repeat(64)}.opus`
 
 let current: string
 let directory: string
@@ -24,7 +24,7 @@ beforeAll(async () => {
 
   if (!first) throw new Error('this test needs a narrated topic')
 
-  current = `${scriptKey(first.script)}.wav`
+  current = `${scriptKey(first.script)}.opus`
 })
 
 beforeEach(async () => {
@@ -52,8 +52,30 @@ describe('pruneRecordings', () => {
 
     const pruned = await pruneRecordings(directory)
 
-    expect(pruned).toEqual({ deleted: [STALE.replace('.wav', '')], kept: 1 })
+    expect(pruned).toEqual({ deleted: [STALE.replace('.opus', '')], kept: 1 })
     expect(await readdir(directory)).toEqual([current])
+  })
+
+  /**
+   * Recordings were WAV before they were compressed, and pruning has to run
+   * before the transcode rather than after it, so that the transcode is not
+   * spent on files nothing points at. That only works if a stale WAV is still
+   * something this can delete.
+   */
+  it('deletes a stale recording left over in the old uncompressed format', async () => {
+    const oldFormat = `${'c'.repeat(64)}.wav`
+    await put(current, oldFormat)
+
+    expect(await pruneRecordings(directory)).toEqual({ deleted: ['c'.repeat(64)], kept: 1 })
+    expect(await readdir(directory)).toEqual([current])
+  })
+
+  it('keeps a recording still spoken by something, whichever format it is in', async () => {
+    const stillWav = current.replace('.opus', '.wav')
+    await put(stillWav)
+
+    expect(await pruneRecordings(directory)).toEqual({ deleted: [], kept: 1 })
+    expect(await readdir(directory)).toEqual([stillWav])
   })
 
   it('leaves alone anything that is not a recording, including a half-written one', async () => {

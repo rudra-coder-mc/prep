@@ -15,11 +15,11 @@ const KEY = 'f'.repeat(64)
 
 describe('fetchNarrationAudio', () => {
   it('asks for the section by key and nothing else', async () => {
-    const fetchMock = respond('RIFF....WAVE', { headers: { 'Content-Type': 'audio/wav' } })
+    const fetchMock = respond('OggS....OpusHead', { headers: { 'Content-Type': 'audio/ogg' } })
 
     const audio = await fetchNarrationAudio(KEY)
 
-    expect(await audio.text()).toBe('RIFF....WAVE')
+    expect(await audio.text()).toBe('OggS....OpusHead')
     // One request whether it was recorded already or made on the spot, and no
     // script in it: the server resolves the key against its own content.
     expect(fetchMock).toHaveBeenCalledTimes(1)

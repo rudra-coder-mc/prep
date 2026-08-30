@@ -111,7 +111,7 @@ describe('POST /api/speech/warm', () => {
   })
 
   it('never lets a key name a file, since it is used as one', async () => {
-    for (const narration of ['../../etc/passwd', `${KEY}.wav`, 'ABC', '', 'a'.repeat(63)]) {
+    for (const narration of ['../../etc/passwd', `${KEY}.opus`, 'ABC', '', 'a'.repeat(63)]) {
       expect((await warm({ narration })).status).toBe(400)
     }
 

@@ -16,8 +16,13 @@ import { spokenScriptKeys } from './spoken-content'
  * by mistake costs the wait to make it again, which is why the rule is a plain
  * one: a file whose name is a key `content/` still hashes to stays, and a file
  * that is not a recording at all is not this command's business.
+ *
+ * Both formats count. Recordings are Opus now, but a cache that has not been
+ * transcoded yet is full of WAV, and pruning has to run first so the transcode
+ * is not spent on files nothing points at. See
+ * docs/decisions/0036-recordings-are-stored-compressed.md.
  */
-const RECORDING = /^([0-9a-f]{64})\.wav$/
+const RECORDING = /^([0-9a-f]{64})\.(wav|opus)$/
 
 export type Prune = {
   /** The keys deleted, so the caller can say what went rather than how much. */

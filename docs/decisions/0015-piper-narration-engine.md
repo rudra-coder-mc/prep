@@ -2,7 +2,13 @@
 
 ## Status
 
-Accepted.
+Accepted. Superseded in part by `0036`, which compresses the cached audio after
+all, for the reason this one anticipated: the volume became a nuisance the
+moment a phone had to hold it. Two things below read differently now. Recordings
+are Ogg Opus rather than WAV, and the `tts` container runs a server of ours
+rather than Piper's, because Piper's only writes WAV. The header the client
+checks before caching is `OggS` with `OpusHead` behind it, not `RIFF....WAVE`,
+but it is checked for exactly the reason recorded here.
 
 ## Context
 

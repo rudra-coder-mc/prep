@@ -4,9 +4,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { InvalidScriptError, narrate } from './narrate'
 import { scriptKey } from './cache'
+import { fakeOpus } from './audio.fixture'
 import { MAX_SCRIPT_LENGTH } from '@prep/core'
 
-const WAV = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45, 7])
+const OPUS = fakeOpus(7)
 
 let directory: string
 let engine: ReturnType<typeof vi.fn>
@@ -15,7 +16,7 @@ beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), 'prep-narrate-'))
   vi.stubEnv('SPEECH_CACHE_DIR', directory)
 
-  engine = vi.fn(async () => new Response(WAV))
+  engine = vi.fn(async () => new Response(OPUS))
   vi.stubGlobal('fetch', engine)
 })
 
@@ -30,7 +31,7 @@ describe('narrate', () => {
     const narration = await narrate('Closures, explained out loud.')
 
     expect(narration.source).toBe('engine')
-    expect(narration.audio).toEqual(WAV)
+    expect(narration.audio).toEqual(OPUS)
     expect(narration.key).toBe(scriptKey('Closures, explained out loud.'))
     expect(engine).toHaveBeenCalledOnce()
   })
@@ -40,7 +41,7 @@ describe('narrate', () => {
     const second = await narrate('Closures, explained out loud.')
 
     expect(second.source).toBe('cache')
-    expect(second.audio).toEqual(WAV)
+    expect(second.audio).toEqual(OPUS)
     expect(engine).toHaveBeenCalledOnce()
   })
 
@@ -87,8 +88,8 @@ describe('narrate', () => {
     ])
 
     expect(engine).toHaveBeenCalledOnce()
-    expect(first.audio).toEqual(WAV)
-    expect(second.audio).toEqual(WAV)
+    expect(first.audio).toEqual(OPUS)
+    expect(second.audio).toEqual(OPUS)
     expect(await readdir(directory)).toHaveLength(1)
   })
 

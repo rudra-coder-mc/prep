@@ -20,7 +20,8 @@ vi.mock('@/lib/speech', async () => {
 const getSession = vi.mocked(auth.api.getSession)
 const narrateMock = vi.mocked(narrate)
 
-const WAV = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x41, 0x56, 0x45])
+/** Opaque here: the route is mocked at `narrate` and never reads the bytes. */
+const OPUS = new Uint8Array([0x4f, 0x67, 0x67, 0x53, 0, 0, 0, 0])
 
 function post(body: unknown) {
   return new Request('http://localhost/api/speech', {
@@ -36,21 +37,21 @@ beforeEach(() => {
 
 describe('POST /api/speech', () => {
   it('answers with the audio, its content type and its length', async () => {
-    narrateMock.mockResolvedValue({ audio: WAV, key: 'abc', source: 'engine' })
+    narrateMock.mockResolvedValue({ audio: OPUS, key: 'abc', source: 'engine' })
 
     const response = await POST(post({ text: 'Say this.' }))
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toBe('audio/wav')
-    expect(response.headers.get('Content-Length')).toBe(String(WAV.byteLength))
-    expect(new Uint8Array(await response.arrayBuffer())).toEqual(WAV)
+    expect(response.headers.get('Content-Type')).toBe('audio/ogg')
+    expect(response.headers.get('Content-Length')).toBe(String(OPUS.byteLength))
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(OPUS)
   })
 
   it('says whether the audio was already synthesised', async () => {
-    narrateMock.mockResolvedValue({ audio: WAV, key: 'abc', source: 'engine' })
+    narrateMock.mockResolvedValue({ audio: OPUS, key: 'abc', source: 'engine' })
     expect((await POST(post({ text: 'Say this.' }))).headers.get('X-Speech-Cache')).toBe('miss')
 
-    narrateMock.mockResolvedValue({ audio: WAV, key: 'abc', source: 'cache' })
+    narrateMock.mockResolvedValue({ audio: OPUS, key: 'abc', source: 'cache' })
     const cached = await POST(post({ text: 'Say this.' }))
     expect(cached.headers.get('X-Speech-Cache')).toBe('hit')
     expect(cached.headers.get('X-Speech-Key')).toBe('abc')

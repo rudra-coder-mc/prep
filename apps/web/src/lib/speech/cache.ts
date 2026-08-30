@@ -51,8 +51,12 @@ export function scriptKey(text: string): string {
   return createHash('sha256').update(normaliseScript(text), 'utf8').digest('hex')
 }
 
+/**
+ * Recordings are Ogg Opus, at 32 kbps mono. See
+ * docs/decisions/0036-recordings-are-stored-compressed.md.
+ */
 function audioPath(directory: string, key: string): string {
-  return join(directory, `${key}.wav`)
+  return join(directory, `${key}.opus`)
 }
 
 /**

@@ -14,11 +14,11 @@ Both are deliberate; see the hard rule in `CLAUDE.md`, which covers every hosted
 service rather than only the company GitLab. That rule now has exactly one named
 exception, and it is new: see the trap on it below.
 
-**`main` was green when task 21 merged.** The full `npm run verify` ran through
-lint, format check, typecheck, the unit tests, the integration tests against
-real Postgres and a real speech engine, the production build and the Playwright
-suite. The production image was built and run separately, since `verify` does
-not cover it and task 21 changed the Dockerfile.
+**`main` was green when task 22 merged.** The full `npm run verify` ran through
+lint, format check, typecheck, 387 unit tests, 49 integration tests against real
+Postgres and a real speech engine, the production build and 61 Playwright specs.
+The `tts` image was rebuilt and its compose healthcheck confirmed, since
+`verify` does not cover the image and task 22 replaced the server inside it.
 `apps/web/e2e/spoken-questions.spec.ts:63` remains the flaky one: it has passed on the
 re-run after every failure it has ever had, which is not the same as being fixed,
 and a spec that fails half the time makes the merge rule mean nothing.
@@ -124,7 +124,21 @@ and nothing checks that the topic on the other end exists.
 **Nothing is uncommitted.** The mobile planning session landed as six ADRs,
 three glossary entries, a mobile section in `docs/architecture.md`, the Expo
 exception in the hard rule, and Phase 6 in `TASKS.md`. Task 21 landed after it,
-so the repository is now a workspace.
+so the repository is now a workspace, and task 22 after that, so recordings are
+Opus.
+
+**The server's recording cache is still WAV, and the app there will read it as
+empty.** `scripts/deploy.sh` excludes `.speech-cache` in both directions, so
+nothing about a deploy converts it, and a key whose file ends `.wav` is a key
+the app does not find. Nothing breaks: a miss is resolved against `content/` and
+re-synthesised, so the cost is the wait rather than a 502.
+
+The fix is not to run the migration there. `npm run speech:transcode` needs
+node_modules, which the deploy excludes, and the cache on this machine is now
+both complete and already converted. rsync it across instead, once, and the
+server has every recording rather than the subset it had recorded for itself.
+Recordings are content addressed, so a cache from one machine is valid on
+another.
 
 **Some question and narration audio has never been built, and nobody knows how
 much.** A `narration:build` over the four async topics was started and stopped
@@ -152,20 +166,18 @@ in that state.
 
 ## The next action
 
-**Take task 22, 24 or 25.** The workspace landed, so all three are unblocked and
-nothing orders them against each other. 22 is the transcode to Opus, 24 is the
-content archive, 25 is the phone's credential. 22 is the one that buys the most
-on its own, since it takes the recording library from 3.6 GB to about 330 MB
-whatever else happens.
+**Take task 23, 24 or 25.** Task 22 unblocked 23, and 24 and 25 were never
+blocked, so nothing orders the three against each other. 23 builds every
+recording a track needs, 24 is the content archive, 25 is the phone's
+credential.
+
+23 is the one to take first. It is the task that finds out how much audio has
+never been built, which is the oldest unknown in this file, and every later
+task that involves a phone holding recordings depends on the answer.
 
 `TASKS.md` carries the whole phase with the blocking edges on each task. Take
 the order from there rather than from this file, and read `0033` before any of
 it.
-
-**Prune before transcoding in task 22.** The cache holds 1776 recordings against
-the 1417 scripts the content has, because editing a script orphans the recording
-it used to key. Transcoding first spends the work on several hundred files
-nothing points at.
 
 The web app is in daily use for the whole phase, so tasks 22 to 28 have to leave
 it behaving identically.
@@ -337,7 +349,7 @@ backlog rather than a trend: check it with a `grep -ro` over `content/` before
 believing any figure here.
 
 **Nobody has listened to a question read aloud and judged whether it works.**
-The pipeline is verified end to end, the recordings are valid WAV and the right
+The pipeline is verified end to end, the recordings are valid audio and the right
 one is requested at the right moment, but no human has confirmed that a question
 dense with operators is followable by ear. `??` against `||` is the case to
 check, in the types and coercion topic. If a handful read badly, the fix is a
@@ -727,13 +739,38 @@ run the undo before `drop()`, because the variable is process wide and vitest
 reuses a worker between files. Re-writing SQL in a test is now a choice, and
 `attempts.integration.test.ts` is a candidate for the same treatment.
 
-**Piper answers with `Content-Type: text/html` even when the body is a WAV.**
-Its recordings and its Flask error pages are indistinguishable by header, so the
-client checks for a `RIFF....WAVE` prefix before anything is written to the
-cache. Without that check a 500 would be cached as audio and played forever.
+**A Flask app that fails serves an HTML page, and the engine is a Flask app.**
+Its recordings and its error pages are not distinguishable by status alone, so
+the client checks for `OggS` with `OpusHead` behind it before anything is
+written to the cache. Without that check a 500 would be cached under the key of
+the script that failed and played as silence forever. This was Piper's own
+server labelling audio as `text/html`; the check outlived the reason.
 
 **Empty text makes Piper itself throw a 500**, which is why the script is
 checked before the request is made rather than after.
+
+**The `tts` container does not run Piper's HTTP server.** It runs
+`services/tts/server.py`, ours, because Piper's only writes WAV and recordings
+are stored as Opus. It speaks `/info`, `/synthesize` and `/transcode` and
+nothing else, so anything in Piper's own API that a search turns up, voices and
+downloads especially, is not there. `opus-tools` in the image is what does the
+encoding, chosen over ffmpeg because the whole job is WAV in and Ogg Opus out.
+
+**A recording is `<key>.opus`, so a cache of `.wav` files reads as no cache at
+all.** Nothing warns about this: the app resolves the key against `content/` and
+re-synthesises, which looks like a cold cache rather than a mistake. `npm run
+speech:transcode` converts one, and it is safe to run twice and safe to
+interrupt.
+
+**`speech:prune` matches both extensions, and that is load-bearing.** Pruning
+has to run before a transcode, or the engine is spent on recordings no current
+script hashes to, and that only works if a stale WAV is still something prune
+deletes. Do not tighten that regex to `.opus`.
+
+**Opus rules out Safari and nothing else.** Every other browser decodes Ogg
+Opus, and the client is Android. If Safari ever matters, the format changes and
+the cache is rebuilt from the scripts, which costs synthesis time and nothing
+else.
 
 **Changing `PIPER_VOICE` is two steps, not one.** A cache entry is addressed by
 the words in the script and not by the voice, so a rebuild alone leaves every
@@ -765,10 +802,13 @@ every test in `apps/web/e2e/speech.spec.ts` brings its own sentence.
 
 **Which is why `apps/web/e2e/spoken-questions.spec.ts` stubs the audio.** Question
 recordings are never built for an e2e run, so the specs route `/api/speech/*` to
-a WAV they construct themselves. Construct it, do not paste a truncated header:
-the browser really decodes this, and `play()` rejecting on a malformed fixture
-reads exactly like the button being broken. One spec deliberately does not stub,
-so the real 404 and its message are covered.
+`apps/web/e2e/fixtures/silence.opus`. That is a file rather than something the
+spec builds, because an Ogg stream is checksummed and cannot be assembled by
+hand the way a WAV header could. Regenerate it with `opusenc` in the `tts`
+container if it is ever needed at another length. The browser really decodes
+this, and `play()` rejecting on a malformed fixture reads exactly like the
+button being broken. One spec deliberately does not stub, so the real 404 and
+its message are covered.
 
 **`apps/web/e2e/speaking.ts` calls the endpoint with the browser's own `fetch`**, not
 Playwright's request fixture, because the fixture would not reproduce the

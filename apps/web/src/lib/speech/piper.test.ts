@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fakeOpus } from './audio.fixture'
 import { speechServiceUrl, SpeechServiceError, synthesise } from './piper'
 
-const WAV = new Uint8Array([
-  0x52, 0x49, 0x46, 0x46, 0x24, 0x0e, 0x02, 0x00, 0x57, 0x41, 0x56, 0x45, 0x00,
-])
+const OPUS = fakeOpus(1, 2, 3)
 
 function respondWith(body: Uint8Array<ArrayBuffer>, init?: ResponseInit) {
   return vi.fn(async () => new Response(body, init))
@@ -16,7 +15,7 @@ afterEach(() => {
 
 describe('synthesise', () => {
   it('posts the text as JSON to the engine', async () => {
-    const fetchMock = respondWith(WAV)
+    const fetchMock = respondWith(OPUS)
     vi.stubGlobal('fetch', fetchMock)
 
     await synthesise('Say this.', 'http://tts:5000')
@@ -28,9 +27,9 @@ describe('synthesise', () => {
     expect(JSON.parse(init.body as string)).toEqual({ text: 'Say this.' })
   })
 
-  it('returns the WAV bytes', async () => {
-    vi.stubGlobal('fetch', respondWith(WAV))
-    expect(await synthesise('Say this.', 'http://tts:5000')).toEqual(WAV)
+  it('returns the recording', async () => {
+    vi.stubGlobal('fetch', respondWith(OPUS))
+    expect(await synthesise('Say this.', 'http://tts:5000')).toEqual(OPUS)
   })
 
   it('fails when the engine cannot be reached', async () => {
@@ -52,11 +51,11 @@ describe('synthesise', () => {
     await expect(synthesise('Say this.', 'http://tts:5000')).rejects.toThrow(/answered 500/)
   })
 
-  it('fails when a 200 body is not a WAV, since Piper labels its audio as HTML', async () => {
+  it('fails when a 200 body is not audio, since a broken engine serves an HTML page', async () => {
     const html = new TextEncoder().encode('<!doctype html><title>500</title>')
     vi.stubGlobal('fetch', respondWith(html))
 
-    await expect(synthesise('Say this.', 'http://tts:5000')).rejects.toThrow(/not a WAV/)
+    await expect(synthesise('Say this.', 'http://tts:5000')).rejects.toThrow(/not Ogg Opus/)
   })
 })
 
