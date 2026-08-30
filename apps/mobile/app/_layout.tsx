@@ -24,6 +24,7 @@ export default function RootLayout() {
         >
           <Stack.Screen name="index" options={{ title: 'prep' }} />
           <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
+          <Stack.Screen name="review" options={{ title: 'Review' }} />
         </Stack>
       </AppProvider>
     </SafeAreaProvider>

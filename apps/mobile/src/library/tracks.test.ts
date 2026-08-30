@@ -93,6 +93,17 @@ describe('the topics in a track', () => {
     expect(scope?.status).toBe('not_started')
   })
 
+  it('says when it was marked learned, since that is what enrolled its questions', async () => {
+    const [closures, scope] = topicSummaries(CONTENT, 'javascript', {
+      tier: 'swe-1',
+      learned,
+      attempts: new Map(),
+    })
+
+    expect(closures?.learnedAt).toEqual(new Date('2026-08-01T00:00:00.000Z'))
+    expect(scope?.learnedAt).toBeNull()
+  })
+
   it('takes its status from the attempts against it', async () => {
     const attempts = new Map([
       [

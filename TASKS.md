@@ -134,17 +134,25 @@ The one thing nobody has verified is the app running on a phone. Every piece of
 its logic is under test, and the rendering is not, because it needs Expo Go and a
 device. Open it before building on it.
 
-## 30. The daily queue on the phone
+Task 30 is done: the phone runs a review session with nothing switched on. The
+queue is `buildDailyQueue` over the ladder rows in SQLite, the three forms are
+graded by the same `@prep/core` functions the server calls, and an answer writes
+the attempt, the ladder row, the topic's last review and the day's count in one
+transaction, left unsynced. `apps/web/src/lib/schedule-agreement.integration.test.ts`
+runs the real `recordAttempt` from both sides over the same history and compares
+the rung and the due date after every answer.
 
-Blocked by nothing now that 29 has landed.
+Two things it settled that the tasks below inherit. The phone stores its
+schedule rather than deriving it, because a question enrolled and never answered
+has no attempts to derive anything from: it is put on the bottom rung by
+`markTopicLearned`, which is `apps/mobile/src/library/learn.ts` and is the phone's
+copy of the server's `enrol`. And `review_schedule`, `topic_progress` and
+`daily_activity` are now written locally as well as by a sync, so task 33's
+ingest has to rebuild all three from the attempts it receives rather than assume
+it owns them.
 
-The queue and the three question forms, graded locally with the same choice and
-ordering functions the server runs. An attempt is written to SQLite and waits
-for a sync. The answer in full appears when the question has been answered and
-not before, which is the part of the web's guarantee that survives offline.
-
-Done when a review session runs end to end with nothing switched on, and the
-schedule the phone computes for a question matches what the server would.
+Marking a topic learned is done from the track screen, because the lesson is not
+on the phone until task 32. Move it when the lesson arrives.
 
 ## 31. Downloading a track's audio
 
@@ -185,6 +193,11 @@ A sync on launch, on returning to the foreground, and at the end of a review
 session. Failure is silent, and the app keeps working entirely from what it
 already holds.
 
+The device now writes its own schedule, last-reviewed marks and day counts, so
+ingesting attempts has to rebuild them the way `rebuildSchedules`,
+`rebuildLastReviewed` and `rebuildActivity` do in `apps/web/src/lib/sync.ts`.
+`attempts.synced` is what says which ones to send.
+
 Done when a session answered on the phone and a session answered on the laptop
 merge in both directions with no attempt lost, and the app with the stack off
 neither blocks nor complains.
@@ -196,6 +209,11 @@ Blocked by 30.
 The rest of the loop, natively: readiness over the whole tier, the streak, the
 weak-topic list, picking a tier per track, and exercises with their status and
 notes.
+
+The streak reads `readActivity` in `apps/mobile/src/db/activity.ts`, which task 30
+started writing. Picking a tier has to bring what is already learned up to it, as
+`enrolLearnedTopics` does on the server, or the pick only applies to topics
+learned after it.
 
 Exercise progress is the one part of the loop the sync does not carry. It is
 neither derived from attempts nor needed before this task, so task 27 left it
