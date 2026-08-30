@@ -7,39 +7,56 @@ what is in flight, and what will bite you.
 
 ## Where this stands
 
-`main` holds the browser track, the finished tier migration, and the whole of
-Phase 3, which is the platform work that turns a tier into a path. The repository
-has no git remote, and no task tracker either. Both are deliberate; see the hard rule in `CLAUDE.md`, which
-covers every hosted service rather than only the company GitLab.
+`main` holds the browser track, the finished tier migration, the whole of Phase
+3, which is the platform work that turns a tier into a path, and every content
+phase after it. The repository has no git remote, and no task tracker either.
+Both are deliberate; see the hard rule in `CLAUDE.md`, which covers every hosted
+service rather than only the company GitLab. That rule now has exactly one named
+exception, and it is new: see the trap on it below.
 
-**`main` is green.** `npm run verify` exited 0 through lint, format check,
-typecheck, 373 unit tests, 48 integration tests against real Postgres and a real
-speech engine, the production build, and all 61 Playwright tests, on the first
-run. Task 17's run was green first time too, and task 16's needed two, the first
-failing on `e2e/spoken-questions.spec.ts:63` alone in its usual way. Two clean
-runs in a row are not evidence that spec is fixed: it has passed on the re-run
-after every failure it has ever had. The open item on it is still the most urgent
-thing in this file, because a spec that fails half the time makes the merge rule
-mean nothing.
+**`main` was green when task 20 merged, and nothing has touched code since.**
+The last full `npm run verify` ran through lint, format check, typecheck, the
+unit tests, the integration tests against real Postgres and a real speech engine,
+the production build and the Playwright suite. The work after it has been
+documentation only, so that result still stands, but it has not been re-run.
+`e2e/spoken-questions.spec.ts:63` remains the flaky one: it has passed on the
+re-run after every failure it has ever had, which is not the same as being fixed,
+and a spec that fails half the time makes the merge rule mean nothing.
 
-At the head of `main` the content check reports 43 topics, 530 questions, 86
-exercises, 269 narration sections and 1060 question scripts, tiered as SWE-1 140,
-SWE-2 258, Senior 73 and Staff 59. The working tree is clean and matches that.
-Re-run `verify` rather than trusting any figure you read anywhere, including
-here, and read the section on piping it before you do.
+At the head of `main` the content check reports 46 topics, 563 questions, 92
+exercises, 291 narration sections and 1126 question scripts, tiered as SWE-1 150,
+SWE-2 275, Senior 79 and Staff 59. That was run rather than remembered. Re-run
+`verify` rather than trusting any figure you read anywhere, including here, and
+read the section on piping it before you do.
 
 The platform is an interview preparation tool built around one loop: read a
 topic, mark it learned, answer recall questions on a schedule. The shell names no
 technology. Every topic can be listened to, the lesson shows which part of itself
 is being spoken, and every question and its answer can be listened to as well.
 
-**The platform is finished again, and everything pending is content.** No
-question takes typed input: every one is a choice question, an ordering question
-or an open question, at most one open per topic and only on an `interview` or
-`scenario` subject, and `npm run content:check` fails a build that breaks either
-rule. Nothing in the schema, the session flow or the speech pipeline is waiting
-on anything. Phase 4 is finished, so `TASKS.md` holds three topics in Phase 5 and
-one loose end that is documentation rather than content.
+**The web platform is finished and so is its content, and the work has moved to
+the phone.** No question takes typed input: every one is a choice question, an
+ordering question or an open question, at most one open per topic and only on an
+`interview` or `scenario` subject, and `npm run content:check` fails a build that
+breaks either rule. Nothing in the schema, the session flow or the speech
+pipeline is waiting on anything. Phases 4 and 5 are both finished and so is the
+documentation loose end that was task 20, so every numbered task in `TASKS.md`
+now belongs to the phone.
+
+**The mobile version has been planned, and the plan is committed.** It is an
+Expo app for Android, offline first, sharing one content library and one set of
+scheduling rules with the web app. Six decisions came out of the session and they
+are the thing to read before touching any of it:
+`docs/decisions/0033-the-mobile-client-is-offline-first.md` is the spine, and
+`0034` through `0038` cover the WebView lessons, the workspace, compressed
+recordings, the answers travelling with the questions, and Expo. Three terms went
+into `docs/glossary.md`: content archive, refresh and sync. `docs/architecture.md`
+gained a mobile client section and the `device_sync` table.
+
+The plan is cut into tasks. Phase 6 in `TASKS.md` is fifteen tasks and two
+low-priority ones, each a slice that can be shown working on its own, and the
+mobile version is gone from Not scheduled. No code has been written against any
+of it yet.
 
 **Every question carries a tier**, one of `swe-1`, `swe-2`, `senior` or `staff`,
 named after the level of interview that asks it. The promise it buys is in
@@ -96,70 +113,49 @@ and nothing checks that the topic on the other end exists.
 
 ## In flight
 
-**Nothing.** Task 18 is committed and merged into `main`, its branch is deleted,
-and the working tree is clean.
+**Nothing is uncommitted.** The mobile planning session landed as six ADRs,
+three glossary entries, a mobile section in `docs/architecture.md`, the Expo
+exception in the hard rule, and Phase 6 in `TASKS.md`. It went through a `docs/`
+branch and a `--no-ff` merge like any other task.
 
-**Task 18's audio has never been built.** Its eighteen new questions are
-thirty-six new scripts, and no recording exists for any of them, so every listen
-button on one answers 502 until somebody runs the build over the four browser
-topics. That is the ordinary state of new content rather than a fault: nothing
-was recorded because recording mid-task is not wanted, and the rule below applies
-here as much as to task 17.
+**Some question and narration audio has never been built, and nobody knows how
+much.** A `narration:build` over the four async topics was started and stopped
+partway through and its log was lost, task 18's browser questions were never
+recorded at all, and task 19 added three whole topics after that. Every listen
+button with no recording behind it answers 502.
 
-**The audio for task 17 is unbuilt, or partly built, and nobody knows which.** A
-`narration:build` over the four async topics was started and stopped partway
-through, and its log was lost with it. That is safe: the build is incremental and
-keyed by the hash of the spoken text, so anything already recorded is correct and
-gets skipped, and anything missing gets made. Re-running it for the four topics
-is how you find out, and until somebody does, some of those thirty-two clips are
-silent in the player.
-
-Do not run it without asking. It was stopped because recording mid-task is not
-wanted, and the rule is below twice: in the notes on authoring a group, and again
+This has an owner rather than being an open sore: task 23 makes `narration:build`
+take a whole track and build every narration section and every question script in
+it, which is exactly what the phone needs before it can be taken anywhere. The
+build is incremental and keyed by the hash of the spoken text, so anything
+already recorded is skipped and nothing is redone. Until then, do not run it
+mid-task. That rule is below twice, in the notes on authoring a group and again
 under the narration player.
 
 **Merged branches are piling up undeleted**, which the conventions below say
-should not happen. `git branch --merged main` is the list; seventeen of its
-entries are branches other than `main`, and the newest is
-`feature/fill-language-fundamentals`. All of them are merged, so deleting them
-loses nothing, and nobody has done it because permission was never asked for. The
-tagging branches from Phase 2 were deleted on merge, and so were the branches for
-tasks 16, 17 and 18, which is why none of those are among them.
+should not happen. `git branch --merged main` lists twenty of them, up from
+nineteen. All are merged, so deleting them loses nothing, and nobody has done it
+because permission was never asked for.
 
 Read that list before acting on it. A branch with no commits of its own also
-shows as merged, so a session that is holding work on a fresh branch has that
-branch sitting in the output looking exactly like the dead ones. Task 16 spent a
-session in that state.
+shows as merged, so a session holding work on a fresh branch has that branch
+sitting in the output looking exactly like the dead ones. Task 16 spent a session
+in that state.
 
 ## The next action
 
-**Task 19 in `TASKS.md`: regular expressions, numbers and precision, strings.**
-It is the whole of Phase 5 and the last content in the file, it is three topics
-the language track has no home for today, and nothing blocks it.
+**Start task 21, the workspace move.** It is the first task of Phase 6 and it
+blocks every other one. `TASKS.md` carries the whole phase, fifteen tasks and two
+low-priority ones, with the blocking edges on each. Take the order from there
+rather than from this file.
 
-It is a bigger job than anything Phase 4 held, and the difference is worth being
-clear about before starting. Phase 4 added questions to topics that already
-existed. These are whole topics, so each one owes a lesson with at least one
-visual, two exercises, ten or eleven questions across all six subjects, a
-`narration.ts` whose every section names a heading the lesson actually has, and a
-place in the teaching order, which means renumbering the `order` field on the
-topics below it. Splitting the group across the track rather than dropping three
-topics in a row is the point of decision `0019`.
+Read `0033` before any of the phase and `0035` before task 21 specifically. All
+eight files bound for `packages/core` are already free of `server-only`, the
+database and the DOM, so nothing is owed as a prefactor first.
 
-They are written tier-aware from the start, which is the one thing that is easier
-than Phase 4 was: the schema refuses a question with no tier, and all three
-subjects are asked at SWE-1 and SWE-2, so the thin bottom Phase 4 spent four
-tasks filling does not have to happen here.
-
-**Task 20 is the alternative for a short session.** It is a rewrite of the
-`Evaluation` section of `docs/architecture.md`, which still describes typed
-answers that decision `0023` removed. It is documentation, it is small, nothing
-blocks it, and it has been sitting under Loose ends for a while.
-
-Author either to `docs/tasks/converting-a-topic.md`, which carries the rule for
-tagging a new question with a tier. Read the section below on what the tagging
-taught before starting; it is where the hard calls were settled, and the tagging
-rule is the same rule a new question is written against.
+The web app is in daily use for the whole phase, so tasks 21 to 28 have to leave
+it behaving identically. That is the standing constraint on the server half of
+this work and it is worth re-reading before each of those tasks.
 
 ### What Phase 4 finished with
 
@@ -290,6 +286,15 @@ authoring: three wrong options that are wrong for interesting reasons is the par
 that teaches something, and it is required on nearly every question in the bank.
 
 ## Open items
+
+**The daily queue and the streak disagree about what "today" is.** `src/lib/day.ts`
+defines a day as a calendar day in `APP_TIMEZONE`, deliberately, so that
+travelling cannot shift when a streak rolls over. `src/lib/daily-queue.ts`
+computes the start and end of the day with `setHours` on whatever timezone the
+process is in. On one machine those are the same answer and the disagreement is
+invisible. Across a laptop and a phone they are not. It is task 36 in the
+proposed phase, deliberately low priority, because it cannot affect anybody who
+stays in one timezone.
 
 **A topic now says the same thing three times, and nothing checks the three
 agree.** The lesson, the concept map that closes it, and the narration script
@@ -523,6 +528,17 @@ keeping a stale colour.
 **Never add a git remote, and never push.** The self-hosted GitLab belongs to
 the company and this is a personal project. `CLAUDE.md` states the rule in full.
 
+**The hard rule now has exactly one named exception, and reading only its
+headline will make you refuse work that is allowed.** `CLAUDE.md` says nothing
+about this project goes to an external service, and that is still true of the
+GitLab, ClickUp and every hosted tracker. Expo is the one thing that was named,
+for building the Android APK and for nothing else, and
+`docs/decisions/0038-expo-is-the-one-hosted-service.md` is the argument. What
+keeps it honest is `.easignore`: the curriculum and the built content archive
+never reach Expo, recordings are not in the repository, and progress is in
+Postgres. Do not extend it to another Expo service and do not read it as
+precedent for a second provider.
+
 **A scripted rewrite of a `questions.ts` can eat a whole question silently, and
 the content check is the only thing that will tell you.** Reordering the options
 on a few questions with a Python script that located each `options: [` by
@@ -539,6 +555,28 @@ in the repository. And prefer editing the block of new questions before appendin
 it, or an exact whole-string replacement, over any script that computes a region
 by searching for delimiters, because the objects in these files are large enough
 that a wrong region looks plausible.
+
+**The speech cache key is a hash of the script, not of the audio, which is the
+one fact that makes the Opus change cheap.** Changing the stored format does not
+invalidate a single key, so the 1776 recordings in `.speech-cache` are
+transcoded in place and nothing is re-synthesised. A session that assumes a
+format change means rebuilding the cache will spend days of CPU it did not need
+to spend. `docs/decisions/0036-recordings-are-stored-compressed.md` says so, and
+`src/lib/speech/cache.ts` is where the key is made.
+
+**The cache holds more recordings than there are current scripts, so transcode
+after pruning rather than before.** The content check counts 291 narration
+sections and 1126 question scripts, which is 1417, against 1776 files on disk.
+The difference is orphans left behind by edited scripts, which is the designed
+behaviour: editing a script produces a new recording and abandons the old one.
+`npm run speech:prune` deletes what no current script hashes to. Running it first
+means not spending compression time on recordings nothing points at.
+
+**Do not delete `.speech-cache` to reclaim space.** It is called a cache and
+losing it costs latency rather than correctness, which is true and misleading:
+that latency is roughly 23 hours of speech at about a second of CPU for every
+three and a half seconds of audio. It is the single most expensive thing in the
+working tree and it is not in git.
 
 **Prettier checks untracked files, so a scratch file at the repo root fails
 `verify` and blocks every commit.** The pre-commit hook runs the same check.
