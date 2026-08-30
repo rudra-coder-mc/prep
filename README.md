@@ -76,9 +76,15 @@ npm run content:archive                          # every topic, plus a lesson pa
 ```
 
 It writes `.content-archive/`: the whole curriculum as one JSON file, one
-pre-rendered lesson page per topic, and the chunk and stylesheet those pages
-share. The version it prints is a hash of the files it was built from, and that
-is what a device compares to decide whether to refresh. Audio is not in it.
+pre-rendered lesson page per topic, the chunk and stylesheet those pages share,
+and `archive.zip` holding all of it, which is the one file a device downloads.
+The version it prints is a hash of the files it was built from, and that is what
+a device compares to decide whether to refresh. Audio is not in it.
+
+The server serves what this wrote and never builds it itself, at
+`/api/device/archive/version`, `/api/device/archive` and
+`/api/device/audio/<key>`. So content edited and not rebuilt is invisible to a
+phone. `npm run deploy` runs this first for that reason.
 
 ## Running it on the machine that serves it
 
@@ -89,9 +95,9 @@ The platform also runs on a spare Ubuntu machine, `work`, published at
 npm run deploy
 ```
 
-That rsyncs the tree over Tailscale, rebuilds the image with the speech profile
-on, and waits until both the app and the voice answer again. `.speech-cache` and
-`.env` stay here. The server records what it is asked for, and keeps its own
+That builds the content archive, rsyncs the tree over Tailscale, rebuilds the
+image with the speech profile on, and waits until both the app and the voice
+answer again. `.speech-cache` and `.env` stay here. The server records what it is asked for, and keeps its own
 `.env`, holding the public URL, its auth secret and the login password.
 
 The URL is fixed. It comes from the machine name and the tailnet name, so it

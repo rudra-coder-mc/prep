@@ -30,7 +30,11 @@ test('a signed-in page can fetch audio it could play', async ({ page }) => {
 
   expect(spoken.status).toBe(200)
   expect(spoken.contentType).toBe('audio/ogg')
-  expect(spoken.header).toMatch(/^OggS.{24}OpusHead$/)
+  // [\s\S] rather than `.`, because the twenty-four bytes in between are an Ogg
+  // page header: a random serial number and a checksum. `.` does not match a
+  // newline, so this failed whenever one of them happened to be 0x0a, which is
+  // about one fresh recording in eleven.
+  expect(spoken.header).toMatch(/^OggS[\s\S]{24}OpusHead$/)
   // Roughly 4 KB per second of speech. The floor only has to rule out a header
   // with no recording behind it.
   expect(spoken.byteLength).toBeGreaterThan(4_000)

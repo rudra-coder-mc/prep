@@ -87,25 +87,16 @@ Task 25 is done: a device signs in at `/api/device/session` and carries the
 session it gets back as a bearer token, which every endpoint already accepts
 because better-auth resolves the header before the session check runs. Nothing
 new is stored, and the browser still gets a cookie. See
-`docs/decisions/0040-a-device-carries-its-session-in-a-header.md`. Tasks 26 and
-27 are unblocked, so they are the two to take next and either order works.
+`docs/decisions/0040-a-device-carries-its-session-in-a-header.md`.
 
-## 26. The server serves what a device needs
-
-Blocked by nothing.
-
-Three endpoints: the current content version, the archive itself, and audio by
-key.
-
-**The audio endpoint never synthesises.** It serves what exists and reports what
-is missing, because a phone asking for a thousand missing recordings would
-occupy the server for a day. `npm run narration:build` is what makes them ahead
-of time.
-One recording is one file, so an interrupted download needs no resume logic:
-what arrived stays, and the next attempt fetches the rest.
-
-Done when a device holding nothing can read the version, pull the archive, and
-get a clear answer for both a recording that exists and one that does not.
+Task 26 is done: a device reads `/api/device/archive/version`, downloads the
+whole archive as one zip from `/api/device/archive`, and gets a recording or a
+clear refusal from `/api/device/audio/<key>`, which never synthesises. The
+server only reads: `npm run content:archive` writes `archive.zip` and
+`npm run deploy` runs it first, so the archive on the server is never older than
+the content beside it. See
+`docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md`. That leaves
+task 27 as the only server task, and task 29 is unblocked as well.
 
 ## 27. Sync, both directions
 
@@ -137,7 +128,7 @@ and nothing for one that has.
 
 ## 29. The app logs in, refreshes and works with the server off
 
-Blocked by 26. This is where offline first becomes real.
+Blocked by nothing. This is where offline first becomes real.
 
 An Expo app that logs in on first run, pulls the archive, mirrors the server's
 tables in SQLite, and then opens and works with the stack stopped. It runs the
@@ -170,12 +161,16 @@ schedule the phone computes for a question matches what the server would.
 
 ## 31. Downloading a track's audio
 
-Blocked by 26 and 29.
+Blocked by 29.
 
 A track at a time, one file per key. The app says how much it is about to
 download and how much it already holds, because the library is hundreds of
 megabytes and the phone's storage is the constraint that made task 22 worth
 doing.
+
+`/api/device/audio/<key>` answers one key, so nothing yet says how large a whole
+track is without asking key by key. Decide here whether that is a listing
+endpoint or an estimate from what the archive already knows.
 
 Done when a track's audio is on the phone and plays with nothing switched on,
 and an interrupted download continues rather than starting again.
@@ -280,6 +275,20 @@ One local notification a day, at a time that can be changed.
 Expo Go is unreliable about local notifications on Android, so this is verified
 on a real build rather than in the development loop, which means it is only
 properly testable after task 35.
+
+## 39. One definition of the workspace root
+
+Three copies of the same eight-line walk up to `package-lock.json` now exist:
+`apps/web/src/lib/speech/cache.ts`, `packages/content/src/archive/location.ts`
+and `packages/content/src/archive/web-sources.ts`. They agree today. Two of them
+return `process.cwd()` when they find nothing and the third throws, which is the
+kind of difference that stays invisible until a build runs somewhere new.
+
+It stays low priority because a wrong answer here is loud rather than subtle:
+nothing is found and the command says so.
+
+Done when one function has one home that both packages can reach, with the
+behaviour on "no lockfile above here" decided once.
 
 ---
 

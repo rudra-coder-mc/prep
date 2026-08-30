@@ -84,6 +84,7 @@ services:
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-dev}
       SPEECH_SERVICE_URL: ${SPEECH_SERVICE_URL:-http://tts:5000}
       SPEECH_CACHE_DIR: /cache/speech
+      CONTENT_ARCHIVE_DIR: /archive
     ports:
       - '${APP_PORT:-3000}:3000'
     volumes:
@@ -92,6 +93,12 @@ services:
       # there is one place recordings live rather than two that have to be kept
       # in step. See docs/decisions/0022-one-place-for-recordings.md.
       - ./.speech-cache:/cache/speech
+      # What a device downloads, built on the host by `npm run content:archive`
+      # and only ever read here. Building it is a content operation rather than
+      # a deployment, so it is mounted rather than baked into the image: a
+      # rebuilt archive is served without rebuilding anything. See
+      # docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md.
+      - ./.content-archive:/archive:ro
     # The database is the only thing that gates startup. The speech engine is
     # not in the default set and is not needed to serve a page: a recording is
     # asked for after the app is up, and a request that arrives before the voice

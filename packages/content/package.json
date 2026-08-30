@@ -6,6 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./archive": "./src/archive/index.ts",
+    "./archive/location": "./src/archive/location.ts",
+    "./archive/manifest": "./src/archive/manifest.ts",
     "./content/*": "./content/*"
   },
   "scripts": {
@@ -13,6 +15,7 @@
   },
   "dependencies": {
     "@prep/core": "*",
+    "fflate": "^0.8.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {

@@ -1,12 +1,13 @@
 #!/bin/sh
-# Runs the end-to-end suite against a dedicated database and a dedicated speech
-# cache, so it never touches whatever is in the development ones.
+# Runs the end-to-end suite against a dedicated database, speech cache and
+# content archive, so it never touches whatever is in the development ones.
 set -e
 
 DB_NAME=${E2E_DB_NAME:-prep_e2e}
 # Absolute, so the script and the app agree on one directory. The app runs from
 # apps/web, so a relative path would have them emptying and filling two.
 SPEECH_CACHE_DIR=${E2E_SPEECH_CACHE_DIR:-"$PWD/.speech-cache-e2e"}
+CONTENT_ARCHIVE_DIR=${E2E_CONTENT_ARCHIVE_DIR:-"$PWD/.content-archive-e2e"}
 
 # The speech engine is off by default and the speech specs need it, so it is
 # started here and stopped again when the run ends, the same way
@@ -47,6 +48,13 @@ export SEED_USER_PASSWORD=${SEED_USER_PASSWORD:-e2e-password}
 rm -rf "$SPEECH_CACHE_DIR"
 export SPEECH_CACHE_DIR
 export SPEECH_SERVICE_URL="http://127.0.0.1:${TTS_PORT:-5001}"
+
+# The device endpoints serve what a build wrote, so the run needs one. It is
+# built here rather than reused from the repository for the same reason the
+# database is dropped above: a spec should not pass or fail on what a developer
+# happened to have lying around. It takes about a second.
+export CONTENT_ARCHIVE_DIR
+npm run content:archive -- "$CONTENT_ARCHIVE_DIR"
 
 npm run db:migrate
 npm run db:seed

@@ -23,6 +23,14 @@ The `tts` image was rebuilt and its compose healthcheck confirmed, since
 re-run after every failure it has ever had, which is not the same as being fixed,
 and a spec that fails half the time makes the merge rule mean nothing.
 
+**One flake was diagnosed and fixed during task 26**, and it is worth knowing it
+was never the code. `speech.spec.ts` asserted the Ogg header with
+`/^OggS.{24}OpusHead$/`, and the twenty-four bytes it spans are a random serial
+number and a checksum. `.` does not match a newline, so the spec failed whenever
+one of those bytes came out 0x0a, which is about one fresh recording in eleven.
+It is `[\s\S]{24}` now. Whether the `spoken-questions` flake is the same shape
+has not been checked; it carries no such assertion, so probably not.
+
 At the head of `main` the content check reports 46 topics, 563 questions, 92
 exercises, 291 narration sections and 1126 question scripts, tiered as SWE-1 150,
 SWE-2 275, Senior 79 and Staff 59. That was run rather than remembered. Re-run
@@ -127,6 +135,21 @@ exception in the hard rule, and Phase 6 in `TASKS.md`. Task 21 landed after it,
 so the repository is now a workspace, task 22 after that, so recordings are
 Opus, then task 23, then task 24, then task 25.
 
+**A device can now take everything it needs from the server.**
+`/api/device/archive/version` says what the current content is and how big the
+download would be, `/api/device/archive` sends the archive as one zip naming its
+version in `X-Content-Version`, and `/api/device/audio/<key>` serves a recording.
+That last one never synthesises, which is the whole difference between it and
+`/api/speech/<key>`, and it is the reason the trap below about the server's cache
+now costs more than a wait.
+
+The server only reads. `npm run content:archive` writes the artefact, the
+directory is a bind mount named by `CONTENT_ARCHIVE_DIR` rather than something in
+the image, and `npm run deploy` builds it before it copies so the server cannot
+serve an archive older than the content beside it. On a laptop serving the stack
+it is a command to remember: content edited and not rebuilt is invisible to a
+phone. See `docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md`.
+
 **A device authenticates with a bearer token and nothing else changed.**
 `/api/device/session` signs one in and reports whether its token is still good;
 better-auth's `bearer` plugin turns the header into the session every endpoint
@@ -137,7 +160,8 @@ the plugin would otherwise put on the browser's login response.
 **The content archive is built by `npm run content:archive`.** It writes
 `.content-archive/`: `content.json` holding every topic in full with the audio key
 of every question and narration section, one pre-rendered lesson page per topic,
-and the chunk and stylesheet those pages share. It needs neither the stack nor
+the chunk and stylesheet those pages share, and `archive.zip` holding all of it,
+which is the one file a device downloads. It needs neither the stack nor
 the database. At the head of `main` it is 46 topics, 563 questions, 92 exercises
 and 291 narration sections, which is what `content:check` reports, and the
 `apps/web/e2e/archive.spec.ts` specs open every one of the 46 pages.
@@ -158,12 +182,19 @@ nothing about a deploy converts it, and a key whose file ends `.wav` is a key
 the app does not find. Nothing breaks: a miss is resolved against `content/` and
 re-synthesised, so the cost is the wait rather than a 502.
 
+That was written when the browser was the only client, and task 26 changed what
+it costs. `/api/device/audio/<key>` never synthesises, so on the server every key
+a phone asks for is a 404 until the cache there holds Opus. A phone downloading a
+track from `work` today gets nothing and is told nothing is recorded, which is
+true and useless.
+
 The fix is not to run the migration there. `npm run speech:transcode` needs
 node_modules, which the deploy excludes, and the cache on this machine is now
 both complete and already converted. rsync it across instead, once, and the
 server has every recording rather than the subset it had recorded for itself.
 Recordings are content addressed, so a cache from one machine is valid on
-another.
+another. **Do this before testing the phone against `work`**, or the first thing
+task 31 shows is an empty library.
 
 **The audio backlog does not exist, and that was measured rather than assumed.**
 This file said for months that some question and narration audio had never been
@@ -195,9 +226,10 @@ in that state.
 
 ## The next action
 
-**Take task 26 or task 27.** Both are unblocked and neither blocks the other, so
-either order works. 26 is the three endpoints a device reads from, and 27 is the
-two-way progress exchange.
+**Take task 27 or task 29.** 27 is the two-way progress exchange, the last of the
+server work. 29 is the first task in the app itself, and task 26 unblocked it: an
+Expo app that logs in, pulls the archive and then works with everything switched
+off. Neither blocks the other.
 
 Task 23 closed the oldest unknown in this file rather than finding work: nothing
 was missing. See the note on the backlog above before planning around any audio
@@ -212,6 +244,13 @@ web Next drops it again and nothing shows; in a plain browser it was 320 KB of a
 else that gets bundled for the phone should reach for a leaf module rather than
 the barrel**, and should be opened in a browser rather than trusted to a build
 that passed.
+
+Task 26 left one thing worth carrying into the app. The three endpoints reach
+for `@prep/content/archive/location` and `@prep/content/archive/manifest` rather
+than the `@prep/content/archive` barrel, because the barrel pulls in the lesson
+build and with it esbuild, MDX and Tailwind. The traced dependency list for those
+routes is 300 files and holds none of them. **This is the same lesson task 24
+learned about `@prep/core`,** and it is now two for two: reach for the leaf.
 
 Task 25 left the shape every endpoint after it should follow. A device sends
 `Authorization: Bearer <token>`, better-auth's `bearer` plugin turns that into

@@ -1,4 +1,4 @@
-import { buildArchive, defaultArchiveDirectory } from '@prep/content/archive'
+import { archiveDirectory, buildArchive } from '@prep/content/archive'
 
 /**
  * Builds the content archive: everything a device needs to run the loop with
@@ -15,7 +15,7 @@ import { buildArchive, defaultArchiveDirectory } from '@prep/content/archive'
  * comparing versions cannot be told an archive is current when it is not.
  */
 async function main() {
-  const directory = process.argv[2] ?? defaultArchiveDirectory()
+  const directory = process.argv[2] ?? archiveDirectory()
   const started = Date.now()
 
   const { manifest, lessonBytes } = await buildArchive(directory)
@@ -27,6 +27,9 @@ async function main() {
   )
   console.log(
     `${manifest.topics} lesson pages, ${(lessonBytes / 1024 / 1024).toFixed(1)} MB of pages and assets, built in ${seconds}s`,
+  )
+  console.log(
+    `${manifest.archive.file} is ${(manifest.archive.bytes / 1024 / 1024).toFixed(1)} MB, which is what a device downloads`,
   )
 }
 
