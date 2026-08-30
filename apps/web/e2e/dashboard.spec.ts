@@ -56,3 +56,36 @@ test('question counts reflect attempts that were actually recorded', async ({ pa
   expect(attempted).toMatch(/Attempted\d+/)
   expect(attempted).not.toMatch(/Attempted0/)
 })
+
+/**
+ * The sync reminder, which is the only thing the device_sync table is for.
+ *
+ * Only the fresh half is reachable from here: a device's row is dated by the
+ * server at the moment it syncs, so nothing a spec can do over HTTP makes one
+ * look old. What the reminder says once a device has gone quiet is pinned in
+ * apps/web/src/components/device-sync-list.test.tsx, and the rule deciding when
+ * that is in apps/web/src/lib/device-status.test.ts.
+ */
+test('the dashboard says when a device last synced, and lets a fresh one be', async ({
+  page,
+  request,
+}) => {
+  const synced = await request.post('/api/device/sync', {
+    data: {
+      device: { id: 'e2e-dashboard-phone', name: 'Dashboard phone' },
+      since: null,
+      attempts: [],
+      topicProgress: [],
+      trackTiers: [],
+    },
+  })
+  expect(synced.status()).toBe(200)
+
+  await page.goto('/')
+
+  const device = page.locator('[data-device="e2e-dashboard-phone"]')
+  await expect(device).toHaveAttribute('data-stale', 'false')
+  await expect(device.getByText('Dashboard phone')).toBeVisible()
+  await expect(device.getByText('Last synced today')).toBeVisible()
+  await expect(device.getByText(/Open the app on it/)).toHaveCount(0)
+})

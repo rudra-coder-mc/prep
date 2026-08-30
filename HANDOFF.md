@@ -14,9 +14,9 @@ Both are deliberate; see the hard rule in `CLAUDE.md`, which covers every hosted
 service rather than only the company GitLab. That rule now has exactly one named
 exception, and it is new: see the trap on it below.
 
-**`main` was green when task 27 merged.** The full `npm run verify` ran through
-lint, format check, typecheck, 482 unit tests, 84 integration tests against real
-Postgres and a real speech engine, the production build and 73 Playwright specs.
+**`main` was green when task 28 merged.** The full `npm run verify` ran through
+lint, format check, typecheck, 502 unit tests, 88 integration tests against real
+Postgres and a real speech engine, the production build and 74 Playwright specs.
 The `tts` image was rebuilt and its compose healthcheck confirmed, since
 `verify` does not cover the image and task 22 replaced the server inside it.
 `apps/web/e2e/spoken-questions.spec.ts:63` remains the flaky one: it has passed on the
@@ -62,8 +62,10 @@ into `docs/glossary.md`: content archive, refresh and sync. `docs/architecture.m
 gained a mobile client section and the `device_sync` table.
 
 The plan is cut into tasks. Phase 6 in `TASKS.md` was fifteen tasks and two
-low-priority ones, each a slice that can be shown working on its own. Task 21 is
-done, so fourteen are left and nothing on the phone itself has been started.
+low-priority ones, each a slice that can be shown working on its own. Tasks 21
+through 28 are done, which is the whole of the server and the web side of the
+phase, so seven are left and nothing on the phone itself has been started. Task
+29 is the first of them and blocked by nothing.
 
 **The repository is a workspace.** `packages/core` holds the logic both clients
 share, `packages/content` holds the curriculum with its loader and validator, and

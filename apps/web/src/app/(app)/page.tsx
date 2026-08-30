@@ -1,5 +1,6 @@
 import type { Route } from 'next'
 import { AppLink } from '@/components/chrome/app-link'
+import { DeviceSyncList } from '@/components/device-sync-list'
 import { Rise } from '@/components/motion/rise'
 import { buttonClass } from '@/components/ui/button'
 import { Card, SectionLabel } from '@/components/ui/card'
@@ -10,6 +11,7 @@ import { StatusBadge } from '@/components/ui/status-badge'
 import { StepUp } from '@/components/step-up'
 import { TIER_LABELS, STATUS_LABELS, type TopicStatus } from '@prep/core'
 import { getDashboard } from '@/lib/dashboard'
+import { getDevices } from '@/lib/devices'
 import { requireSession } from '@/lib/session'
 
 const STATUS_ORDER: TopicStatus[] = ['mastered', 'understood', 'learning', 'weak', 'not_started']
@@ -45,7 +47,10 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 export default async function Dashboard() {
   const session = await requireSession()
-  const dashboard = await getDashboard(session.user.id)
+  const [dashboard, devices] = await Promise.all([
+    getDashboard(session.user.id),
+    getDevices(session.user.id),
+  ])
 
   const total = dashboard.topics.length
   const started = total - dashboard.byStatus.not_started
@@ -205,6 +210,12 @@ export default async function Dashboard() {
               ))}
             </ol>
           </section>
+        </Rise>
+      ) : null}
+
+      {devices.length > 0 ? (
+        <Rise delay={0.2}>
+          <DeviceSyncList devices={devices} />
         </Rise>
       ) : null}
     </PageShell>

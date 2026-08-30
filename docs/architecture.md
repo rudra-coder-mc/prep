@@ -557,6 +557,18 @@ ways instead, since the curriculum bounds them at one row per topic and one per
 track. See
 `docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
 
+**The web says when each device last synced**, which is the only thing
+`device_sync` is read for. A sync always starts from the device, because the
+server has no route to a sleeping phone, so saying so is the whole of what the
+web can do about one that has stopped. The dashboard lists each device with how
+long ago it was heard from, and adds a reminder to any that has been quiet for
+three days or more.
+
+Three days, because a phone syncs on launch and on returning to the foreground,
+so a device that was opened at all was heard from, and because an exchange that
+fails does so silently by design. The count is calendar days in `APP_TIMEZONE`
+rather than elapsed hours, so a sync late last night reads as yesterday.
+
 ## Not in V1
 
 AI tutoring, multi-user support, social login, gamification beyond the streak,

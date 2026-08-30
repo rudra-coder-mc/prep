@@ -56,9 +56,9 @@ blocking edges below only make sense that way.
 Tasks below name them by number.
 
 Each task is a vertical slice that can be shown working on its own when it
-lands. Tasks 22 to 28 are the server, and the web app has to behave identically
-through every one of them, because it is in daily use for the whole phase. Tasks
-29 to 35 are the app.
+lands. Tasks 22 to 28 were the server and the web, and the web app had to behave
+identically through every one of them, because it is in daily use for the whole
+phase. Tasks 29 to 35 are the app.
 
 The workspace that was task 21 is in place: `packages/core` holds the logic both
 clients share, `packages/content` holds the curriculum, and the Next app is
@@ -97,9 +97,9 @@ server only reads: `npm run content:archive` writes `archive.zip` and
 the content beside it. See
 `docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md`.
 
-Task 27 is done, so the server is finished: `POST /api/device/sync` exchanges
-attempts, learned marks and tier picks in one request, and the schedule, the
-streak and every topic status are rebuilt from them rather than exchanged.
+Task 27 is done: `POST /api/device/sync` exchanges attempts, learned marks and
+tier picks in one request, and the schedule, the streak and every topic status
+are rebuilt from them rather than exchanged.
 `replaySchedule` in `packages/core` is the fold both sides run, which is what
 makes them agree about when a question is next due. The one new table is
 `device_sync`; the one new column is `attempts.recorded_at`, without which a
@@ -107,16 +107,11 @@ device that synced yesterday never sees the week a phone answered offline. See
 `docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
 Exercise progress deliberately does not travel yet: see task 34.
 
-## 28. The web says when a device last synced
-
-Blocked by nothing.
-
-The server can never start a sync, because it has no route to a sleeping phone.
-So the web shows when each device last synced, and says so when one has not been
-heard from in a while. That reminder is the only thing `device_sync` is for.
-
-Done when the web shows the reminder for a device that has not synced recently,
-and nothing for one that has.
+Task 28 is done, so the whole web side of this phase is finished. The dashboard
+lists every device that has ever synced with how long ago it was heard from, and
+reminds about any quiet for three days or more, which is the only thing
+`device_sync` is read for. The threshold and why it is three days are in
+`docs/architecture.md`.
 
 ## 29. The app logs in, refreshes and works with the server off
 
