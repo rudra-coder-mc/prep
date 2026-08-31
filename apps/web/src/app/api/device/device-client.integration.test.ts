@@ -153,7 +153,7 @@ describe('a device taking the archive', () => {
       available.questions,
     )
 
-    // Every topic's pre-rendered page came with it, which is what task 32 reads.
+    // Every topic's pre-rendered page came with it, which is what the phone opens.
     const directory = archivePath(installed)
     for (const topic of content.topics) {
       expect(await files.exists(`${directory}/${topic.lesson}`)).toBe(true)

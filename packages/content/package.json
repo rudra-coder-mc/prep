@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./archive": "./src/archive/index.ts",
     "./archive/types": "./src/archive/types.ts",
+    "./archive/bridge": "./src/archive/bridge.ts",
     "./archive/location": "./src/archive/location.ts",
     "./archive/manifest": "./src/archive/manifest.ts",
     "./content/*": "./content/*"
