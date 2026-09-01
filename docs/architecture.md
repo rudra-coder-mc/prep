@@ -401,6 +401,10 @@ Synthesis costs about a second of CPU for three and a half seconds of speech, so
 a request carries one section of a narration rather than a whole one, and a
 script over 3000 characters is refused rather than left to hang. Two requests for
 the same key arriving together join one piece of work rather than doing it twice.
+Requests for different keys do not join, and the engine is what stops them
+running together: it synthesises one script at a time, because the memory one
+inference costs is enough to kill the container if a few arrive at once. See
+`docs/decisions/0046-the-speech-engine-synthesises-one-at-a-time.md`.
 Nothing about the audio gates the application starting: the app waits on the
 database and on nothing else, and a request that lands before the voice model has
 loaded says the voice is unavailable.

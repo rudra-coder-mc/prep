@@ -14,25 +14,19 @@ Both are deliberate; see the hard rule in `CLAUDE.md`, which covers every hosted
 service rather than only the company GitLab. That rule now has exactly one named
 exception, and it is new: see the trap on it below.
 
-**Task 32 was merged on a green run rather than a green tree.** `npm run verify`
-passed lint, format check, typecheck, 683 unit tests, 94 integration tests
-against real Postgres and a real speech engine, and the production build every
-time it was run. The 74 Playwright specs passed on one run of three: the other
-two lost a spec each to the speech engine aborting, which is the entry below and
-task 41. The `tts` image has not been rebuilt since task 22 replaced the server
-inside it, and `verify` does not cover the image.
-
-**The flake in `apps/web/e2e/spoken-questions.spec.ts` was never the spec. The
-speech engine crashes.** See the entry below and task 41; `verify` cannot be
-trusted until that is fixed.
+**The `tts` image has to be built from this commit.** The engine now
+synthesises one script at a time, which is what stopped it dying under
+concurrent callers, and `npm run verify` does not build the image. A machine
+still running an image built before task 41 has the crash. `docker compose build
+tts` is the whole of it. See
+`docs/decisions/0046-the-speech-engine-synthesises-one-at-a-time.md`.
 
 **One flake was diagnosed and fixed during task 26**, and it is worth knowing it
 was never the code. `speech.spec.ts` asserted the Ogg header with
 `/^OggS.{24}OpusHead$/`, and the twenty-four bytes it spans are a random serial
 number and a checksum. `.` does not match a newline, so the spec failed whenever
 one of those bytes came out 0x0a, which is about one fresh recording in eleven.
-It is `[\s\S]{24}` now. The `spoken-questions` flake turned out to be a different
-shape entirely, and not a test problem at all.
+It is `[\s\S]{24}` now.
 
 At the head of `main` the content check reports 46 topics, 563 questions, 92
 exercises, 291 narration sections and 1126 question scripts, tiered as SWE-1 150,
@@ -269,10 +263,6 @@ sitting in the output looking exactly like the dead ones. Task 16 spent a sessio
 in that state.
 
 ## The next action
-
-**Two, and they do not compete for the same hands.** Task 41 fixes the crashing
-speech engine, which is what `verify` and therefore the merge rule rest on, and
-it is machine work. The other needs a phone.
 
 **Open the app on a phone. Nothing on the phone has ever been seen running.**
 Tasks 29 to 32 built the shell, the review loop, the audio download and the
@@ -554,34 +544,6 @@ fuller answer and is in the topic named after the thing being asked about. The
 prototypes lesson still teaches what `class` really is, so nothing about the
 reading order changed. Its open question is now `patching-a-built-in`, which is
 about the shared mutable prototype and shares nothing with `class-syntax`.
-
-**The flaky spec was never a flaky spec. The speech engine aborts and Docker
-restarts it.** This was recorded here for months as an unowned flake in
-`apps/web/e2e/spoken-questions.spec.ts`, blamed by turns on Playwright's route
-interception and on a hydration race. It is neither. `docker compose logs tts`
-holds twenty instances of `terminate called without an active exception`
-followed immediately by `Loaded voice`: the process dies mid-synthesis and comes
-back. Whichever spec was waiting on that recording times out, and the re-run
-passes because the engine is fresh. That is exactly the pattern the entry here
-described and could not explain.
-
-Two things follow. The failure moves between the specs that use the real engine
-rather than sitting on one, which is why the line number in this file kept
-drifting; and the specs that stub the audio only looked implicated because they
-are the long ones. One crash in the log carries a cause, from onnxruntime:
-`Non-zero status code returned while running Conv node ... GetElementType is not
-implemented`.
-
-The mechanism to check first is concurrency. `services/tts/server.py` ends in
-Flask's `app.run()`, which is threaded, and one `PiperVoice` is shared across
-requests. Nothing on the application's side stops two synthesis calls
-overlapping: `warmRecording` serialises warms against each other, and a reader
-pressing play goes straight to `narrate`, whose `inFlight` map only joins
-requests for the same key. Task 41 has the reproduction to run before touching
-anything.
-
-Do not diagnose this from a run where anything else was touching Docker or port 3100. Two of the failures in the log that prompted the original entry were caused
-by exactly that, and they are not evidence of anything.
 
 **The topic list is about to look shorter on the server, and that is the feature
 working.** No database has a `track_tier` row yet, so every track lands on SWE-1
@@ -969,6 +931,25 @@ nothing else, so anything in Piper's own API that a search turns up, voices and
 downloads especially, is not there. `opus-tools` in the image is what does the
 encoding, chosen over ffmpeg because the whole job is WAV in and Ogg Opus out.
 
+**The engine synthesises one script at a time, and it has to.** One sentence of
+the length this curriculum writes costs about half a gigabyte while the model
+decodes it, and concurrent requests each want their own. Four at once used to
+peak at 1.83 GiB and could kill the process, which is what the flaky spec was.
+A lock in `services/tts/server.py` holds the peak flat, so a second caller waits
+rather than competing. Do not remove it to make a bulk recording run faster, and
+do not add workers to the Flask app for the same reason. See
+`docs/decisions/0046-the-speech-engine-synthesises-one-at-a-time.md`.
+
+**`terminate called without an active exception` in the `tts` log is two
+different events, and telling them apart is the whole trick.** Read the line
+above it. A crash that lost somebody's recording names the onnxruntime node it
+failed in, `Non-zero status code returned while running Conv node`, and that is
+the one the lock above was written for. The same line at the end of a run, with
+nothing above it, is the teardown inside onnxruntime as the container is
+stopped: the process is on its way down, nothing is waiting on it, and the only
+trace is an exit code of 133 instead of 0. Reading the second kind as the first
+is what kept this open for months.
+
 **A recording is `<key>.opus`, so a cache of `.wav` files reads as no cache at
 all.** Nothing warns about this: the app resolves the key against `content/` and
 re-synthesises, which looks like a cold cache rather than a mistake. `npm run
@@ -1268,11 +1249,11 @@ commit that completes it.
 
 `npm run verify` must pass before merging into `main`. There is no CI, so the
 pre-commit hook (lint, format check, typecheck, unit tests) and that command are
-the entire safety net. The crashing speech engine above is the one thing standing
-in the way of taking that literally: what has been done so far is to re-run the
-suite and merge on the green one, having first confirmed the failure is a spec
-waiting on a recording the engine died making. Anything else failing is a real
-failure. Task 41 is what removes the exception.
+the entire safety net. Take it literally: a failure is a failure. The one
+standing exception, a spec that timed out waiting on a recording the speech
+engine died making, was removed by task 41. `verify` does not build the `tts`
+image, so build it after pulling a commit that changes
+`services/tts/server.py`.
 
 Commit messages say what was wrong or missing and what was done about it, in
 plain sentences. No file by file changelogs, no notes about tests passing.
