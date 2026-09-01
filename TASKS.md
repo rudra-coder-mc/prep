@@ -186,37 +186,6 @@ whose recording is not on the device is left out, and a lesson with none of them
 shows no player at all. Marking a topic learned moved here from the track screen,
 which now lists a track's topics and opens one.
 
-## 41. The speech engine crashes, and it is what makes the suite flaky
-
-Take this first. It is the reason `npm run verify` cannot be trusted, and the
-merge rule rests on `verify`.
-
-`apps/web/e2e/spoken-questions.spec.ts` has been recorded in `HANDOFF.md` as an
-unowned flaky spec for months. It is not the spec. `docker compose logs tts`
-holds twenty instances of `terminate called without an active exception`
-followed by the voice being loaded again: the engine aborts mid-synthesis and
-Docker restarts it. Whichever spec was waiting on that recording times out, and
-the next run passes because the engine came back. One crash carries a cause:
-`Non-zero status code returned while running Conv node ... GetElementType is not
-implemented`, from onnxruntime.
-
-The likely mechanism is concurrency. `services/tts/server.py` ends in Flask's
-`app.run()`, which is threaded by default, and one `PiperVoice` is shared by
-every request. On the application's side nothing stops two synthesis requests
-overlapping: `warmRecording` serialises warms with each other, but a reader
-pressing play goes straight to `narrate`, and `inFlight` in
-`apps/web/src/lib/speech/narrate.ts` only joins requests for the same key. Two
-different keys at once is two threads in one onnxruntime session.
-
-Reproduce it before fixing it: two concurrent `POST /synthesize` calls for
-different long scripts, straight at the container, in a loop. If that aborts the
-process, the fix is a lock around the synthesis rather than anything in the
-application, since the engine must be safe for whoever calls it.
-
-Done when the reproduction no longer aborts the container, and `npm run verify`
-passes twice in a row. Then delete the flaky-spec passages from `HANDOFF.md`
-rather than editing them: there is no flaky spec.
-
 ## 33. The phone syncs
 
 Blocked by nothing.

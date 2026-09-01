@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { narrate } from './narrate'
 import { scriptKey } from './cache'
-import { transcode } from './piper'
+import { speechServiceUrl, synthesise, transcode } from './piper'
 
 /**
  * Against the real speech engine, because the thing worth proving is that the
@@ -116,5 +116,39 @@ describe('transcode against the speech engine', () => {
 
     expect(opusHead(opus)).toMatchObject({ ogg: 'OggS', magic: 'OpusHead', channels: 1 })
     expect(opus.byteLength).toBeLessThan(wav.byteLength / 4)
+  })
+})
+
+/**
+ * The engine is shared, and the callers do not know about each other: a reader
+ * pressing play, a page warming the section it expects to need next, and
+ * `npm run narration:build` recording a whole track all reach the same
+ * container. Before it synthesised one at a time, four requests at once were
+ * four inferences at once, which is four times the memory and enough to kill
+ * the process for all of them. See
+ * docs/decisions/0046-the-speech-engine-synthesises-one-at-a-time.md.
+ *
+ * What this proves is that concurrent callers all get their audio and the
+ * engine is still there afterwards. The memory it now holds flat is not visible
+ * from here; `services/tts/server.py` names the measurement.
+ */
+describe('the speech engine under concurrent callers', () => {
+  const SCRIPTS = [
+    'A promise is a value that has not arrived yet.',
+    'The prototype chain is a lookup and never a copy.',
+    'One macrotask per turn, and microtasks until there are none left.',
+    'A closure keeps its whole scope alive, not only what it reads.',
+  ]
+
+  it('answers every one of them and survives', async () => {
+    const recordings = await Promise.all(SCRIPTS.map((script) => synthesise(script)))
+
+    for (const recording of recordings) {
+      expect(opusHead(recording)).toMatchObject({ ogg: 'OggS', magic: 'OpusHead', channels: 1 })
+      expect(recording.byteLength).toBeGreaterThan(4_000)
+    }
+
+    const info = await fetch(`${speechServiceUrl()}/info`)
+    expect(info.ok).toBe(true)
   })
 })

@@ -16,6 +16,7 @@ import io
 import logging
 import os
 import subprocess
+import threading
 import wave
 from pathlib import Path
 
@@ -24,6 +25,23 @@ from piper import PiperVoice
 
 BITRATE = "32"
 """Kilobits per second, mono. Opus is transparent on 22 kHz speech here."""
+
+SYNTHESIS = threading.Lock()
+"""One synthesis at a time, whoever is asking.
+
+Flask serves requests on a thread each, and every one of them runs inference on
+the same voice. Nothing about that is unsafe, but the memory is: one sentence of
+the length this curriculum writes costs about four hundred megabytes while it is
+being decoded, and concurrent requests each want their own. Four at once is
+enough to exhaust a container that serves one of them with room to spare, and
+the engine does not survive it. See
+docs/decisions/0046-the-speech-engine-synthesises-one-at-a-time.md.
+
+The caller is not the place to fix this. A recording is asked for by a reader
+pressing play, by a page warming the section it expects to need next, and by
+`npm run narration:build` recording a whole track, and none of them knows about
+the others.
+"""
 
 LOGGER = logging.getLogger(__name__)
 
@@ -73,7 +91,9 @@ def create_app() -> Flask:
             return Response('{"error":"No text provided"}', status=400, mimetype="application/json")
 
         buffer = io.BytesIO()
-        with wave.open(buffer, "wb") as wav_file:
+        # Held for the inference and released before encoding, which costs a
+        # subprocess and a few megabytes rather than the model's working set.
+        with SYNTHESIS, wave.open(buffer, "wb") as wav_file:
             voice.synthesize_wav(text, wav_file)
 
         return opus(encode(buffer.getvalue()))
