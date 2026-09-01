@@ -14,22 +14,25 @@ Both are deliberate; see the hard rule in `CLAUDE.md`, which covers every hosted
 service rather than only the company GitLab. That rule now has exactly one named
 exception, and it is new: see the trap on it below.
 
-**`main` was green when task 29 merged.** The full `npm run verify` ran through
-lint, format check, typecheck, 573 unit tests, 92 integration tests against real
-Postgres and a real speech engine, the production build and 74 Playwright specs.
-The `tts` image was rebuilt and its compose healthcheck confirmed, since
-`verify` does not cover the image and task 22 replaced the server inside it.
-`apps/web/e2e/spoken-questions.spec.ts:63` remains the flaky one: it has passed on the
-re-run after every failure it has ever had, which is not the same as being fixed,
-and a spec that fails half the time makes the merge rule mean nothing.
+**Task 32 was merged on a green run rather than a green tree.** `npm run verify`
+passed lint, format check, typecheck, 683 unit tests, 94 integration tests
+against real Postgres and a real speech engine, and the production build every
+time it was run. The 74 Playwright specs passed on one run of three: the other
+two lost a spec each to the speech engine aborting, which is the entry below and
+task 41. The `tts` image has not been rebuilt since task 22 replaced the server
+inside it, and `verify` does not cover the image.
+
+**The flake in `apps/web/e2e/spoken-questions.spec.ts` was never the spec. The
+speech engine crashes.** See the entry below and task 41; `verify` cannot be
+trusted until that is fixed.
 
 **One flake was diagnosed and fixed during task 26**, and it is worth knowing it
 was never the code. `speech.spec.ts` asserted the Ogg header with
 `/^OggS.{24}OpusHead$/`, and the twenty-four bytes it spans are a random serial
 number and a checksum. `.` does not match a newline, so the spec failed whenever
 one of those bytes came out 0x0a, which is about one fresh recording in eleven.
-It is `[\s\S]{24}` now. Whether the `spoken-questions` flake is the same shape
-has not been checked; it carries no such assertion, so probably not.
+It is `[\s\S]{24}` now. The `spoken-questions` flake turned out to be a different
+shape entirely, and not a test problem at all.
 
 At the head of `main` the content check reports 46 topics, 563 questions, 92
 exercises, 291 narration sections and 1126 question scripts, tiered as SWE-1 150,
@@ -69,8 +72,8 @@ unblocked; 30 is the one the rest hangs off.
 
 **The repository is a workspace.** `packages/core` holds the logic both clients
 share, `packages/content` holds the curriculum with its loader and validator,
-`apps/web` is the Next application and `apps/mobile` is the Expo app. The packages are consumed as TypeScript
-source rather than a build: npm links them, Next transpiles them, and there is no
+`apps/web` is the Next application and `apps/mobile` is the Expo app. The
+packages are consumed as TypeScript source rather than a build: npm links them, Next transpiles them, and there is no
 compile step to remember. Two things in the move are worth knowing before you
 touch them, and both are in the traps below: how the loader finds the curriculum,
 and what an old path in a doc means now.
@@ -178,6 +181,45 @@ the change if those components ever move. See
 `docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md` and
 task 37.
 
+`LESSON_SOURCES` in that file is what the content version hashes, and until task
+32 it listed only the three files in `apps/web`. The runtime the page runs and
+the bridge it opens were left out, so editing either produced pages a device
+would never be told to fetch. They are in the list now. A file that ends up
+inside a lesson page belongs there, or the bug is silent and looks like a stale
+phone.
+
+**The phone app runs the whole loop and has never been run on a phone.**
+`apps/mobile` signs in, downloads and unpacks the archive, mirrors the server's
+progress tables in SQLite, lists the tracks it holds and each track's topics,
+opens a topic's lesson and reads it aloud, downloads a track's audio, enrols a
+topic when it is marked learned, and runs the day's queue through the three
+question forms with nothing switched on. Its logic is under test: 158 unit tests
+across 24 files cover the queries, the migration, the install, the refresh, the
+server client, the queue, the grading, the writes, the audio library and the
+lesson bridge, against real SQLite and real files. Two integration tests hold
+both ends of a wire at once:
+`apps/web/src/app/api/device/device-client.integration.test.ts` runs the client
+against the real endpoints and an archive built from `content/`, and
+`apps/web/src/lib/schedule-agreement.integration.test.ts` runs the real
+`recordAttempt` from each side over the same history and compares the rung and
+the due date after every answer. What is untested is every line that renders,
+because that needs Expo Go and a device, and the machine this was written on has
+no way to run one. Open it before building on it.
+
+An answer on the phone writes four rows in one transaction: the attempt, the
+ladder row, the topic's last review and the day's count. The server writes the
+last of those in a separate call, deliberately, and the difference is written
+down in `apps/mobile/src/db/attempts.ts` at the place someone would go to
+"fix" it. Do not split them here: the screen offers the question again when the
+write throws, and there is no second copy of the answer until a sync runs.
+
+The curriculum stays a directory of files on the device and only progress goes
+into SQLite, which is
+`docs/decisions/0043-the-phone-keeps-content-in-a-file-and-progress-in-sqlite.md`.
+Each archive version unpacks into a directory named after itself and the swap is
+one settings row, so a refresh that fails leaves the device holding the archive it
+was already working from.
+
 **The server's recording cache is still WAV, and the app there will read it as
 empty.** `scripts/deploy.sh` excludes `.speech-cache` in both directions, so
 nothing about a deploy converts it, and a key whose file ends `.wav` is a key
@@ -196,7 +238,7 @@ both complete and already converted. rsync it across instead, once, and the
 server has every recording rather than the subset it had recorded for itself.
 Recordings are content addressed, so a cache from one machine is valid on
 another. **Do this before testing the phone against `work`**, or the first thing
-task 31 shows is an empty library.
+the phone's download screen shows is an empty library.
 
 **The audio backlog does not exist, and that was measured rather than assumed.**
 This file said for months that some question and narration audio had never been
@@ -228,13 +270,35 @@ in that state.
 
 ## The next action
 
-**Take task 30, but open the app on a phone first.** The server, the web and the
-app's shell are all finished. Task 29 built `apps/mobile` and every piece of its
-logic is under test against real SQLite, real files and the real endpoints, but
-nobody has yet watched it render on a device: that needs Expo Go, and this
-machine has no way to run it. `npm run mobile`, scan the code, sign in against
-whichever machine is serving the stack, and download the curriculum once. Do that
-before building the queue on top of it.
+**Two, and they do not compete for the same hands.** Task 41 fixes the crashing
+speech engine, which is what `verify` and therefore the merge rule rest on, and
+it is machine work. The other needs a phone.
+
+**Open the app on a phone. Nothing on the phone has ever been seen running.**
+Tasks 29 to 32 built the shell, the review loop, the audio download and the
+lesson, and every piece of their logic is under test against real SQLite, real
+files, the real endpoints and real Postgres. Not one line that renders has been
+run, because that needs Expo Go and this machine has no way to run one. `npm run
+mobile`, scan the code, sign in against whichever machine is serving the stack,
+download the curriculum, open a lesson, take a track's audio, mark a topic
+learned and answer a few questions. Four tasks of screens are now waiting on that
+one check, so do it before taking task 33.
+
+What to watch for, since it is untested rather than merely unseen: the archive
+downloading and unpacking, whether a lesson renders in the WebView at all, and
+whether the three question forms lay out on a narrow screen. The queue, the
+grading and the writes behind them are proved; the rendering is not.
+
+**The lesson is the one screen where a blank result is expected rather than
+surprising.** A page's script is an ES module, and a WebView will not fetch one
+from a `file://` address without `allowFileAccess`, `allowFileAccessFromFileURLs`
+and `allowUniversalAccessFromFileURLs`, which the lesson screen sets. That
+combination was reasoned about, not run. A lesson that opens empty and silent is
+the first place to look, and the WebView's console will say which of the three is
+missing. The page itself was checked against a real build in a browser: served
+over localhost with a stubbed `ReactNativeWebView`, it rendered, said it was
+ready, dimmed around the spoken section, scrolled to it, took the injected
+palette and handed back the links tapped in it.
 
 Two things in task 29 will shape what comes next. The app is typechecked twice,
 and `apps/mobile/tsconfig.app.json` is the pass that refuses `node` and `dom`
@@ -491,53 +555,33 @@ prototypes lesson still teaches what `class` really is, so nothing about the
 reading order changed. Its open question is now `patching-a-built-in`, which is
 about the shared mutable prototype and shares nothing with `class-syntax`.
 
-**One end-to-end spec is flaky, nobody owns it, and it now blocks the merge
-rule.** "A question can be listened to before it is answered",
-`apps/web/e2e/spoken-questions.spec.ts:63`, has failed seven times in sixteen full suite
-runs, and passes on a re-run of the same commit every time.
+**The flaky spec was never a flaky spec. The speech engine aborts and Docker
+restarts it.** This was recorded here for months as an unowned flake in
+`apps/web/e2e/spoken-questions.spec.ts`, blamed by turns on Playwright's route
+interception and on a hydration race. It is neither. `docker compose logs tts`
+holds twenty instances of `terminate called without an active exception`
+followed immediately by `Loaded voice`: the process dies mid-synthesis and comes
+back. Whichever spec was waiting on that recording times out, and the re-run
+passes because the engine is fresh. That is exactly the pattern the entry here
+described and could not explain.
 
-**It has now taken a second spec with it.** In one run,
-`spoken-questions.spec.ts:75`, "the answer gets its own listen button", failed
-alongside it in exactly the same way, and both passed on the immediate re-run of
-the same build. Those two are the only specs in the file that press a listen
-button behind the `serveAudio` stub, which is weak evidence for the route
-interception hypothesis below and against the hydration one: a hydration race
-would not pick out two specs that share a stub.
-It always fails the same way: the listen button never becomes "Stop listening"
-within the five second timeout, so the audio never started. Every failure has
-been on a tree that touched nothing but content data, and one of them was on
-unmodified `main` immediately after a green run of the same commit, which rules
-out the content and rules out the last change. Passing in isolation is not
-evidence either; it has done that after every failure.
+Two things follow. The failure moves between the specs that use the real engine
+rather than sitting on one, which is why the line number in this file kept
+drifting; and the specs that stub the audio only looked implicated because they
+are the long ones. One crash in the log carries a cause, from onnxruntime:
+`Non-zero status code returned while running Conv node ... GetElementType is not
+implemented`.
 
-This is the urgent one, because the convention below says nothing merges into
-`main` with `verify` failing, and at one in two the rule now means running the
-suite until it passes. That is the same as not having the rule, and task 16 was
-merged that way. **The decision
-worth taking first is whether this becomes a task**, and the answer is probably
-yes, because whoever writes the fix also gets to decide what the spec should
-assert rather than being told by a timeout.
+The mechanism to check first is concurrency. `services/tts/server.py` ends in
+Flask's `app.run()`, which is threaded, and one `PiperVoice` is shared across
+requests. Nothing on the application's side stops two synthesis calls
+overlapping: `warmRecording` serialises warms against each other, and a reader
+pressing play goes straight to `narrate`, whose `inFlight` map only joins
+requests for the same key. Task 41 has the reproduction to run before touching
+anything.
 
-Two hypotheses fit, and nobody has separated them. The older one is the route
-interception: `serveAudio` adds a handler for `**/api/speech/warm` after the
-audio handler deliberately, because Playwright consults the last handler added
-first, and the warm call racing the play call would leave the play with nothing
-to start. The newer one, from reading the page snapshot Playwright captured on
-the last failure, is a hydration race: the click lands on a button that has
-rendered but has no React handler attached yet, so nothing happens at all. The
-snapshot shows the question fully rendered with its options and the button still
-reading "Listen to the question", which fits either an unhandled click or a play
-attempt that failed and reset the label.
-
-The cheap way to separate them is to assert on the `asked` array before asserting
-on the button. Under the warm race a request was made, so `asked` has an entry;
-under the hydration race it is empty. `test-results/` holds the trace and the
-error context from the last failure, and it is gitignored, so it survives until
-the next run overwrites it. Raising the timeout would hide either one rather than
-answer it.
-
-Do not diagnose this from a run where anything else was touching Docker or port 3100. Two of the failures in the log that prompted this entry were caused by
-exactly that, and they are not evidence of anything.
+Do not diagnose this from a run where anything else was touching Docker or port 3100. Two of the failures in the log that prompted the original entry were caused
+by exactly that, and they are not evidence of anything.
 
 **The topic list is about to look shorter on the server, and that is the feature
 working.** No database has a `track_tier` row yet, so every track lands on SWE-1
@@ -678,6 +722,41 @@ packages come with it. A file read at request time is invisible to a static
 trace, so removing either line produces an image that builds, starts, and has no
 topics. Check with
 `docker run --rm --entrypoint sh <image> -c 'ls packages/content/content'`.
+
+**`apps/mobile/tsconfig.json` is the wide config and `tsconfig.app.json` is the
+strict one, and that order is not an accident.** eslint's project service and any
+editor read the nearest `tsconfig.json`, so it has to cover the tests and the
+Node-backed stores in `test-support/`. The strict pass, which refuses `node` and
+`dom` libraries so that a Node import in `src/` fails in the terminal instead of
+in Metro, is the extra `-p tsconfig.app.json` run in the workspace's `typecheck`
+script. Narrowing `tsconfig.json` to exclude the tests looks tidier and makes
+eslint report every test file as `not found by the project service`. That was
+tried and reverted during task 29.
+
+**Node-backed test helpers for the phone go in `apps/mobile/test-support/`, never
+in `src/`.** `test-support/database.ts` is `node:sqlite` behind the same interface
+`expo-sqlite` sits behind, and `test-support/file-store.ts` is `node:fs` behind
+the file interface. One of them in `src/` passes every test and fails the
+app-only typecheck, which is the point of that typecheck.
+
+**React Native does not declare `TextDecoder` and does not promise it.** Neither
+`react-native`'s own global types nor `expo/types` declare it, so a phone-side
+file that decodes bytes should use fflate's `strFromU8`, which is already a
+dependency. `apps/mobile/src/archive/install.ts` does. This is the same shape as
+the task 24 lesson about the bundle: what typechecks against `lib.dom` is not
+what Hermes has.
+
+**Importing an archive type from `@prep/content/archive` drags Node in behind
+it.** The barrel reaches the loader, esbuild and MDX, so the phone imports its
+shapes from `@prep/content/archive/types`, a leaf whose only import is
+`@prep/core`. Adding a value to that file that needs a filesystem breaks the
+mobile typecheck rather than anything nearer to the change.
+
+**One test file crosses the two applications, and it is the only one.**
+`apps/web/src/app/api/device/device-client.integration.test.ts` imports the
+phone's client, install and test stores by relative path, because an application
+is not a package and nothing imports one. Moving a file under `apps/mobile/src`
+breaks it, and the web typecheck is what says so.
 
 **A path written in a doc before task 21 is one level out.** `src/lib/x.ts` means
 `apps/web/src/lib/x.ts` unless task 21 moved that file into a package. The ADRs
@@ -1074,6 +1153,21 @@ corrupted, because recordings are content addressed and the build skips what it
 already has, so running it again carries on. Do not run it in the background and
 then do other work.
 
+**`npm run mobile` needs an Expo Go that matches SDK 57.** `apps/mobile` is
+pinned to Expo SDK 57, React Native 0.86 and React 19, and Expo Go from the Play
+Store tracks the latest SDK. An older Expo Go left on the phone refuses the
+bundle with a version message rather than anything about this code. Nothing here
+runs the app: `npm run verify` typechecks, lints and unit tests it, and never
+bundles or renders it.
+
+**Metro has to be told this is a workspace.** `apps/mobile/metro.config.js`
+watches the repository root, resolves out of the root `node_modules`, and turns
+hierarchical lookup off so a package found halfway up the tree cannot become a
+second copy of React. Removing any of the three produces a bundler that follows
+`@prep/core` out of the app's tree and stops. Adding a dependency to
+`apps/mobile` should not move a version the web app uses, and the lockfile is
+where to check: task 29's install moved none of them.
+
 **Do not sign a device in from a new e2e spec.** better-auth allows three
 sign-ins per ten seconds, and behind Playwright's own server there is no client
 IP to key on, so every spec shares one bucket. A fourth login in the window
@@ -1174,10 +1268,11 @@ commit that completes it.
 
 `npm run verify` must pass before merging into `main`. There is no CI, so the
 pre-commit hook (lint, format check, typecheck, unit tests) and that command are
-the entire safety net. The flaky spec above is the one thing standing in the way
-of taking that literally: what has been done so far is to re-run the suite and
-merge on the green one, having first confirmed the failure is that spec failing
-in its usual way. Anything else failing is a real failure.
+the entire safety net. The crashing speech engine above is the one thing standing
+in the way of taking that literally: what has been done so far is to re-run the
+suite and merge on the green one, having first confirmed the failure is a spec
+waiting on a recording the engine died making. Anything else failing is a real
+failure. Task 41 is what removes the exception.
 
 Commit messages say what was wrong or missing and what was done about it, in
 plain sentences. No file by file changelogs, no notes about tests passing.

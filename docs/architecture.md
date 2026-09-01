@@ -511,8 +511,9 @@ and the screen can offer the question again knowing which. The attempt is left
 unsynced, which is the whole of what a sync has to find.
 
 Marking a topic learned is what enrols its questions, at the tier the track is
-on, exactly as it is on the server. It is done from the track screen until the
-lesson is on the phone.
+on, exactly as it is on the server. It is done at the foot of the lesson, which
+is where the reading that earns it ends. The track screen lists a track's topics
+and opens one.
 
 `apps/web/src/lib/schedule-agreement.integration.test.ts` is the second test
 holding both ends at once. It runs the real `recordAttempt` from each side over
@@ -522,11 +523,23 @@ elsewhere; this is what would notice them parting.
 
 Lessons are the one thing it does not render natively. Each one is compiled
 ahead of time into a self-contained HTML page, bundled with the same visual
-components the web uses, and shown in a WebView. React Native sends in the
-heading the narration is on and the colour theme; the page sends back taps on
-internal links. Everything else, the queue, the three question forms, the
-player, the dashboard, is native. See
+components the web uses, and shown in a WebView. Everything else, the queue, the
+three question forms, the player, the dashboard, is native. See
 `docs/decisions/0034-lessons-are-pre-rendered-and-shown-in-a-webview.md`.
+
+**The bridge is four messages and no state, and the page's end of it is built
+into the page.** `packages/content/src/archive/bridge.ts` is the protocol and
+both ends import it. The page says when it is ready; the app answers with its
+palette, as CSS custom properties, and with the heading the voice is on; the page
+hands back the links tapped inside it and the screen navigates natively. Marking
+the narrated section is the web app's own `markNarratedSection`, so a lesson
+follows the voice the same way on both surfaces. See
+`docs/decisions/0045-the-lesson-bridge-is-built-into-the-page.md`.
+
+The page's script is a module and the WebView opens it from a `file://` address,
+which on Android needs `allowFileAccess`, `allowFileAccessFromFileURLs` and
+`allowUniversalAccessFromFileURLs`. Without them the module is refused and the
+lesson is a blank page with nothing said about why.
 
 `packages/content/src/archive/` is that build, run by `npm run content:archive`.
 It compiles each `lesson.mdx` with `@mdx-js/mdx` and bundles it with esbuild into
@@ -623,8 +636,9 @@ curriculum does not throw the recordings away. A key is the hash of the words,
 so an unedited script keeps its recording across a refresh.
 
 A question's prompt can be played in a review session when its recording is on
-the device, and no control is shown at all when it is not. The lesson's own
-player is task 32.
+the device, and no control is shown at all when it is not. A lesson's player
+follows the same rule a section at a time: it offers the narration sections this
+device holds, and a lesson with none of them shows no player.
 
 **`POST /api/device/sync` is the one device endpoint that writes**, and the whole
 of the exchange: everything the device has that the server does not goes up, and

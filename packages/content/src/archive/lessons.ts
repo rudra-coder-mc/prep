@@ -9,6 +9,7 @@ import { topicFile } from '../loader'
 import { lessonPagePath } from './data'
 import {
   GLOBAL_CSS,
+  LESSON_RUNTIME,
   MDX_COMPONENTS,
   VISUALS_DIR,
   WEB_SOURCE_ROOT,
@@ -122,8 +123,6 @@ async function buildStylesheet(): Promise<string> {
 
 /** MDX compiled to a module, and the entry that mounts it. */
 async function writeEntries(topics: LessonTopic[], work: string): Promise<string[]> {
-  const runtime = path.join(WORKSPACE_ROOT, 'packages/content/src/archive/lesson-runtime.tsx')
-
   return Promise.all(
     topics.map(async (topic) => {
       const source = await readFile(
@@ -143,7 +142,7 @@ async function writeEntries(topics: LessonTopic[], work: string): Promise<string
       await writeFile(
         entry,
         [
-          `import { mountLesson } from ${JSON.stringify(runtime)}`,
+          `import { mountLesson } from ${JSON.stringify(LESSON_RUNTIME)}`,
           `import Lesson from './${name}.lesson.jsx'`,
           `mountLesson(Lesson)`,
           '',

@@ -29,6 +29,8 @@ export type TrackSummary = {
 
 export type TopicSummary = {
   slug: string
+  /** How a route names it, which is how a screen links to its lesson. */
+  directory: string
   title: string
   summary: string
   questions: number
@@ -77,6 +79,7 @@ export function topicSummaries(
 
     return {
       slug: topic.slug,
+      directory: topic.directory,
       title: topic.title,
       summary: topic.summary,
       questions: questions.length,
@@ -85,6 +88,19 @@ export function topicSummaries(
       learnedAt,
     }
   })
+}
+
+/** One topic, by the address a route or a link inside a lesson names. */
+export function findTopic(
+  content: ArchiveContent,
+  technology: string,
+  directory: string,
+): ArchiveTopic | null {
+  return (
+    content.topics.find(
+      (topic) => topic.technology === technology && topic.directory === directory,
+    ) ?? null
+  )
 }
 
 function topicsIn(content: ArchiveContent, technology: string): ArchiveTopic[] {

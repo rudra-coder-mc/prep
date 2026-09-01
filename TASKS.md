@@ -151,9 +151,6 @@ copy of the server's `enrol`. And `review_schedule`, `topic_progress` and
 ingest has to rebuild all three from the attempts it receives rather than assume
 it owns them.
 
-Marking a topic learned is done from the track screen, because the lesson is not
-on the phone until task 32. Move it when the lesson arrives.
-
 Task 31 is done: a track's audio downloads onto the phone and plays there with
 nothing switched on. `POST /api/device/audio` prices a set of keys, which is the
 only thing a device cannot work out for itself: the archive already carries every
@@ -168,27 +165,61 @@ now has a `ServerClient` on the app state rather than one built per action, whic
 is what a screen downloading for a minute needs.
 
 Listening is on the question prompt in a review session, and the control is
-absent rather than dead when the recording is not on the device. The lesson's own
-player is task 32.
+absent rather than dead when the recording is not on the device.
 
-## 32. The lesson on the phone
+Task 32 is done: a lesson reads on the phone. The pre-rendered page opens in a
+WebView with the player, the navigation and the mark native around it, and the
+bridge between them is four messages and no state. The page's end of that bridge
+is compiled into the page rather than injected by the app, so the marking that
+makes the lesson follow the voice is the web app's own `markNarratedSection`
+rather than a copy. See
+`docs/decisions/0045-the-lesson-bridge-is-built-into-the-page.md`.
 
-Blocked by nothing now that 31 has landed.
+Two things it settled. The files a page is built from now include the runtime and
+the bridge, so `LESSON_SOURCES` is the whole list and a change to any of it is a
+new archive version. And the page's script is a module, which a WebView will not
+fetch from a `file://` address without the three access props the lesson screen
+sets: without them the lesson is blank and nothing says why.
 
-The pre-rendered page in a WebView, with the player and everything else native
-around it. The bridge carries four messages and no state: React Native sends in
-the heading the narration is on and the colour theme, the page sends back taps
-on internal links so navigation stays native.
+The lesson's own player follows the same rule as the question prompt's: a section
+whose recording is not on the device is left out, and a lesson with none of them
+shows no player at all. Marking a topic learned moved here from the track screen,
+which now lists a track's topics and opens one.
 
-Read `0034`, and `docs/decisions/0018-the-lesson-follows-the-voice.md` for how
-a section of speech finds its section of lesson.
+## 41. The speech engine crashes, and it is what makes the suite flaky
 
-Done when a lesson reads and animates on the phone the way it does on the
-laptop, the lesson follows the voice, and a link inside it navigates natively.
+Take this first. It is the reason `npm run verify` cannot be trusted, and the
+merge rule rests on `verify`.
+
+`apps/web/e2e/spoken-questions.spec.ts` has been recorded in `HANDOFF.md` as an
+unowned flaky spec for months. It is not the spec. `docker compose logs tts`
+holds twenty instances of `terminate called without an active exception`
+followed by the voice being loaded again: the engine aborts mid-synthesis and
+Docker restarts it. Whichever spec was waiting on that recording times out, and
+the next run passes because the engine came back. One crash carries a cause:
+`Non-zero status code returned while running Conv node ... GetElementType is not
+implemented`, from onnxruntime.
+
+The likely mechanism is concurrency. `services/tts/server.py` ends in Flask's
+`app.run()`, which is threaded by default, and one `PiperVoice` is shared by
+every request. On the application's side nothing stops two synthesis requests
+overlapping: `warmRecording` serialises warms with each other, but a reader
+pressing play goes straight to `narrate`, and `inFlight` in
+`apps/web/src/lib/speech/narrate.ts` only joins requests for the same key. Two
+different keys at once is two threads in one onnxruntime session.
+
+Reproduce it before fixing it: two concurrent `POST /synthesize` calls for
+different long scripts, straight at the container, in a loop. If that aborts the
+process, the fix is a lock around the synthesis rather than anything in the
+application, since the engine must be safe for whoever calls it.
+
+Done when the reproduction no longer aborts the container, and `npm run verify`
+passes twice in a row. Then delete the flaky-spec passages from `HANDOFF.md`
+rather than editing them: there is no flaky spec.
 
 ## 33. The phone syncs
 
-Blocked by 30.
+Blocked by nothing.
 
 A sync on launch, on returning to the foreground, and at the end of a review
 session. Failure is silent, and the app keeps working entirely from what it
@@ -205,7 +236,7 @@ neither blocks nor complains.
 
 ## 34. The dashboard, the tier pick and the exercises
 
-Blocked by 30.
+Blocked by nothing.
 
 The rest of the loop, natively: readiness over the whole tier, the streak, the
 weak-topic list, picking a tier per track, and exercises with their status and
