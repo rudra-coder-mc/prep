@@ -14,6 +14,8 @@ export type SettingKey =
   | 'device-name'
   /** Written last by an install, so its presence is what says one finished. */
   | 'archive-version'
+  /** The `syncedAt` of the last exchange, which the next one asks from. */
+  | 'last-synced-at'
   /** Whose progress the tables hold. See ../session/session.ts. */
   | 'account-id'
   | 'account-email'

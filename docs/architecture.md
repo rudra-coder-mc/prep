@@ -670,6 +670,20 @@ ways instead, since the curriculum bounds them at one row per topic and one per
 track. See
 `docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
 
+**On the phone's side of it, three things start an exchange**: a launch, a
+return to the foreground, and the end of a review session. One runs at a time,
+and a caller that arrives while one is running is given the running one. Failure
+is silent, because there is nothing to do about a server that is switched off and
+the app works without one. The end of a session is the only place the app says an
+exchange happened.
+
+The device rebuilds what it derives exactly as the server does, and adds one rule
+the server has no need for: a question that has attempts and no ladder row is
+replayed on every exchange. The archive is a download that can lag behind the
+attempts, so an answer can arrive for a question the device holds no copy of, and
+without the repair the row would sit there with nothing to put the question back
+into rotation. See `docs/decisions/0047-the-phone-syncs-when-it-can.md`.
+
 **The web says when each device last synced**, which is the only thing
 `device_sync` is read for. A sync always starts from the device, because the
 server has no route to a sleeping phone, so saying so is the whole of what the

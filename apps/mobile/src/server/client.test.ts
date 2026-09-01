@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createServerClient, ServerError } from './client'
 
 /**
@@ -222,5 +222,63 @@ describe('when the server cannot be reached', () => {
     const error = await client.archiveVersion().catch((e: unknown) => e)
     expect(error).toBeInstanceOf(ServerError)
     expect((error as ServerError).kind).toBe('offline')
+  })
+})
+
+describe('exchanging progress', () => {
+  const request = {
+    device: { id: 'device-1', name: 'Phone' },
+    since: null,
+    attempts: [],
+    topicProgress: [],
+    trackTiers: [],
+  }
+
+  afterEach(() => vi.useRealTimers())
+
+  it('sends the collections as ISO strings and reads them back as dates', async () => {
+    const { client, seen } = clientWith(() =>
+      json({
+        syncedAt: '2026-08-26T09:30:00.000Z',
+        attempts: [],
+        topicProgress: [
+          { topicSlug: 'javascript/closures', learnedAt: '2026-08-24T09:00:00.000Z' },
+        ],
+        trackTiers: [],
+      }),
+    )
+
+    const response = await client.sync({
+      ...request,
+      since: new Date('2026-08-25T09:00:00.000Z'),
+    })
+
+    expect(response.syncedAt).toEqual(new Date('2026-08-26T09:30:00.000Z'))
+    expect(response.topicProgress[0]?.learnedAt).toEqual(new Date('2026-08-24T09:00:00.000Z'))
+    expect(await seen[0]!.json()).toMatchObject({ since: '2026-08-25T09:00:00.000Z' })
+  })
+
+  /**
+   * React Native's fetch has no timeout of its own, so a machine that sleeps
+   * mid-request would otherwise leave the exchange pending for as long as the
+   * app runs, and the app holds one exchange at a time.
+   */
+  it('abandons an exchange the server never answers', async () => {
+    vi.useFakeTimers()
+
+    const { client } = clientWith(
+      (sent) =>
+        new Promise<Response>((_, reject) => {
+          sent.signal.addEventListener('abort', () => reject(new Error('aborted')))
+        }),
+    )
+
+    const failed = client.sync(request).catch((error: unknown) => error)
+    await vi.advanceTimersByTimeAsync(30_000)
+
+    const error = await failed
+    expect(error).toBeInstanceOf(ServerError)
+    expect((error as ServerError).kind).toBe('offline')
+    expect((error as ServerError).message).toMatch(/took longer than 30 seconds/)
   })
 })

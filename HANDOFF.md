@@ -60,9 +60,9 @@ gained a mobile client section and the `device_sync` table.
 
 The plan is cut into tasks. Phase 6 in `TASKS.md` was fifteen tasks and two
 low-priority ones, each a slice that can be shown working on its own. Tasks 21
-through 29 are done, which is the whole of the server, the whole of the web side
-of the phase, and the app's shell. Six are left. Tasks 30 and 31 are both
-unblocked; 30 is the one the rest hangs off.
+through 33 are done, which is the whole of the server, the whole of the web side
+of the phase, and an app that runs the loop and exchanges progress. Two are
+left, 34 and 35, and neither is blocked.
 
 **The repository is a workspace.** `packages/core` holds the logic both clients
 share, `packages/content` holds the curriculum with its loader and validator,
@@ -265,14 +265,20 @@ in that state.
 ## The next action
 
 **Open the app on a phone. Nothing on the phone has ever been seen running.**
-Tasks 29 to 32 built the shell, the review loop, the audio download and the
-lesson, and every piece of their logic is under test against real SQLite, real
-files, the real endpoints and real Postgres. Not one line that renders has been
-run, because that needs Expo Go and this machine has no way to run one. `npm run
-mobile`, scan the code, sign in against whichever machine is serving the stack,
-download the curriculum, open a lesson, take a track's audio, mark a topic
-learned and answer a few questions. Four tasks of screens are now waiting on that
-one check, so do it before taking task 33.
+Tasks 29 to 33 built the shell, the review loop, the audio download, the lesson
+and the sync, and every piece of their logic is under test against real SQLite,
+real files, the real endpoints and real Postgres. Not one line that renders has
+been run, because that needs Expo Go and this machine has no way to run one.
+`npm run mobile`, scan the code, sign in against whichever machine is serving the
+stack, download the curriculum, open a lesson, take a track's audio, mark a topic
+learned and answer a few questions. Five tasks of screens are now waiting on that
+one check.
+
+Task 33 was taken before that check rather than after it, which the previous
+version of this file said not to do. It changed no screen the check covers: the
+review screen gained a line of copy on its completion card, and everything else
+it added is logic. The check is still the next action, and it is now the only
+thing standing between the app and task 35's build.
 
 What to watch for, since it is untested rather than merely unseen: the archive
 downloading and unpacking, whether a lesson renders in the WebView at all, and
@@ -337,6 +343,20 @@ question to ask is which of the three it comes from, not how to send it. The one
 place this is not true is exercise progress, which nothing derives and nothing
 yet carries: task 34 says so, and adding it is a fourth collection in the same
 payload. See `docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
+
+Task 33 left two things worth carrying into the tasks after it. The device's
+half of the exchange is `apps/mobile/src/sync/sync.ts`, and it is deliberately
+the mirror image of `apps/web/src/lib/sync.ts`, section for section, so the two
+can be read side by side when one of them changes. It adds exactly one rule the
+server has no need for: every exchange replays any question that has attempts and
+no ladder row, because the archive is a download that can lag behind the attempts
+and an answer can arrive for a question the phone holds no copy of.
+
+**The matching hole one level up is open, and it is task 42.** A learned mark
+that arrives for a topic the archive does not hold enrols nothing, and nothing
+enrols it later, so the topic reads as learned and never asks a question. It
+needs a topic added to `content/` and learned on the laptop before the phone
+refreshes, so it is narrow, and it is silent, which is why it is written down.
 
 `TASKS.md` carries the whole phase with the blocking edges on each task. Take
 the order from there rather than from this file, and read `0033` before any of

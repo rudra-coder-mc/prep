@@ -55,9 +55,11 @@ export default function ReviewScreen() {
   const [position, setPosition] = useState(0)
   const [tally, setTally] = useState<Tally>({ passed: 0, weak: 0, failed: 0 })
   const [problem, setProblem] = useState<string | null>(null)
+  const [handedOver, setHandedOver] = useState<number | null>(null)
   const scroller = useRef<ScrollView>(null)
 
-  const { content, db, files } = app
+  const { content, db, files, sync } = app
+  const finished = queue !== null && queue.length > 0 && position >= queue.length
 
   useEffect(() => {
     let cancelled = false
@@ -72,6 +74,23 @@ export default function ReviewScreen() {
       cancelled = true
     }
   }, [content, db])
+
+  // The end of a session is the one moment the device certainly has something
+  // the server does not, so it is the third thing that starts an exchange.
+  // Nothing waits for it: the answers are already on this device.
+  useEffect(() => {
+    if (!finished) return
+
+    let cancelled = false
+    void (async () => {
+      const outcome = await sync()
+      if (!cancelled && outcome) setHandedOver(outcome.sent)
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [finished, sync])
 
   const advance = useCallback((result: Result) => {
     setTally((current) => ({ ...current, [result]: current[result] + 1 }))
@@ -97,7 +116,7 @@ export default function ReviewScreen() {
           <Muted>
             {queue.length === 0
               ? 'Mark a topic learned to put its questions into recall.'
-              : `${queue.length} ${queue.length === 1 ? 'question' : 'questions'} recorded on this device, waiting for a sync.`}
+              : describeSession(queue.length, app.syncing, handedOver)}
           </Muted>
           {queue.length > 0 ? (
             <View style={styles.tally}>
@@ -162,6 +181,21 @@ export default function ReviewScreen() {
       />
     </ScrollView>
   )
+}
+
+/**
+ * What happened to the answers. A sync that could not be done says so as the
+ * plain fact that they are still here, because a server that is switched off is
+ * the ordinary case rather than something gone wrong.
+ */
+function describeSession(answered: number, syncing: boolean, handedOver: number | null): string {
+  const questions = `${answered} ${answered === 1 ? 'question' : 'questions'}`
+
+  if (syncing) return `${questions} answered. Handing them over.`
+  if (handedOver === null) return `${questions} recorded on this device, waiting for a sync.`
+  if (handedOver === 0) return `${questions} answered. The server already had them.`
+
+  return `${questions} answered, and ${handedOver === 1 ? 'one answer is' : `${handedOver} answers are`} now on the server.`
 }
 
 /** The forms, chosen by the question rather than by the screen. */

@@ -2,15 +2,21 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { buildArchive } from '@prep/content/archive'
+import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { user } from '@/db/schema'
+import { DEFAULT_TIER } from '@prep/core'
+import { attempts, dailyActivity, reviewSchedule, user } from '@/db/schema'
 import { createTestDatabase, useTestDatabase, type TestDatabase } from '@/db/testing'
 import { createAccount } from '@/lib/account'
+import { recordReview } from '@/lib/activity'
+import { recordAttempt } from '@/lib/attempts'
+import { markTopicLearned } from '@/lib/progress'
 import { GET as archiveRoute } from '@/app/api/device/archive/route'
 import { GET as audioRoute } from '@/app/api/device/audio/[key]/route'
 import { POST as audioSizesRoute } from '@/app/api/device/audio/route'
 import { GET as versionRoute } from '@/app/api/device/archive/version/route'
 import { GET as checkRoute, POST as signInRoute } from '@/app/api/device/session/route'
+import { POST as syncRoute } from '@/app/api/device/sync/route'
 // The phone's own modules, reached by path because an application is not a
 // package and nothing imports one. This file is the exception and it is a test:
 // proving two halves of a wire agree means holding both ends of it at once.
@@ -22,6 +28,11 @@ import { recordingPath } from '../../../../../mobile/src/audio/library'
 import { migrate } from '../../../../../mobile/src/db/migrate'
 import { createTestDatabase as createDeviceDatabase } from '../../../../../mobile/test-support/database'
 import { createServerClient, ServerError } from '../../../../../mobile/src/server/client'
+import { readActivity } from '../../../../../mobile/src/db/activity'
+import { recordAttempt as recordOnDevice } from '../../../../../mobile/src/db/attempts'
+import { readSchedule } from '../../../../../mobile/src/db/schedule'
+import { markTopicLearned as markLearnedOnDevice } from '../../../../../mobile/src/library/learn'
+import { syncProgress } from '../../../../../mobile/src/sync/sync'
 
 /**
  * The phone's client against the real endpoints, the real better-auth and a real
@@ -54,6 +65,7 @@ async function route(request: Request): Promise<Response> {
   if (pathname === '/api/device/archive/version') return versionRoute(request)
   if (pathname === '/api/device/archive') return archiveRoute(request)
   if (pathname === '/api/device/audio') return audioSizesRoute(request)
+  if (pathname === '/api/device/sync') return syncRoute(request)
 
   const recording = /^\/api\/device\/audio\/([0-9a-f]{64})$/.exec(pathname)
   if (recording) {
@@ -219,3 +231,188 @@ describe('a device taking a track of audio', () => {
     db.close()
   }, 120_000)
 })
+
+/**
+ * The whole of task 33, both ends of it at once: a session answered on the
+ * phone and a session answered on the laptop, merged in one exchange.
+ *
+ * Neither side is authoritative and neither is told where a question landed.
+ * Each rebuilds its own schedule from the attempts it now holds, through the
+ * same `replaySchedule`, which is the only reason they can agree. See
+ * docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md.
+ */
+describe('a phone and a laptop answering the same bank', () => {
+  const MONDAY = new Date('2026-08-24T09:00:00.000Z')
+  const TUESDAY = new Date('2026-08-25T09:00:00.000Z')
+  const WEDNESDAY = new Date('2026-08-26T09:00:00.000Z')
+
+  const phone = { id: 'test-phone', name: 'Test phone' }
+
+  /** Where each side thinks a question sits, for the questions with a history. */
+  async function agreementOn(
+    device: ReturnType<typeof createDeviceDatabase>,
+    userId: string,
+    keys: string[],
+  ) {
+    const stored = await ctx.db
+      .select({
+        questionId: reviewSchedule.questionId,
+        intervalStep: reviewSchedule.intervalStep,
+        dueAt: reviewSchedule.dueAt,
+        lastResult: reviewSchedule.lastResult,
+      })
+      .from(reviewSchedule)
+      .where(eq(reviewSchedule.userId, userId))
+
+    const onDevice = await readSchedule(device)
+    const pick = <T extends { questionId: string }>(rows: T[]) =>
+      keys.map((key) => rows.find((row) => row.questionId === key))
+
+    return {
+      server: pick(stored),
+      device: pick(onDevice).map((row) =>
+        row
+          ? {
+              questionId: row.questionId,
+              intervalStep: row.intervalStep,
+              dueAt: row.dueAt,
+              lastResult: row.lastResult,
+            }
+          : undefined,
+      ),
+    }
+  }
+
+  it('merges in both directions, loses nothing, and agrees about what is due', async () => {
+    const session = await anonymous().signIn(EMAIL, PASSWORD)
+    const client = carrying(session.token)
+    const userId = session.user.id
+
+    const device = createDeviceDatabase()
+    await migrate(device)
+    const files = await createTestFileStore()
+    await installArchive({ db: device, files, bytes: await client.downloadArchive() })
+    const content = await readArchiveContent(device, files)
+
+    const topic = content.topics.find(
+      (candidate) =>
+        candidate.questions.filter((question) => question.form === 'choice').length > 1,
+    )
+    const [onLaptop, onPhone] = topic!.questions.filter((question) => question.form === 'choice')
+    const laptopKey = `${topic!.slug}#${onLaptop!.id}`
+    const phoneKey = `${topic!.slug}#${onPhone!.id}`
+
+    // The laptop reads the topic and answers one of its questions on Monday.
+    await markTopicLearned(userId, topic!.technology, topic!.directory)
+    await recordAttempt(
+      userId,
+      {
+        topicSlug: topic!.slug,
+        questionId: onLaptop!.id,
+        answer: '0',
+        result: 'passed',
+        form: 'choice',
+        hintsUsed: 0,
+      },
+      MONDAY,
+    )
+    await recordReview(userId, MONDAY)
+
+    // The phone, with nothing switched on, reads the same topic and answers the
+    // other question a day later.
+    await markLearnedOnDevice(device, content, topic!.slug, DEFAULT_TIER, TUESDAY)
+    await recordOnDevice(
+      device,
+      {
+        topicSlug: topic!.slug,
+        questionId: onPhone!.id,
+        answer: '0',
+        result: 'passed',
+        form: 'choice',
+        hintsUsed: 0,
+      },
+      { id: 'answered-on-the-phone', now: TUESDAY },
+    )
+
+    const first = await syncProgress({ db: device, content, client, device: phone }, WEDNESDAY)
+    expect(first.sent).toBe(1)
+
+    // The server has what the phone answered, and the phone has what the laptop
+    // answered, and neither has anything twice.
+    const onServer = await ctx.db
+      .select({ id: attempts.id, questionId: attempts.questionId })
+      .from(attempts)
+      .where(eq(attempts.userId, userId))
+    expect(onServer.map((row) => row.questionId).sort()).toEqual([laptopKey, phoneKey].sort())
+    expect(onServer.some((row) => row.id === 'answered-on-the-phone')).toBe(true)
+
+    const held = await device.all<{ question_id: string }>('select question_id from attempts')
+    expect(held.map((row) => row.question_id).sort()).toEqual([laptopKey, phoneKey].sort())
+
+    // Only the questions with a history are compared. One enrolled on both sides
+    // and never answered is due from the moment each side was told the topic had
+    // been read, which is two different moments and nothing derives it.
+    const agreed = await agreementOn(device, userId, [laptopKey, phoneKey])
+    expect(agreed.device).toEqual(agreed.server)
+    expect(agreed.server[0]).toMatchObject({ intervalStep: 1, lastResult: 'passed' })
+
+    // Each answer counts on the day it was given rather than the day it arrived,
+    // which is what the streak is derived from on both sides.
+    const serverDays = await ctx.db
+      .select({ day: dailyActivity.day, reviewed: dailyActivity.reviewed })
+      .from(dailyActivity)
+      .where(eq(dailyActivity.userId, userId))
+    expect(
+      (await readActivity(device)).map(({ day, reviewed }) => ({ day, reviewed })).sort(byDay),
+    ).toEqual(serverDays.sort(byDay))
+
+    // A second exchange with nothing new to say changes nothing on either side.
+    const second = await syncProgress({ db: device, content, client, device: phone }, WEDNESDAY)
+    expect(second.sent).toBe(0)
+    expect(await device.all('select id from attempts')).toHaveLength(2)
+    expect(await agreementOn(device, userId, [laptopKey, phoneKey])).toEqual(agreed)
+
+    // And it keeps working: another answer on each side, one more exchange.
+    // Both are dated now rather than in the fixture's week, because the server
+    // hands out a watermark of its own clock and asks by when it learned of an
+    // attempt: one recorded before the last exchange would never be asked for.
+    const later = new Date()
+    await recordAttempt(
+      userId,
+      {
+        topicSlug: topic!.slug,
+        questionId: onLaptop!.id,
+        answer: '0',
+        result: 'failed',
+        form: 'choice',
+        hintsUsed: 0,
+      },
+      later,
+    )
+    await recordOnDevice(
+      device,
+      {
+        topicSlug: topic!.slug,
+        questionId: onPhone!.id,
+        answer: '0',
+        result: 'passed',
+        form: 'choice',
+        hintsUsed: 0,
+      },
+      { id: 'answered-on-the-phone-again', now: later },
+    )
+
+    await syncProgress({ db: device, content, client, device: phone }, later)
+
+    const after = await agreementOn(device, userId, [laptopKey, phoneKey])
+    expect(after.device).toEqual(after.server)
+    // A wrong answer goes to the bottom rung whatever it had climbed, and a
+    // second right one climbs to the second, on both sides.
+    expect(after.server[0]).toMatchObject({ intervalStep: 0, lastResult: 'failed' })
+    expect(after.server[1]).toMatchObject({ intervalStep: 2, lastResult: 'passed' })
+
+    device.close()
+  }, 120_000)
+})
+
+const byDay = (a: { day: string }, b: { day: string }) => a.day.localeCompare(b.day)
