@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Readiness } from '@prep/core'
+import type { Readiness } from './readiness'
 import { summariseTracks, type TrackTopic } from './tracks'
 
 const topic = (technology: string, overrides: Partial<TrackTopic> = {}): TrackTopic => ({

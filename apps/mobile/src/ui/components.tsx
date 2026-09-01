@@ -67,6 +67,33 @@ export function Problem({ children }: { children: ReactNode }) {
   )
 }
 
+/**
+ * A share of something, as a bar. The number is always beside it in the copy,
+ * because a bar alone cannot say whether it is a share of ten or of six hundred.
+ */
+export function Bar({
+  value,
+  tone = 'accent',
+  label,
+}: {
+  value: number
+  tone?: 'accent' | 'pass' | 'weak'
+  label: string
+}) {
+  const percent = Math.max(0, Math.min(100, value))
+
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: 100, now: Math.round(percent) }}
+      style={styles.bar}
+    >
+      <View style={[styles.barFill, { width: `${percent}%`, backgroundColor: colors[tone] }]} />
+    </View>
+  )
+}
+
 export function Waiting({ label }: { label: string }) {
   return (
     <View style={styles.waiting}>
@@ -110,4 +137,11 @@ const styles = StyleSheet.create({
   },
   problemText: { color: colors.muted, fontSize: 14, lineHeight: 20 },
   waiting: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
+  bar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.raised,
+    overflow: 'hidden',
+  },
+  barFill: { height: '100%', borderRadius: 3 },
 })

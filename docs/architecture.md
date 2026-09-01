@@ -517,7 +517,22 @@ unsynced, which is the whole of what a sync has to find.
 Marking a topic learned is what enrols its questions, at the tier the track is
 on, exactly as it is on the server. It is done at the foot of the lesson, which
 is where the reading that earns it ends. The track screen lists a track's topics
-and opens one.
+and opens one, and it is where the track's tier is picked: a changed pick brings
+what is already learned up to it, as it does on the web, or the pick would only
+apply to topics read after it.
+
+**The dashboard is one fold, run twice.** `summariseDashboard` in
+`packages/core` takes the topics, the tier picks, the attempts, the learned
+marks, the ladder rows, the exercise rows and the day counts, and returns the
+whole page: readiness per track, the step up a finished tier offers, the topics
+by status, the question and exercise counts, the weakest topics and the streak.
+`apps/web/src/lib/dashboard.ts` hands it rows out of Postgres and
+`apps/mobile/src/library/dashboard.ts` hands it the same rows out of SQLite and
+the archive. Neither decides anything, so the two surfaces cannot agree about
+what was answered while disagreeing about how ready it makes somebody.
+`apps/web/src/lib/dashboard-agreement.integration.test.ts` is the third test
+holding both ends at once: it works on each side, syncs once, and compares the
+two dashboards whole.
 
 `apps/web/src/lib/schedule-agreement.integration.test.ts` is the second test
 holding both ends at once. It runs the real `recordAttempt` from each side over
@@ -648,15 +663,15 @@ device holds, and a lesson with none of them shows no player.
 of the exchange: everything the device has that the server does not goes up, and
 everything the server has that the device does not comes back, in one request.
 
-Three things travel, and nothing else does, because nothing else is a fact
-somebody entered. Attempts merge by id, and an attempt is immutable, so the same
-one arriving twice changes nothing. Learned marks and tier picks merge by
-timestamp with the later one winning. Every rule is commutative and idempotent,
-so two devices have nothing to resolve and a sync that fails halfway is repaired
-by the next one.
+Four things travel, and nothing else does, because everything else is derived
+from them. Attempts merge by id, and an attempt is immutable, so the same one
+arriving twice changes nothing. Learned marks, tier picks and exercise progress
+merge by timestamp with the later one winning. Every rule is commutative and
+idempotent, so two devices have nothing to resolve and a sync that fails halfway
+is repaired by the next one.
 
 The schedule, the streak, the daily queue and every topic status are derived from
-those three rather than exchanged. Ingesting attempts replays each affected
+those four rather than exchanged. Ingesting attempts replays each affected
 question's whole history from the bottom rung through `replaySchedule`, which is
 in `packages/core` so that the device folds the same attempts with the same
 function. That is what makes both sides agree about when a question is next due,
@@ -665,10 +680,15 @@ rather than one of them being told.
 Attempts come back by `attempts.recorded_at`, which is when this server learned
 of one rather than when it was answered: a phone that was offline all week hands
 over attempts dated all week, and a device that synced on Tuesday would never ask
-for anything that old. Learned marks and tier picks are exchanged in full both
-ways instead, since the curriculum bounds them at one row per topic and one per
-track. See
+for anything that old. The other three are exchanged in full both ways instead,
+since the curriculum bounds them at one row per topic, one per track and one per
+exercise. See
 `docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
+
+Exercise progress is the one collection nothing derives. An exercise is solved in
+an editor and the platform is only ever told the outcome, so there is no history
+to replay and no ladder to place it on, and it is carried as state rather than
+rebuilt.
 
 **On the phone's side of it, three things start an exchange**: a launch, a
 return to the foreground, and the end of a review session. One runs at a time,

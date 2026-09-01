@@ -22,6 +22,7 @@ import { readTrackTiers } from '../db/progress'
 import type { Database } from '../db/sqlite'
 import { readDeviceIdentity } from '../device/expo'
 import type { DeviceIdentity } from '../device/identity'
+import { pickTrackTier } from '../library/learn'
 import { createServerClient, type ServerClient } from '../server/client'
 import { createSecretStore } from '../session/expo'
 import { restoreSession, signIn, signOut, type StoredSession } from '../session/session'
@@ -67,6 +68,12 @@ export type AppState = {
   refresh(): Promise<RefreshResult | null>
   /** Null when it could not be done, which is not a failure worth reporting. */
   sync(): Promise<SyncOutcome | null>
+  /**
+   * Picks the tier for a track, which changes what is on the path and enrols
+   * what is already learned up to it. It lives here rather than in the screen
+   * that offers it because every screen reads the pick out of `tiers`.
+   */
+  pickTier(technology: string, tier: Tier): Promise<void>
 }
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -179,7 +186,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const outcome = await syncProgress({ db: stores.db, content, client, device })
 
-        if (outcome.received.attempts + outcome.received.learned + outcome.received.tiers > 0) {
+        const { attempts, learned, tiers: picks, exercises } = outcome.received
+        if (attempts + learned + picks + exercises > 0) {
           setTiers(await readTrackTiers(stores.db))
           setProgressRevision((revision) => revision + 1)
         }
@@ -256,6 +264,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSession(null)
         setProblem(null)
         setStatus('signed-out')
+      },
+
+      async pickTier(technology, tier) {
+        if (!stores || !content) return
+
+        setProblem(null)
+        await pickTrackTier(stores.db, content, technology, tier, new Date())
+        setTiers(await readTrackTiers(stores.db))
+        // The pick enrolled questions, so the day's queue has moved under any
+        // screen already showing a count from before it.
+        setProgressRevision((revision) => revision + 1)
       },
 
       async refresh() {

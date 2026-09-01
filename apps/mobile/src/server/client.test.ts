@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createServerClient, ServerError } from './client'
+import { createServerClient, ServerError, type SyncRequest } from './client'
 
 /**
  * The wire between the phone and the device endpoints.
@@ -226,12 +226,13 @@ describe('when the server cannot be reached', () => {
 })
 
 describe('exchanging progress', () => {
-  const request = {
+  const request: SyncRequest = {
     device: { id: 'device-1', name: 'Phone' },
     since: null,
     attempts: [],
     topicProgress: [],
     trackTiers: [],
+    exerciseProgress: [],
   }
 
   afterEach(() => vi.useRealTimers())
@@ -245,17 +246,51 @@ describe('exchanging progress', () => {
           { topicSlug: 'javascript/closures', learnedAt: '2026-08-24T09:00:00.000Z' },
         ],
         trackTiers: [],
+        exerciseProgress: [
+          {
+            exerciseSlug: 'javascript/closures/counter',
+            topicSlug: 'javascript/closures',
+            status: 'completed',
+            notes: null,
+            completedAt: '2026-08-24T10:00:00.000Z',
+            updatedAt: '2026-08-24T10:00:00.000Z',
+          },
+        ],
       }),
     )
 
     const response = await client.sync({
       ...request,
       since: new Date('2026-08-25T09:00:00.000Z'),
+      exerciseProgress: [
+        {
+          exerciseSlug: 'javascript/closures/debounce',
+          topicSlug: 'javascript/closures',
+          status: 'in_progress',
+          notes: 'half done',
+          completedAt: null,
+          updatedAt: new Date('2026-08-25T08:00:00.000Z'),
+        },
+      ],
     })
 
     expect(response.syncedAt).toEqual(new Date('2026-08-26T09:30:00.000Z'))
     expect(response.topicProgress[0]?.learnedAt).toEqual(new Date('2026-08-24T09:00:00.000Z'))
-    expect(await seen[0]!.json()).toMatchObject({ since: '2026-08-25T09:00:00.000Z' })
+    expect(response.exerciseProgress[0]?.completedAt).toEqual(new Date('2026-08-24T10:00:00.000Z'))
+
+    expect(await seen[0]!.json()).toMatchObject({
+      since: '2026-08-25T09:00:00.000Z',
+      exerciseProgress: [
+        {
+          exerciseSlug: 'javascript/closures/debounce',
+          // A note kept as it was typed, and a null that survives the round trip
+          // rather than becoming a string.
+          notes: 'half done',
+          completedAt: null,
+          updatedAt: '2026-08-25T08:00:00.000Z',
+        },
+      ],
+    })
   })
 
   /**

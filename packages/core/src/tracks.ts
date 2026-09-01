@@ -1,4 +1,6 @@
-import { technologyLabel, type Readiness, type TopicStatus } from '@prep/core'
+import type { Readiness } from './readiness'
+import { technologyLabel } from './technologies'
+import type { TopicStatus } from './topic-status'
 
 /** The part of a topic overview a track summary actually needs. */
 export type TrackTopic = {

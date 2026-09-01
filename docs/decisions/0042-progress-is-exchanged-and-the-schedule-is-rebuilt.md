@@ -3,6 +3,10 @@
 Status: accepted
 Date: 2026-08-30
 
+Extended on 2026-09-01 by task 34, which added exercise progress as the fourth
+collection this decision said it would be. The text below is amended rather than
+superseded: nothing here was reversed.
+
 ## Context
 
 A device holds everything and needs nothing at rest (`0033`). It answers
@@ -23,20 +27,25 @@ somewhere neither side would have put it.
 
 ## Decision
 
-Three things travel, and nothing else does, because nothing else is a fact
-somebody entered: **attempts, learned marks and tier picks**. The schedule, the
-streak, the daily queue and every topic status are derived from those on
-whichever side receives them.
+Four things travel, and nothing else does, because everything else is derived
+from them: **attempts, learned marks, tier picks and exercise progress**. The
+schedule, the streak, the daily queue and every topic status are derived from
+those on whichever side receives them.
 
 **Attempts merge by id.** An attempt is a fact about a moment, so the id is made
 where the answer was given and the same attempt arriving twice changes nothing.
 Rows are only ever inserted.
 
-**Learned marks and tier picks merge by timestamp, later wins.** Both are a
-person's most recent intention about one topic or one track, so there is nothing
-to combine.
+**Learned marks, tier picks and exercise progress merge by timestamp, later
+wins.** Each is a person's most recent intention about one topic, one track or
+one exercise, so there is nothing to combine.
 
-All three rules are commutative and idempotent. Two devices merging have nothing
+**Exercise progress travels as state, because nothing derives it.** An exercise
+is solved in an editor and the platform is only ever told the outcome, so unlike
+the schedule and the streak there is no history to replay it out of. It is
+carried whole and merged the way a tier pick is.
+
+All the rules are commutative and idempotent. Two devices merging have nothing
 to resolve, and a sync that fails halfway is repaired by the next one rather
 than needing to be rolled back, which is why the exchange is not wrapped in a
 transaction.
@@ -61,9 +70,10 @@ other device endpoint (`0040`).
 
 **Attempts come back by when the server learned of them**, which is a new
 `attempts.recorded_at`, rather than by when they were answered. A device asks for
-everything since the `syncedAt` of its last exchange. Learned marks and tier
-picks are exchanged in full both ways instead: there is one row per topic and one
-per track, so the curriculum bounds them and a full exchange stays small forever.
+everything since the `syncedAt` of its last exchange. The other three are
+exchanged in full both ways instead: there is one row per topic, one per track
+and one per exercise, so the curriculum bounds them and a full exchange stays
+small forever.
 
 **`device_sync` holds one row per device**: its name and when it was last heard
 from. It feeds the reminder in the web app and nothing else.
@@ -91,7 +101,7 @@ second device that synced on Tuesday would never ask for anything that old.
 
 **Version vectors, or a change log table.** The general answer to the problem
 this does not have. Attempts are append-only and identified at the point they are
-made, and the other two are single values with a timestamp. Nothing here needs
+made, and the other three are single values with a timestamp. Nothing here needs
 ordering between devices.
 
 **Wrap the exchange in one transaction.** Correct in the ordinary sense, and it
@@ -109,10 +119,10 @@ used daily sends and receives almost nothing.
 Replay costs one query and one write per question an ingest touches, not per
 question in the bank.
 
-**Exercise progress does not sync.** Nothing about it is hard, and it was left
-out because it is the one part of the loop that is neither derived from attempts
-nor needed by anything before task 34. It is a fourth collection in the same
-payload when that task wants it.
+**Exercise progress synced from task 34 onward.** It was left out of the first
+version of this because it is neither derived from attempts nor needed by
+anything before that task, and it arrived exactly as this decision predicted: a
+fourth collection in the same payload, merged by the tier pick's rule.
 
 Two devices whose clocks disagree can fold the same answers in a different
 order. The ladder is order-sensitive only where a wrong answer is involved, and

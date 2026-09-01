@@ -1,5 +1,12 @@
 import { z } from 'zod'
-import { RESULTS, TIERS, type Result, type Tier } from '@prep/core'
+import {
+  EXERCISE_STATUSES,
+  RESULTS,
+  TIERS,
+  type ExerciseStatus,
+  type Result,
+  type Tier,
+} from '@prep/core'
 
 /**
  * The device endpoints, and the only place in the app that knows their
@@ -55,7 +62,7 @@ const recordingsSchema = z.object({
 
 /**
  * The sync's wire shape, which is the one endpoint that both sends and receives
- * the same three collections. Dates are ISO-8601 strings on the wire and `Date`
+ * the same four collections. Dates are ISO-8601 strings on the wire and `Date`
  * everywhere else, the way the rest of this client works. The merge rules are
  * in ../sync/sync.ts and
  * docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md.
@@ -72,6 +79,15 @@ const syncAttemptSchema = z.object({
   attemptedAt: z.iso.datetime(),
 })
 
+const syncExerciseSchema = z.object({
+  exerciseSlug: z.string().min(1),
+  topicSlug: z.string().min(1),
+  status: z.enum(EXERCISE_STATUSES),
+  notes: z.string().nullable(),
+  completedAt: z.iso.datetime().nullable(),
+  updatedAt: z.iso.datetime(),
+})
+
 const syncSchema = z.object({
   syncedAt: z.iso.datetime(),
   attempts: z.array(syncAttemptSchema),
@@ -79,6 +95,7 @@ const syncSchema = z.object({
   trackTiers: z.array(
     z.object({ technology: z.string().min(1), tier: z.enum(TIERS), updatedAt: z.iso.datetime() }),
   ),
+  exerciseProgress: z.array(syncExerciseSchema),
 })
 
 export type SyncAttempt = {
@@ -97,6 +114,20 @@ export type SyncAttempt = {
 export type SyncLearnedMark = { topicSlug: string; learnedAt: Date }
 export type SyncTierPick = { technology: string; tier: Tier; updatedAt: Date }
 
+/**
+ * How an exercise went, which is the one collection here that is state rather
+ * than a fact somebody entered at a moment. It merges by `updatedAt` the way a
+ * tier pick does, because nothing derives it and there is nothing to replay.
+ */
+export type SyncExerciseProgress = {
+  exerciseSlug: string
+  topicSlug: string
+  status: ExerciseStatus
+  notes: string | null
+  completedAt: Date | null
+  updatedAt: Date
+}
+
 export type SyncRequest = {
   device: { id: string; name: string }
   /** The `syncedAt` of this device's last exchange, or null if it has never had one. */
@@ -104,6 +135,7 @@ export type SyncRequest = {
   attempts: SyncAttempt[]
   topicProgress: SyncLearnedMark[]
   trackTiers: SyncTierPick[]
+  exerciseProgress: SyncExerciseProgress[]
 }
 
 export type SyncResponse = {
@@ -112,6 +144,7 @@ export type SyncResponse = {
   attempts: SyncAttempt[]
   topicProgress: SyncLearnedMark[]
   trackTiers: SyncTierPick[]
+  exerciseProgress: SyncExerciseProgress[]
 }
 
 export type DeviceSession = {
@@ -230,6 +263,11 @@ export function createServerClient({ baseUrl, token, fetch }: ServerClientOption
           ...pick,
           updatedAt: pick.updatedAt.toISOString(),
         })),
+        exerciseProgress: request.exerciseProgress.map((row) => ({
+          ...row,
+          completedAt: row.completedAt?.toISOString() ?? null,
+          updatedAt: row.updatedAt.toISOString(),
+        })),
       }),
     })
 
@@ -249,6 +287,11 @@ export function createServerClient({ baseUrl, token, fetch }: ServerClientOption
       trackTiers: parsed.data.trackTiers.map((pick) => ({
         ...pick,
         updatedAt: new Date(pick.updatedAt),
+      })),
+      exerciseProgress: parsed.data.exerciseProgress.map((row) => ({
+        ...row,
+        completedAt: row.completedAt === null ? null : new Date(row.completedAt),
+        updatedAt: new Date(row.updatedAt),
       })),
     }
   }

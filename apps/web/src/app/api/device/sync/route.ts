@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { auth } from '@/lib/auth'
-import { RESULTS, TIERS } from '@prep/core'
+import { EXERCISE_STATUSES, RESULTS, TIERS } from '@prep/core'
 import { sync } from '@/lib/sync'
 
 /**
@@ -31,6 +31,19 @@ const attempt = z.object({
   attemptedAt: timestamp,
 })
 
+const exercise = z.object({
+  // Made by exerciseKey, which joins the topic slug and the exercise id with a
+  // slash, so the whole thing is three segments.
+  exerciseSlug: z
+    .string()
+    .regex(/^[^/]+\/[^/]+\/[^/]+$/, 'must be a topic slug and an exercise id'),
+  topicSlug: z.string().min(1),
+  status: z.enum(EXERCISE_STATUSES),
+  notes: z.string().nullable(),
+  completedAt: timestamp.nullable(),
+  updatedAt: timestamp,
+})
+
 const requestSchema = z.object({
   device: z.object({ id: z.string().min(1), name: z.string().min(1) }),
   since: timestamp.nullable(),
@@ -39,6 +52,7 @@ const requestSchema = z.object({
   trackTiers: z.array(
     z.object({ technology: z.string().min(1), tier: z.enum(TIERS), updatedAt: timestamp }),
   ),
+  exerciseProgress: z.array(exercise),
 })
 
 export async function POST(request: Request): Promise<Response> {
@@ -68,6 +82,11 @@ export async function POST(request: Request): Promise<Response> {
         learnedAt: t.learnedAt.toISOString(),
       })),
       trackTiers: result.trackTiers.map((t) => ({ ...t, updatedAt: t.updatedAt.toISOString() })),
+      exerciseProgress: result.exerciseProgress.map((e) => ({
+        ...e,
+        completedAt: e.completedAt?.toISOString() ?? null,
+        updatedAt: e.updatedAt.toISOString(),
+      })),
     },
     // The device stores the answer and asks again from the watermark in it, so a
     // cached one would be a sync that never happened.

@@ -6,6 +6,7 @@ test.use({ storageState: SIGNED_OUT_STATE })
 
 const TOPIC = 'javascript/closures'
 const QUESTION = `${TOPIC}#what-is-a-closure`
+const EXERCISE = 'javascript/prototypes/safe-lookup'
 
 /**
  * The exchange as a device runs it: over HTTP, with a bearer token and nothing
@@ -19,7 +20,8 @@ const QUESTION = `${TOPIC}#what-is-a-closure`
  *
  * It answers a question and marks a topic learned, which is the same state the
  * review specs create, and deliberately picks no tier: the pick is what the
- * dashboard and tier specs read.
+ * dashboard and tier specs read. The exercise it records belongs to a topic no
+ * other spec opens, for the same reason.
  */
 test('a device hands over what it answered and is handed back what it missed', async ({
   request,
@@ -48,6 +50,16 @@ test('a device hands over what it answered and is handed back what it missed', a
       ],
       topicProgress: [{ topicSlug: TOPIC, learnedAt: attemptedAt }],
       trackTiers: [],
+      exerciseProgress: [
+        {
+          exerciseSlug: EXERCISE,
+          topicSlug: 'javascript/prototypes',
+          status: 'completed',
+          notes: 'done on the train',
+          completedAt: attemptedAt,
+          updatedAt: attemptedAt,
+        },
+      ],
     },
   })
 
@@ -70,6 +82,7 @@ test('a device hands over what it answered and is handed back what it missed', a
       attempts: [],
       topicProgress: [],
       trackTiers: [],
+      exerciseProgress: [],
     },
   })
 
@@ -80,6 +93,13 @@ test('a device hands over what it answered and is handed back what it missed', a
   expect(mine.questionId).toBe(QUESTION)
   expect(mine.result).toBe('passed')
   expect(mine.attemptedAt).toBe(attemptedAt)
+
+  // Exercise progress is state rather than a fact about a moment, so it comes
+  // back in full to every device including the one that sent it.
+  const exercise = seen.exerciseProgress.find(
+    (row: { exerciseSlug: string }) => row.exerciseSlug === EXERCISE,
+  )
+  expect(exercise).toMatchObject({ status: 'completed', notes: 'done on the train' })
 
   // Asking again from the watermark brings back nothing the device does not
   // already hold, which is what makes a sync on every launch cheap. Not nothing
@@ -93,6 +113,7 @@ test('a device hands over what it answered and is handed back what it missed', a
       attempts: [],
       topicProgress: [],
       trackTiers: [],
+      exerciseProgress: [],
     },
   })
 
@@ -109,6 +130,7 @@ test('a sync needs a session', async ({ request }) => {
       attempts: [],
       topicProgress: [],
       trackTiers: [],
+      exerciseProgress: [],
     },
   })
 
@@ -126,6 +148,7 @@ test('a malformed sync is refused rather than half applied', async ({ request })
       attempts: [{ id: 'nonsense', questionId: QUESTION, topicSlug: TOPIC, result: 'brilliant' }],
       topicProgress: [],
       trackTiers: [],
+      exerciseProgress: [],
     },
   })
 

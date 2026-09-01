@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { migrate } from '../db/migrate'
-import { readLearnedTopics } from '../db/progress'
+import { readTierPicks, readLearnedTopics } from '../db/progress'
 import { readSchedule } from '../db/schedule'
-import { enrolLearnedTopics, markTopicLearned } from './learn'
+import { enrolLearnedTopics, markTopicLearned, pickTrackTier } from './learn'
 import { createTestDatabase } from '../../test-support/database'
 import { archiveContent, archiveQuestion, archiveTopic } from '../../test-support/content'
 
@@ -119,5 +119,39 @@ describe('bringing what is learned up to a tier', () => {
     await enrolLearnedTopics(db, content, 'javascript', 'swe-1', TUESDAY)
 
     expect(await readSchedule(db)).toHaveLength(3)
+  })
+})
+
+describe('picking the tier for a track', () => {
+  it('stores the pick with the timestamp a sync merges it by', async () => {
+    await pickTrackTier(db, content, 'javascript', 'swe-2', TUESDAY)
+
+    expect(await readTierPicks(db)).toEqual([
+      { technology: 'javascript', tier: 'swe-2', updatedAt: TUESDAY },
+    ])
+  })
+
+  /**
+   * Without this the pick would only apply to topics learned after it, so
+   * stepping up would mean re-reading every topic by hand.
+   */
+  it('brings what is already learned up to it', async () => {
+    await markTopicLearned(db, content, 'javascript/closures', 'swe-1', MONDAY)
+
+    await pickTrackTier(db, content, 'javascript', 'swe-2', TUESDAY)
+
+    expect((await readSchedule(db)).map((row) => row.questionId).sort()).toEqual([
+      'javascript/closures#capture',
+      'javascript/closures#scope',
+    ])
+  })
+
+  it('leaves the other tracks where they were', async () => {
+    await markTopicLearned(db, content, 'browser/events', 'swe-2', MONDAY)
+
+    await pickTrackTier(db, content, 'javascript', 'staff', TUESDAY)
+
+    expect((await readTierPicks(db)).map((pick) => pick.technology)).toEqual(['javascript'])
+    expect(await readSchedule(db)).toHaveLength(1)
   })
 })

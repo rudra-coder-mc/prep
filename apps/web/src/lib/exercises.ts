@@ -2,9 +2,11 @@ import 'server-only'
 import { and, eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { exerciseProgress } from '@/db/schema'
-import { exerciseKey } from '@prep/core'
+import { exerciseKey, type ExerciseStatus } from '@prep/core'
 
-export type ExerciseStatus = 'in_progress' | 'completed'
+// One definition of the two states, in the package both surfaces read, so the
+// column, the wire and the phone cannot drift apart.
+export type { ExerciseStatus }
 export type ExerciseProgressRow = typeof exerciseProgress.$inferSelect
 
 export async function getExerciseProgress(
