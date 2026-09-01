@@ -38,6 +38,15 @@ export const MAX_OPEN_QUESTIONS_PER_TOPIC = 1
 export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 
 /**
+ * How far along an exercise is. There is no rung between started and done: an
+ * exercise is solved in an editor and the platform is only told the outcome.
+ * It is progress that nothing derives, which is why it travels in a sync as
+ * state rather than being rebuilt from attempts. See
+ * docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md.
+ */
+export const EXERCISE_STATUSES = ['in_progress', 'completed'] as const
+
+/**
  * The level of interview a question belongs to, named after the roles interviews
  * hire for rather than after how hard a question feels. Defined in
  * docs/glossary.md, which is the rule for which tier a question is tagged with,
@@ -324,6 +333,7 @@ export type Narration = z.infer<typeof narrationSchema>
 export type QuestionType = (typeof QUESTION_TYPES)[number]
 export type AnswerForm = (typeof ANSWER_FORMS)[number]
 export type Difficulty = (typeof DIFFICULTIES)[number]
+export type ExerciseStatus = (typeof EXERCISE_STATUSES)[number]
 export type Tier = (typeof TIERS)[number]
 
 /** A question's identity across the whole platform, stored on attempts. */

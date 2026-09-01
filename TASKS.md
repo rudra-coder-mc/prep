@@ -14,8 +14,8 @@ enrols only what that tier covers, and the dashboard measures readiness against
 the whole tier. The content phases are done: the bank covers SWE-1 and SWE-2
 across the whole language track.
 
-What is left is the second surface. The same loop on a phone, working with the
-server switched off, because the machine that serves the platform usually is.
+The second surface runs the same loop. What is left of it is one task: getting
+the app onto the phone as an installable build.
 
 Phase 6 lists the decisions it rests on at its head, and
 `docs/decisions/0033-the-mobile-client-is-offline-first.md` is the one to read
@@ -198,29 +198,22 @@ this side can be handed an answer to a question it holds no copy of: every
 exchange replays any question that has attempts and no ladder row, which is what
 makes a stale archive repair itself. And `enrolLearnedTopics` now exists on the
 phone as well, in `apps/mobile/src/library/learn.ts`, because a tier picked on
-the laptop has to bring what is already learned up to it here too. Task 34 wants
-the same function for its pick.
+the laptop has to bring what is already learned up to it here too.
 
-## 34. The dashboard, the tier pick and the exercises
+Task 34 is done, so the phone runs the whole loop. The dashboard, the tier pick
+and the exercises are all native, and exercise progress now travels as the fourth
+collection in the sync, merged by `updatedAt` the way a tier pick is. `0042` is
+amended rather than superseded: it said this was the shape the fourth collection
+would take, and it was.
 
-Blocked by nothing.
-
-The rest of the loop, natively: readiness over the whole tier, the streak, the
-weak-topic list, picking a tier per track, and exercises with their status and
-notes.
-
-The streak reads `readActivity` in `apps/mobile/src/db/activity.ts`, which task 30
-started writing. Picking a tier has to bring what is already learned up to it, as
-`enrolLearnedTopics` does on the server, or the pick only applies to topics
-learned after it.
-
-Exercise progress is the one part of the loop the sync does not carry. It is
-neither derived from attempts nor needed before this task, so task 27 left it
-out. It is a fourth collection in the same payload, merged by `updatedAt` the
-way a tier pick is, and task 33's exchange has to grow to include it.
-
-Done when the phone's dashboard and the web's agree once a sync has run,
-exercises included.
+Two things it settled. The dashboard is one fold run twice:
+`summariseDashboard` in `packages/core` returns the whole page, and
+`apps/web/src/lib/dashboard.ts` and `apps/mobile/src/library/dashboard.ts` are
+query layers that decide nothing. `apps/web/src/lib/tracks.ts` moved into the
+package with it. And
+`apps/web/src/lib/dashboard-agreement.integration.test.ts` is the third test
+holding both ends at once: work on each side, one exchange, then the two
+dashboards compared whole.
 
 ## 35. An installable APK
 

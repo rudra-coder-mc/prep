@@ -4,6 +4,7 @@ import {
   attempts as attemptsTable,
   dailyActivity,
   deviceSync,
+  exerciseProgress,
   reviewSchedule,
   topicProgress,
   trackTier,
@@ -17,6 +18,7 @@ import {
 } from '@/db/testing'
 import { questionKey, replaySchedule, toDayString, type Result } from '@prep/core'
 import { recordAttempt } from '@/lib/attempts'
+import { setExerciseStatus } from '@/lib/exercises'
 import { markTopicLearned } from '@/lib/progress'
 import { sync, type IncomingAttempt } from '@/lib/sync'
 
@@ -58,7 +60,11 @@ function attempt(
 
 /** A sync carrying nothing, which is how a device asks what it has missed. */
 function pull(since: Date | null, device = PHONE, now = WEDNESDAY) {
-  return sync(userId, { device, since, attempts: [], topicProgress: [], trackTiers: [] }, now)
+  return sync(
+    userId,
+    { device, since, attempts: [], topicProgress: [], trackTiers: [], exerciseProgress: [] },
+    now,
+  )
 }
 
 async function scheduleFor(key: string) {
@@ -97,6 +103,7 @@ describe('taking attempts from a device', () => {
         ],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -134,6 +141,7 @@ describe('taking attempts from a device', () => {
         attempts: [attempt({ id: 'a2', attemptedAt: TUESDAY })],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -154,6 +162,7 @@ describe('taking attempts from a device', () => {
       attempts: [twice],
       topicProgress: [],
       trackTiers: [],
+      exerciseProgress: [],
     }
 
     await sync(userId, request, TUESDAY)
@@ -176,6 +185,7 @@ describe('taking attempts from a device', () => {
         attempts: [attempt({ id: 'a1', attemptedAt: MONDAY })],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -200,6 +210,7 @@ describe('taking attempts from a device', () => {
         ],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -221,6 +232,7 @@ describe('taking attempts from a device', () => {
         ],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -245,6 +257,7 @@ describe('taking attempts from a device', () => {
         ],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -331,6 +344,7 @@ describe('handing attempts back', () => {
         attempts: [attempt({ id: 'a1', attemptedAt: MONDAY })],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -355,6 +369,7 @@ describe('handing attempts back', () => {
         attempts: [attempt({ id: 'a1', attemptedAt: MONDAY })],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -397,6 +412,7 @@ describe('learned marks', () => {
         attempts: [],
         topicProgress: [{ topicSlug: TOPIC, learnedAt: MONDAY }],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -422,6 +438,7 @@ describe('learned marks', () => {
         attempts: [],
         topicProgress: [{ topicSlug: TOPIC, learnedAt: TUESDAY }],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -434,6 +451,7 @@ describe('learned marks', () => {
         attempts: [],
         topicProgress: [{ topicSlug: TOPIC, learnedAt: MONDAY }],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -463,6 +481,7 @@ describe('tier picks', () => {
         attempts: [],
         topicProgress: [],
         trackTiers: [{ technology: 'javascript', tier: 'senior', updatedAt: TUESDAY }],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -483,6 +502,7 @@ describe('tier picks', () => {
         attempts: [],
         topicProgress: [],
         trackTiers: [{ technology: 'javascript', tier: 'senior', updatedAt: TUESDAY }],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -495,6 +515,7 @@ describe('tier picks', () => {
         attempts: [],
         topicProgress: [],
         trackTiers: [{ technology: 'javascript', tier: 'swe-2', updatedAt: MONDAY }],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -512,6 +533,7 @@ describe('tier picks', () => {
         attempts: [],
         topicProgress: [],
         trackTiers: [{ technology: 'javascript', tier: 'senior', updatedAt: TUESDAY }],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )
@@ -520,6 +542,94 @@ describe('tier picks', () => {
 
     expect(response.trackTiers).toEqual([
       { technology: 'javascript', tier: 'senior', updatedAt: TUESDAY },
+    ])
+  })
+})
+
+/**
+ * Exercise progress is the one collection nothing derives. There is no schedule
+ * to replay it into and no ladder to place it on, so it is merged as state by
+ * its timestamp, the way a tier pick is, and handed back in full.
+ */
+describe('exercise progress', () => {
+  const EXERCISE = 'javascript/closures/counter'
+
+  function push(status: 'in_progress' | 'completed', updatedAt: Date, notes: string | null = null) {
+    return sync(
+      userId,
+      {
+        device: PHONE,
+        since: null,
+        attempts: [],
+        topicProgress: [],
+        trackTiers: [],
+        exerciseProgress: [
+          {
+            exerciseSlug: EXERCISE,
+            topicSlug: TOPIC,
+            status,
+            notes,
+            completedAt: status === 'completed' ? updatedAt : null,
+            updatedAt,
+          },
+        ],
+      },
+      WEDNESDAY,
+    )
+  }
+
+  async function stored() {
+    const [row] = await ctx.db
+      .select()
+      .from(exerciseProgress)
+      .where(eq(exerciseProgress.userId, userId))
+    return row
+  }
+
+  it('takes a row from a device that has never been recorded here', async () => {
+    await push('completed', TUESDAY, 'two goes')
+
+    expect(await stored()).toMatchObject({
+      exerciseSlug: EXERCISE,
+      topicSlug: TOPIC,
+      status: 'completed',
+      notes: 'two goes',
+      completedAt: TUESDAY,
+    })
+  })
+
+  it('keeps the row with the later timestamp, whichever order they arrive in', async () => {
+    await push('completed', TUESDAY)
+    await push('in_progress', MONDAY)
+
+    expect(await stored()).toMatchObject({ status: 'completed', updatedAt: TUESDAY })
+  })
+
+  it('takes a reopening that happened after the completion', async () => {
+    await push('completed', MONDAY)
+    await push('in_progress', TUESDAY)
+
+    expect(await stored()).toMatchObject({
+      status: 'in_progress',
+      // Reopening clears the completion, so nothing counts it as finished.
+      completedAt: null,
+    })
+  })
+
+  it('hands back what is recorded here', async () => {
+    await setExerciseStatus(userId, TOPIC, 'counter', 'completed', 'done here', TUESDAY)
+
+    const response = await pull(null)
+
+    expect(response.exerciseProgress).toEqual([
+      {
+        exerciseSlug: EXERCISE,
+        topicSlug: TOPIC,
+        status: 'completed',
+        notes: 'done here',
+        completedAt: TUESDAY,
+        updatedAt: TUESDAY,
+      },
     ])
   })
 })
@@ -580,6 +690,7 @@ describe('the exchange as a whole', () => {
         ],
         topicProgress: [],
         trackTiers: [],
+        exerciseProgress: [],
       },
       WEDNESDAY,
     )

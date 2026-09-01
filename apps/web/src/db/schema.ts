@@ -10,7 +10,7 @@ import {
   timestamp,
   unique,
 } from 'drizzle-orm/pg-core'
-import { RESULTS, TIERS } from '@prep/core'
+import { EXERCISE_STATUSES, RESULTS, TIERS } from '@prep/core'
 
 /* -------------------------------------------------------------------------- */
 /* Authentication                                                             */
@@ -79,7 +79,7 @@ export const verification = pgTable('verification', {
 /* keys. See docs/decisions/0002-content-in-git.md.                            */
 
 export const attemptResult = pgEnum('attempt_result', RESULTS)
-export const exerciseStatus = pgEnum('exercise_status', ['in_progress', 'completed'])
+export const exerciseStatus = pgEnum('exercise_status', EXERCISE_STATUSES)
 
 /**
  * The four interview levels, taken from the content schema so the database and

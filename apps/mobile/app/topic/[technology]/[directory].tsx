@@ -185,6 +185,13 @@ export default function TopicScreen() {
           onPress={() => void markLearned()}
           busy={marking}
         />
+        {topic.exercises.length > 0 ? (
+          <Button
+            label={`${topic.exercises.length} exercises`}
+            tone="quiet"
+            onPress={() => router.push(`/topic/${technology}/${directory}/exercises`)}
+          />
+        ) : null}
       </View>
     </View>
   )

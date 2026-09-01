@@ -5,6 +5,7 @@ import {
   attempts,
   dailyActivity,
   deviceSync,
+  exerciseProgress,
   reviewSchedule,
   topicProgress,
   trackTier,
@@ -15,6 +16,7 @@ import {
   countDueToday,
   replaySchedule,
   toDayString,
+  type ExerciseStatus,
   type Result,
   type ScheduledQuestion,
   type Tier,
@@ -25,16 +27,17 @@ import { getTrackTier } from '@/lib/track-tier'
 /**
  * The two-way exchange of progress with a device.
  *
- * Three things travel, and nothing else does, because nothing else is a fact
- * somebody entered: attempts, learned marks and tier picks. The schedule, the
- * streak and every topic status are rebuilt from them on whichever side receives
- * them, which is why two devices merging have nothing to resolve.
+ * Four things travel, and nothing else does, because everything else is derived
+ * from them: attempts, learned marks, tier picks and exercise progress. The
+ * schedule, the streak and every topic status are rebuilt on whichever side
+ * receives them, which is why two devices merging have nothing to resolve.
  *
  * Attempts merge by id, and an attempt is immutable, so the same one arriving
- * twice changes nothing. Learned marks and tier picks merge by timestamp with
- * the later one winning. All three rules are commutative and idempotent, so a
- * sync that fails halfway is repaired by the next one rather than needing to be
- * rolled back. See
+ * twice changes nothing. The other three merge by timestamp with the later one
+ * winning. Every rule is commutative and idempotent, so a sync that fails
+ * halfway is repaired by the next one rather than needing to be rolled back.
+ * Exercise progress is the one collection nothing derives, which is why it is
+ * carried rather than rebuilt. See
  * docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md.
  */
 
@@ -54,6 +57,16 @@ export type IncomingAttempt = {
 export type LearnedMark = { topicSlug: string; learnedAt: Date }
 export type TierPick = { technology: string; tier: Tier; updatedAt: Date }
 
+/** How an exercise went, which is state rather than a fact entered at a moment. */
+export type ExerciseRecord = {
+  exerciseSlug: string
+  topicSlug: string
+  status: ExerciseStatus
+  notes: string | null
+  completedAt: Date | null
+  updatedAt: Date
+}
+
 export type SyncRequest = {
   device: { id: string; name: string }
   /** The `syncedAt` of this device's last exchange, or null if it has never had one. */
@@ -61,6 +74,7 @@ export type SyncRequest = {
   attempts: IncomingAttempt[]
   topicProgress: LearnedMark[]
   trackTiers: TierPick[]
+  exerciseProgress: ExerciseRecord[]
 }
 
 export type SyncResponse = {
@@ -69,6 +83,7 @@ export type SyncResponse = {
   attempts: IncomingAttempt[]
   topicProgress: LearnedMark[]
   trackTiers: TierPick[]
+  exerciseProgress: ExerciseRecord[]
 }
 
 export async function sync(
@@ -83,6 +98,7 @@ export async function sync(
 
   const changedTracks = await mergeTierPicks(userId, request.trackTiers)
   const newlyLearned = await mergeLearnedMarks(userId, request.topicProgress)
+  await mergeExerciseProgress(userId, request.exerciseProgress)
   const ingested = await ingestAttempts(userId, request.attempts, now)
 
   await enrolNewlyLearned(userId, newlyLearned)
@@ -100,6 +116,7 @@ export async function sync(
     attempts: await attemptsSince(userId, request.since, request.attempts),
     topicProgress: await learnedMarks(userId),
     trackTiers: await tierPicks(userId),
+    exerciseProgress: await exerciseRecords(userId),
   }
 }
 
@@ -167,6 +184,50 @@ async function mergeLearnedMarks(userId: string, marks: LearnedMark[]): Promise<
   }
 
   return moved
+}
+
+/**
+ * Later row wins, the way a tier pick does. Nothing is returned because nothing
+ * follows from it: an exercise has no schedule, no ladder and no streak, and the
+ * only thing that reads it is a screen.
+ */
+async function mergeExerciseProgress(userId: string, records: ExerciseRecord[]): Promise<void> {
+  for (const record of records) {
+    const [stored] = await db
+      .select({ updatedAt: exerciseProgress.updatedAt })
+      .from(exerciseProgress)
+      .where(
+        and(
+          eq(exerciseProgress.userId, userId),
+          eq(exerciseProgress.exerciseSlug, record.exerciseSlug),
+        ),
+      )
+      .limit(1)
+
+    if (stored && stored.updatedAt >= record.updatedAt) continue
+
+    await db
+      .insert(exerciseProgress)
+      .values({
+        userId,
+        exerciseSlug: record.exerciseSlug,
+        topicSlug: record.topicSlug,
+        status: record.status,
+        notes: record.notes,
+        completedAt: record.completedAt,
+        updatedAt: record.updatedAt,
+      })
+      .onConflictDoUpdate({
+        target: [exerciseProgress.userId, exerciseProgress.exerciseSlug],
+        set: {
+          topicSlug: record.topicSlug,
+          status: record.status,
+          notes: record.notes,
+          completedAt: record.completedAt,
+          updatedAt: record.updatedAt,
+        },
+      })
+  }
 }
 
 type Ingested = { questionKeys: string[]; topicSlugs: string[]; days: Set<string> }
@@ -464,8 +525,9 @@ async function learnedMarks(userId: string): Promise<LearnedMark[]> {
 
 /**
  * The whole state rather than a delta, in both directions. There is one row per
- * track and one per topic, so the curriculum bounds them: a full exchange stays
- * small forever, and neither side needs a watermark to reconcile them.
+ * track, one per topic and one per exercise, so the curriculum bounds them: a
+ * full exchange stays small forever, and neither side needs a watermark to
+ * reconcile them.
  */
 async function tierPicks(userId: string): Promise<TierPick[]> {
   return db
@@ -476,4 +538,19 @@ async function tierPicks(userId: string): Promise<TierPick[]> {
     })
     .from(trackTier)
     .where(eq(trackTier.userId, userId))
+}
+
+/** In full as well, and bounded the same way: one row per exercise, at most. */
+async function exerciseRecords(userId: string): Promise<ExerciseRecord[]> {
+  return db
+    .select({
+      exerciseSlug: exerciseProgress.exerciseSlug,
+      topicSlug: exerciseProgress.topicSlug,
+      status: exerciseProgress.status,
+      notes: exerciseProgress.notes,
+      completedAt: exerciseProgress.completedAt,
+      updatedAt: exerciseProgress.updatedAt,
+    })
+    .from(exerciseProgress)
+    .where(eq(exerciseProgress.userId, userId))
 }

@@ -9,22 +9,29 @@ import {
   type Result,
   type Tier,
 } from '@prep/core'
+import { readExerciseProgress } from '../db/exercises'
 import { readSchedule } from '../db/schedule'
 import { readLearnedTopics, readTierPicks, readTrackTiers } from '../db/progress'
 import { readSetting, writeSetting } from '../db/settings'
 import type { Database } from '../db/sqlite'
 import { enrolLearnedTopics, enrolTopicQuestions } from '../library/learn'
-import type { ServerClient, SyncAttempt, SyncLearnedMark, SyncTierPick } from '../server/client'
+import type {
+  ServerClient,
+  SyncAttempt,
+  SyncExerciseProgress,
+  SyncLearnedMark,
+  SyncTierPick,
+} from '../server/client'
 import type { DeviceIdentity } from '../device/identity'
 
 /**
  * The exchange of progress with the server, from the device's end.
  *
  * It is the mirror image of apps/web/src/lib/sync.ts and it merges by the same
- * three rules: attempts by id, learned marks and tier picks by timestamp with
- * the later winning. All three are commutative and idempotent, so nothing here
- * is wrapped in a transaction and an exchange that fails halfway is repaired by
- * the next one. See
+ * rules: attempts by id, and learned marks, tier picks and exercise progress by
+ * timestamp with the later winning. All of them are commutative and idempotent,
+ * so nothing here is wrapped in a transaction and an exchange that fails halfway
+ * is repaired by the next one. See
  * docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md.
  *
  * Nothing here catches anything. A sync is never required: the app works
@@ -37,7 +44,7 @@ export type SyncOutcome = {
   syncedAt: Date
   /** Attempts handed over, which is what was waiting on this device. */
   sent: number
-  received: { attempts: number; learned: number; tiers: number }
+  received: { attempts: number; learned: number; tiers: number; exercises: number }
 }
 
 export type SyncStores = {
@@ -59,9 +66,10 @@ export async function syncProgress(
     since: await lastSyncedAt(db),
     attempts: pending,
     // In full rather than as a delta, in both directions. There is one row per
-    // topic and one per track, so the curriculum bounds them.
+    // topic, one per track and one per exercise, so the curriculum bounds them.
     topicProgress: await learnedMarks(db),
     trackTiers: await readTierPicks(db),
+    exerciseProgress: await readExerciseProgress(db),
   })
 
   // The server has them, so they need never be sent again. Marked before the
@@ -74,6 +82,7 @@ export async function syncProgress(
 
   const changedTracks = await mergeTierPicks(db, response.trackTiers)
   const movedMarks = await mergeLearnedMarks(db, response.topicProgress)
+  const movedExercises = await mergeExerciseProgress(db, response.exerciseProgress)
   const ingested = await ingestAttempts(db, response.attempts)
 
   // After the picks have been merged, so a topic learned elsewhere enrols the
@@ -99,6 +108,7 @@ export async function syncProgress(
       attempts: response.attempts.length,
       learned: movedMarks.length,
       tiers: changedTracks.length,
+      exercises: movedExercises,
     },
   }
 }
@@ -207,6 +217,50 @@ async function mergeLearnedMarks(
     )
 
     moved.push(mark)
+  }
+
+  return moved
+}
+
+/**
+ * Later row wins, the way a tier pick does. Returns how many moved, which is
+ * only ever used to decide whether a screen has to read the tables again:
+ * nothing follows from an exercise the way enrolment follows from a mark.
+ */
+async function mergeExerciseProgress(
+  db: Database,
+  records: SyncExerciseProgress[],
+): Promise<number> {
+  const stored = new Map(
+    (await readExerciseProgress(db)).map((row) => [row.exerciseSlug, row.updatedAt]),
+  )
+  let moved = 0
+
+  for (const record of records) {
+    const held = stored.get(record.exerciseSlug)
+    if (held && held >= record.updatedAt) continue
+
+    await db.run(
+      `insert into exercise_progress
+         (exercise_slug, topic_slug, status, notes, completed_at, updated_at)
+       values (?, ?, ?, ?, ?, ?)
+       on conflict (exercise_slug) do update set
+         topic_slug = excluded.topic_slug,
+         status = excluded.status,
+         notes = excluded.notes,
+         completed_at = excluded.completed_at,
+         updated_at = excluded.updated_at`,
+      [
+        record.exerciseSlug,
+        record.topicSlug,
+        record.status,
+        record.notes,
+        record.completedAt?.toISOString() ?? null,
+        record.updatedAt.toISOString(),
+      ],
+    )
+
+    moved += 1
   }
 
   return moved

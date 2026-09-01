@@ -60,9 +60,9 @@ gained a mobile client section and the `device_sync` table.
 
 The plan is cut into tasks. Phase 6 in `TASKS.md` was fifteen tasks and two
 low-priority ones, each a slice that can be shown working on its own. Tasks 21
-through 33 are done, which is the whole of the server, the whole of the web side
-of the phase, and an app that runs the loop and exchanges progress. Two are
-left, 34 and 35, and neither is blocked.
+through 34 are done, which is the whole of the server, the whole of the web side
+of the phase, and an app that runs the whole loop and exchanges progress. One is
+left, 35, and it is not blocked.
 
 **The repository is a workspace.** `packages/core` holds the logic both clients
 share, `packages/content` holds the curriculum with its loader and validator,
@@ -184,19 +184,23 @@ phone.
 
 **The phone app runs the whole loop and has never been run on a phone.**
 `apps/mobile` signs in, downloads and unpacks the archive, mirrors the server's
-progress tables in SQLite, lists the tracks it holds and each track's topics,
-opens a topic's lesson and reads it aloud, downloads a track's audio, enrols a
-topic when it is marked learned, and runs the day's queue through the three
-question forms with nothing switched on. Its logic is under test: 158 unit tests
-across 24 files cover the queries, the migration, the install, the refresh, the
-server client, the queue, the grading, the writes, the audio library and the
-lesson bridge, against real SQLite and real files. Two integration tests hold
-both ends of a wire at once:
+progress tables in SQLite, shows a dashboard, lists the tracks it holds and each
+track's topics, picks a track's tier, opens a topic's lesson and reads it aloud,
+records how its exercises went, downloads a track's audio, enrols a topic when it
+is marked learned, and runs the day's queue through the three question forms with
+nothing switched on. Its logic is under test: 194 unit tests
+across 27 files cover the queries, the migration, the install, the refresh, the
+server client, the queue, the grading, the writes, the audio library, the
+exercises, the dashboard and the lesson bridge, against real SQLite and real
+files. Three integration tests hold both ends of a wire at once:
 `apps/web/src/app/api/device/device-client.integration.test.ts` runs the client
-against the real endpoints and an archive built from `content/`, and
+against the real endpoints and an archive built from `content/`,
 `apps/web/src/lib/schedule-agreement.integration.test.ts` runs the real
 `recordAttempt` from each side over the same history and compares the rung and
-the due date after every answer. What is untested is every line that renders,
+the due date after every answer, and
+`apps/web/src/lib/dashboard-agreement.integration.test.ts` works on both sides,
+syncs once and compares the two dashboards whole. What is untested is every line
+that renders,
 because that needs Expo Go and a device, and the machine this was written on has
 no way to run one. Open it before building on it.
 
@@ -265,25 +269,29 @@ in that state.
 ## The next action
 
 **Open the app on a phone. Nothing on the phone has ever been seen running.**
-Tasks 29 to 33 built the shell, the review loop, the audio download, the lesson
-and the sync, and every piece of their logic is under test against real SQLite,
-real files, the real endpoints and real Postgres. Not one line that renders has
-been run, because that needs Expo Go and this machine has no way to run one.
-`npm run mobile`, scan the code, sign in against whichever machine is serving the
-stack, download the curriculum, open a lesson, take a track's audio, mark a topic
-learned and answer a few questions. Five tasks of screens are now waiting on that
-one check.
+Tasks 29 to 34 built the shell, the review loop, the audio download, the lesson,
+the sync and the dashboard, and every piece of their logic is under test against
+real SQLite, real files, the real endpoints and real Postgres. Not one line that
+renders has been run, because that needs Expo Go and this machine has no way to
+run one. `npm run mobile`, scan the code, sign in against whichever machine is
+serving the stack, download the curriculum, open a lesson, take a track's audio,
+mark a topic learned, answer a few questions, record an exercise and change a
+track's tier. Six tasks of screens are now waiting on that one check, and it is
+the only thing left before task 35 builds an APK out of them.
 
-Task 33 was taken before that check rather than after it, which the previous
-version of this file said not to do. It changed no screen the check covers: the
-review screen gained a line of copy on its completion card, and everything else
-it added is logic. The check is still the next action, and it is now the only
-thing standing between the app and task 35's build.
+Tasks 33 and 34 were both taken before that check rather than after it, which
+the previous version of this file said not to do. Task 33 changed no screen the
+check covers. Task 34 changed a great many: the home screen is now a dashboard,
+the track screen carries a tier picker, and the exercises screen is new. **The
+check is now overdue rather than merely pending**, and the layout of those three
+screens is the part of task 34 that nothing proves.
 
 What to watch for, since it is untested rather than merely unseen: the archive
-downloading and unpacking, whether a lesson renders in the WebView at all, and
-whether the three question forms lay out on a narrow screen. The queue, the
-grading and the writes behind them are proved; the rendering is not.
+downloading and unpacking, whether a lesson renders in the WebView at all,
+whether the three question forms lay out on a narrow screen, whether the
+exercises route resolves at all, and whether the dashboard's readiness rows and
+the tier picker fit a narrow screen. The queue, the grading, the writes and every
+number on the dashboard are proved; the rendering is not.
 
 **The lesson is the one screen where a blank result is expected rather than
 surprising.** A page's script is an ES module, and a WebView will not fetch one
@@ -335,14 +343,33 @@ verify its own session rather than assume the gate did it. Every route that
 exists does. See `docs/decisions/0040-a-device-carries-its-session-in-a-header.md`.
 
 Task 27 left the rule the app has to be built against. **Only attempts, learned
-marks and tier picks travel. Everything else is derived on both sides**, from
-those, by the same `packages/core` functions: the schedule through
-`replaySchedule`, the streak through the day counts, the queue and every topic
-status as they already were. When the app needs a value the server also has, the
-question to ask is which of the three it comes from, not how to send it. The one
-place this is not true is exercise progress, which nothing derives and nothing
-yet carries: task 34 says so, and adding it is a fourth collection in the same
-payload. See `docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
+marks, tier picks and exercise progress travel. Everything else is derived on
+both sides**, from those, by the same `packages/core` functions: the schedule
+through `replaySchedule`, the streak through the day counts, the queue and every
+topic status as they already were. When the app needs a value the server also
+has, the question to ask is which of the four it comes from, not how to send it.
+Exercise progress is the odd one out and the reason there are four: nothing
+derives it, so it is carried as state and merged by `updatedAt`. Task 34 added
+it, and `0042` is amended rather than superseded, because it had already said
+that is what the fourth collection would look like. See
+`docs/decisions/0042-progress-is-exchanged-and-the-schedule-is-rebuilt.md`.
+
+Task 34 left one rule and one warning. **The dashboard is one fold run twice.**
+`summariseDashboard` in `packages/core` returns the whole page, and
+`apps/web/src/lib/dashboard.ts` and `apps/mobile/src/library/dashboard.ts` are
+query layers that decide nothing at all: they read rows and hand them over.
+`apps/web/src/lib/tracks.ts` moved into the package with it. **A number added to
+either dashboard belongs in the fold**, or the two surfaces start disagreeing
+about a person who answered the same questions.
+`apps/web/src/lib/dashboard-agreement.integration.test.ts` compares the two whole
+dashboards after one sync and would say so, and it was checked by breaking the
+phone's side on purpose rather than trusted for passing first time.
+
+The warning is that **the exercises screen is a new route under an existing
+one**: `apps/mobile/app/topic/[technology]/[directory]/exercises.tsx` sits beside
+`[directory].tsx`. Expo Router allows a file and a directory of the same dynamic
+name, which is why it is written that way, but nothing here has run Metro, so it
+is on the list of things the first launch on a phone has to confirm.
 
 Task 33 left two things worth carrying into the tasks after it. The device's
 half of the exchange is `apps/mobile/src/sync/sync.ts`, and it is deliberately

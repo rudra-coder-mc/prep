@@ -50,6 +50,31 @@ export async function enrolTopicQuestions(
 }
 
 /**
+ * Picks the tier for a track, and brings what is already learned up to it.
+ *
+ * Without that second half the pick would only apply to topics learned after it,
+ * so stepping up would mean re-reading every topic by hand. The pick is stamped
+ * with `now` because that timestamp is what a sync merges it by: the later pick
+ * wins, whichever surface made it. This mirrors `pickTrackTier` in
+ * apps/web/src/lib/progress.ts.
+ */
+export async function pickTrackTier(
+  db: Database,
+  content: ArchiveContent,
+  technology: string,
+  tier: Tier,
+  now: Date,
+): Promise<void> {
+  await db.run(
+    `insert into track_tier (technology, tier, updated_at) values (?, ?, ?)
+     on conflict (technology) do update set tier = excluded.tier, updated_at = excluded.updated_at`,
+    [technology, tier, now.toISOString()],
+  )
+
+  await enrolLearnedTopics(db, content, technology, tier, now)
+}
+
+/**
  * Brings everything already learned on one track up to a tier, which is what a
  * changed pick means: without it the pick would only apply to topics learned
  * after it. This mirrors `enrolLearnedTopics` in apps/web/src/lib/progress.ts.

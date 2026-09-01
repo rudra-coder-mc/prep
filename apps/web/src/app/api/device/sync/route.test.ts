@@ -30,6 +30,16 @@ const BODY = {
   ],
   topicProgress: [{ topicSlug: 'javascript/closures', learnedAt: '2026-08-16T09:00:00.000Z' }],
   trackTiers: [{ technology: 'javascript', tier: 'swe-2', updatedAt: '2026-08-16T09:00:00.000Z' }],
+  exerciseProgress: [
+    {
+      exerciseSlug: 'javascript/closures/counter',
+      topicSlug: 'javascript/closures',
+      status: 'completed',
+      notes: 'took two goes',
+      completedAt: '2026-08-16T10:00:00.000Z',
+      updatedAt: '2026-08-16T10:00:00.000Z',
+    },
+  ],
 }
 
 function post(body: unknown): Promise<Response> {
@@ -60,6 +70,7 @@ beforeEach(() => {
     attempts: [],
     topicProgress: [],
     trackTiers: [],
+    exerciseProgress: [],
   })
 })
 
@@ -81,6 +92,7 @@ describe('POST /api/device/sync', () => {
     expect(request.attempts[0].attemptedAt).toEqual(new Date('2026-08-17T09:00:00.000Z'))
     expect(request.topicProgress[0].learnedAt).toEqual(new Date('2026-08-16T09:00:00.000Z'))
     expect(request.trackTiers[0].updatedAt).toEqual(new Date('2026-08-16T09:00:00.000Z'))
+    expect(request.exerciseProgress[0].completedAt).toEqual(new Date('2026-08-16T10:00:00.000Z'))
     expect(request.since).toBeNull()
   })
 
@@ -110,6 +122,16 @@ describe('POST /api/device/sync', () => {
           updatedAt: new Date('2026-08-16T09:00:00.000Z'),
         },
       ],
+      exerciseProgress: [
+        {
+          exerciseSlug: 'javascript/closures/counter',
+          topicSlug: 'javascript/closures',
+          status: 'in_progress',
+          notes: null,
+          completedAt: null,
+          updatedAt: new Date('2026-08-16T10:00:00.000Z'),
+        },
+      ],
     })
 
     const body = await (await post(BODY)).json()
@@ -118,6 +140,10 @@ describe('POST /api/device/sync', () => {
     expect(body.attempts[0].attemptedAt).toBe('2026-08-18T09:00:00.000Z')
     expect(body.topicProgress[0].learnedAt).toBe('2026-08-16T09:00:00.000Z')
     expect(body.trackTiers[0].updatedAt).toBe('2026-08-16T09:00:00.000Z')
+    expect(body.exerciseProgress[0].updatedAt).toBe('2026-08-16T10:00:00.000Z')
+    // A row still in progress has no completion, and null survives the trip
+    // rather than arriving as the string "null".
+    expect(body.exerciseProgress[0].completedAt).toBeNull()
   })
 
   it('takes a since and passes it on as a date', async () => {
@@ -132,6 +158,14 @@ describe('POST /api/device/sync', () => {
     ['an unnamed device', withField('device.name', '')],
     ['a result the ladder has no rung for', withField('attempts.0.result', 'brilliant')],
     ['a tier that is not one of the four', withField('trackTiers.0.tier', 'principal')],
+    [
+      'an exercise status the platform has no meaning for',
+      withField('exerciseProgress.0.status', 'abandoned'),
+    ],
+    [
+      'an exercise key with no exercise in it',
+      withField('exerciseProgress.0.exerciseSlug', 'javascript/closures'),
+    ],
     ['a confidence off the scale', withField('attempts.0.confidence', 9)],
     ['a date that is not one', withField('attempts.0.attemptedAt', 'tuesday')],
     [
@@ -161,6 +195,7 @@ describe('POST /api/device/sync', () => {
       attempts: [],
       topicProgress: [],
       trackTiers: [],
+      exerciseProgress: [],
     })
 
     expect(response.status).toBe(200)

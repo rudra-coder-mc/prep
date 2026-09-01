@@ -1,11 +1,12 @@
 import { Link, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { DEFAULT_TIER, technologyLabel } from '@prep/core'
+import { DEFAULT_TIER, technologyLabel, type Tier } from '@prep/core'
 import { readAttemptsForTopics, readLearnedTopics } from '../../src/db/progress'
 import { topicSummaries, type TopicSummary } from '../../src/library/tracks'
 import { useApp } from '../../src/ui/app-state'
 import { Muted, Waiting } from '../../src/ui/components'
+import { TierPicker } from '../../src/ui/tier-picker'
 import { STATUS_LABELS, statusColour } from '../../src/ui/status'
 import { colors, radius, space } from '../../src/ui/theme'
 import { TrackAudio } from '../../src/ui/track-audio'
@@ -25,11 +26,17 @@ import { TrackAudio } from '../../src/ui/track-audio'
  * The audio card at the top is the track's recordings, which are downloaded a
  * track at a time rather than with the archive: see
  * docs/decisions/0044-a-device-is-told-what-a-track-of-audio-weighs.md.
+ *
+ * The tier is picked here, beside the topics it decides the membership of. A
+ * changed pick brings what is already learned up to it, which is why it goes
+ * through the app rather than writing the row from this screen.
  */
 export default function TrackScreen() {
-  const { client, content, db, files, tiers } = useApp()
+  const app = useApp()
+  const { client, content, db, files, tiers } = app
   const { technology } = useLocalSearchParams<{ technology: string }>()
   const [topics, setTopics] = useState<TopicSummary[] | null>(null)
+  const [picking, setPicking] = useState(false)
 
   const tier = technology ? (tiers.get(technology) ?? DEFAULT_TIER) : DEFAULT_TIER
 
@@ -55,10 +62,24 @@ export default function TrackScreen() {
       return () => {
         cancelled = true
       }
-    }, [content, db, technology, tier]),
+      // The revision is a dependency and not a value this reads: a sync landing
+      // while this screen is open moves the statuses under it.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [content, db, technology, tier, app.progressRevision]),
   )
 
   const title = technology ? technologyLabel(technology) : 'Track'
+
+  async function pick(next: Tier) {
+    if (!technology || next === tier) return
+
+    setPicking(true)
+    try {
+      await app.pickTier(technology, next)
+    } finally {
+      setPicking(false)
+    }
+  }
 
   if (!topics) {
     return (
@@ -73,6 +94,20 @@ export default function TrackScreen() {
     <>
       <Stack.Screen options={{ title }} />
       <ScrollView contentContainerStyle={styles.page}>
+        {technology ? (
+          <View style={styles.picker}>
+            <Muted>
+              Preparing for an interview at which level. It decides which topics are on the path and
+              which of their questions marking one learned enrols.
+            </Muted>
+            <TierPicker
+              label={title}
+              tier={tier}
+              busy={picking}
+              onPick={(next) => void pick(next)}
+            />
+          </View>
+        ) : null}
         {content && files && technology ? (
           <TrackAudio content={content} files={files} client={client} technology={technology} />
         ) : null}
@@ -103,6 +138,7 @@ export default function TrackScreen() {
 
 const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.md },
+  picker: { gap: space.sm },
   row: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

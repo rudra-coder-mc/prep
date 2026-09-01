@@ -6,11 +6,13 @@ import { migrate } from '../db/migrate'
 import { readLearnedTopics, readTrackTiers } from '../db/progress'
 import { readSchedule } from '../db/schedule'
 import { readSetting } from '../db/settings'
+import { setExerciseStatus, readExerciseProgress } from '../db/exercises'
 import { markTopicLearned } from '../library/learn'
 import {
   ServerError,
   type ServerClient,
   type SyncAttempt,
+  type SyncExerciseProgress,
   type SyncRequest,
 } from '../server/client'
 import { syncProgress } from './sync'
@@ -77,6 +79,7 @@ type Returning = {
   attempts?: SyncAttempt[]
   topicProgress?: { topicSlug: string; learnedAt: Date }[]
   trackTiers?: { technology: string; tier: 'swe-1' | 'swe-2'; updatedAt: Date }[]
+  exerciseProgress?: SyncExerciseProgress[]
   syncedAt?: Date
 }
 
@@ -91,6 +94,7 @@ function serverReturning(returning: Returning = {}) {
         attempts: returning.attempts ?? [],
         topicProgress: returning.topicProgress ?? [],
         trackTiers: returning.trackTiers ?? [],
+        exerciseProgress: returning.exerciseProgress ?? [],
       }
     }),
   } as unknown as ServerClient
@@ -146,6 +150,33 @@ describe('handing over what this device answered', () => {
       { topicSlug: 'javascript/closures', learnedAt: MONDAY },
     ])
     expect(requests[0]?.device).toEqual(DEVICE)
+  })
+
+  it('sends the exercise progress it holds, which nothing else could rebuild', async () => {
+    await setExerciseStatus(
+      db,
+      {
+        topicSlug: 'javascript/closures',
+        exerciseId: 'counter',
+        status: 'completed',
+        notes: 'two goes',
+      },
+      MONDAY,
+    )
+
+    const { client, requests } = serverReturning()
+    await exchange(client)
+
+    expect(requests[0]?.exerciseProgress).toEqual([
+      {
+        exerciseSlug: 'javascript/closures/counter',
+        topicSlug: 'javascript/closures',
+        status: 'completed',
+        notes: 'two goes',
+        completedAt: MONDAY,
+        updatedAt: MONDAY,
+      },
+    ])
   })
 
   it('leaves the attempts unsent and the watermark alone when the server cannot be reached', async () => {
@@ -350,5 +381,69 @@ describe('an answer to a question this device does not hold yet', () => {
     const [scheduled] = await readSchedule(db)
     expect(scheduled?.questionId).toBe('javascript/closures#ghost')
     expect(scheduled?.intervalStep).toBe(1)
+  })
+})
+
+/**
+ * Exercise progress is the one collection nothing derives, so it is merged as
+ * state by its timestamp rather than replayed. The rule is the tier pick's, and
+ * so is the reason it has to be commutative: two devices recording the same
+ * exercise have only the timestamps to decide between them.
+ */
+describe('taking exercise progress recorded elsewhere', () => {
+  const completedOnTuesday = {
+    exerciseSlug: 'javascript/closures/counter',
+    topicSlug: 'javascript/closures',
+    status: 'completed' as const,
+    notes: 'done on the laptop',
+    completedAt: TUESDAY,
+    updatedAt: TUESDAY,
+  }
+
+  it('stores a row this device has never seen', async () => {
+    const outcome = await exchange(
+      serverReturning({ exerciseProgress: [completedOnTuesday] }).client,
+    )
+
+    expect(outcome.received.exercises).toBe(1)
+    expect(await readExerciseProgress(db)).toEqual([completedOnTuesday])
+  })
+
+  it('takes the later row and keeps the newer one this device already holds', async () => {
+    await setExerciseStatus(
+      db,
+      {
+        topicSlug: 'javascript/closures',
+        exerciseId: 'counter',
+        status: 'in_progress',
+        notes: 'started here',
+      },
+      MONDAY,
+    )
+
+    await exchange(serverReturning({ exerciseProgress: [completedOnTuesday] }).client)
+    expect((await readExerciseProgress(db))[0]).toMatchObject({ status: 'completed' })
+
+    // And an older row arriving after it changes nothing, which is what makes a
+    // half-finished exchange safe to simply run again.
+    await exchange(
+      serverReturning({
+        exerciseProgress: [{ ...completedOnTuesday, status: 'in_progress', updatedAt: MONDAY }],
+      }).client,
+    )
+
+    expect((await readExerciseProgress(db))[0]).toMatchObject({
+      status: 'completed',
+      updatedAt: TUESDAY,
+    })
+  })
+
+  it('says nothing moved when the same row arrives twice', async () => {
+    await exchange(serverReturning({ exerciseProgress: [completedOnTuesday] }).client)
+
+    const again = await exchange(serverReturning({ exerciseProgress: [completedOnTuesday] }).client)
+
+    expect(again.received.exercises).toBe(0)
+    expect(await readExerciseProgress(db)).toHaveLength(1)
   })
 })

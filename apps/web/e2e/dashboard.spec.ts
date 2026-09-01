@@ -77,6 +77,7 @@ test('the dashboard says when a device last synced, and lets a fresh one be', as
       attempts: [],
       topicProgress: [],
       trackTiers: [],
+      exerciseProgress: [],
     },
   })
   expect(synced.status()).toBe(200)

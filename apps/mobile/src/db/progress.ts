@@ -1,4 +1,4 @@
-import type { AttemptRecord, Tier } from '@prep/core'
+import type { AttemptRecord, DashboardAttempt, Tier } from '@prep/core'
 import type { SyncTierPick } from '../server/client'
 import type { Database } from './sqlite'
 
@@ -76,4 +76,25 @@ export async function readAttemptsForTopics(
   }
 
   return byTopic
+}
+
+/**
+ * Every attempt on this device, oldest first, with the topic each belongs to.
+ * The dashboard counts them all rather than a track's, so it reads them in one
+ * query rather than a topic at a time.
+ */
+export async function readAllAttempts(db: Database): Promise<DashboardAttempt[]> {
+  const rows = await db.all<{
+    topic_slug: string
+    question_id: string
+    result: AttemptRecord['result']
+    attempted_at: string
+  }>('select topic_slug, question_id, result, attempted_at from attempts order by attempted_at')
+
+  return rows.map((row) => ({
+    topicSlug: row.topic_slug,
+    questionId: row.question_id,
+    result: row.result,
+    attemptedAt: new Date(row.attempted_at),
+  }))
 }

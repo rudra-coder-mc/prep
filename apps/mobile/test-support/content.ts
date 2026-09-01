@@ -1,4 +1,5 @@
 import type { ArchiveContent, ArchiveQuestion, ArchiveTopic } from '@prep/content/archive/types'
+import type { Exercise } from '@prep/core'
 
 /**
  * Archives small enough to read, for the tests that need content rather than a
@@ -25,6 +26,17 @@ export function archiveQuestion(overrides: Partial<ArchiveQuestion> = {}): Archi
     tags: [],
     promptAudioKey: 'prompt-scope',
     answerAudioKey: 'answer-scope',
+    ...overrides,
+  }
+}
+
+export function archiveExercise(overrides: Partial<Exercise> = {}): Exercise {
+  return {
+    id: 'counter',
+    title: 'A counter that cannot be reset from outside',
+    difficulty: 'easy',
+    prompt: 'Write one.',
+    requirements: ['No property holds the count.'],
     ...overrides,
   }
 }
