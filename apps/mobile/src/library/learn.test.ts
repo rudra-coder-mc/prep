@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { migrate } from '../db/migrate'
 import { readLearnedTopics } from '../db/progress'
 import { readSchedule } from '../db/schedule'
-import { markTopicLearned } from './learn'
+import { enrolLearnedTopics, markTopicLearned } from './learn'
 import { createTestDatabase } from '../../test-support/database'
 import { archiveContent, archiveQuestion, archiveTopic } from '../../test-support/content'
 
@@ -26,6 +26,11 @@ const content = archiveContent([
       archiveQuestion({ id: 'capture', tier: 'swe-2' }),
       archiveQuestion({ id: 'realms', tier: 'staff' }),
     ],
+  }),
+  archiveTopic({
+    technology: 'browser',
+    directory: 'events',
+    questions: [archiveQuestion({ id: 'bubbling', tier: 'swe-2' })],
   }),
 ])
 
@@ -78,5 +83,41 @@ describe('marking a topic learned', () => {
     await expect(
       markTopicLearned(db, content, 'javascript/generators', 'swe-1', MONDAY),
     ).rejects.toThrow(/no copy/)
+  })
+})
+
+/**
+ * The second way a question is enrolled: the tier moved rather than the topic
+ * being read. A pick made on the laptop arrives here through a sync, so this is
+ * what stops it applying only to whatever is learned after it.
+ */
+describe('bringing what is learned up to a tier', () => {
+  it('enrols the questions the new tier covers on that track alone', async () => {
+    await markTopicLearned(db, content, 'javascript/closures', 'swe-1', MONDAY)
+    await markTopicLearned(db, content, 'browser/events', 'swe-2', MONDAY)
+
+    await enrolLearnedTopics(db, content, 'javascript', 'swe-2', TUESDAY)
+
+    expect((await readSchedule(db)).map((row) => row.questionId).sort()).toEqual([
+      'browser/events#bubbling',
+      'javascript/closures#capture',
+      'javascript/closures#scope',
+    ])
+  })
+
+  it('leaves a topic that was never read alone', async () => {
+    await enrolLearnedTopics(db, content, 'javascript', 'staff', TUESDAY)
+
+    expect(await readSchedule(db)).toEqual([])
+  })
+
+  // A question already on the ladder is something you have started remembering,
+  // and a change of plan is not a reason to throw that away.
+  it('removes nothing when the tier steps down', async () => {
+    await markTopicLearned(db, content, 'javascript/closures', 'staff', MONDAY)
+
+    await enrolLearnedTopics(db, content, 'javascript', 'swe-1', TUESDAY)
+
+    expect(await readSchedule(db)).toHaveLength(3)
   })
 })

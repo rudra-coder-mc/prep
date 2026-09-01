@@ -6,9 +6,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
+import { AppState as NativeAppState } from 'react-native'
 import { readArchiveContent } from '../archive/content'
 import { createFileStore } from '../archive/expo'
 import type { FileStore } from '../archive/files'
@@ -23,6 +25,7 @@ import type { DeviceIdentity } from '../device/identity'
 import { createServerClient, type ServerClient } from '../server/client'
 import { createSecretStore } from '../session/expo'
 import { restoreSession, signIn, signOut, type StoredSession } from '../session/session'
+import { syncProgress, type SyncOutcome } from '../sync/sync'
 
 /**
  * Everything the app holds, opened once and kept for as long as it runs.
@@ -50,11 +53,20 @@ export type AppState = {
   /** The client for this session, or null while signed out. */
   client: ServerClient | null
   refreshing: boolean
+  syncing: boolean
+  /**
+   * Bumped whenever an exchange brought something in. A screen reading the
+   * progress tables watches it, or the answers given on the laptop sit in
+   * SQLite until something else happens to make it read them again.
+   */
+  progressRevision: number
   /** The last thing that went wrong, shown once and cleared by the next action. */
   problem: string | null
   signIn(address: string, email: string, password: string): Promise<void>
   signOut(): Promise<void>
   refresh(): Promise<RefreshResult | null>
+  /** Null when it could not be done, which is not a failure worth reporting. */
+  sync(): Promise<SyncOutcome | null>
 }
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -75,6 +87,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [content, setContent] = useState<ArchiveContent | null>(null)
   const [tiers, setTiers] = useState<Map<string, Tier>>(new Map())
   const [refreshing, setRefreshing] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [progressRevision, setProgressRevision] = useState(0)
   const [problem, setProblem] = useState<string | null>(null)
 
   // State rather than a ref, because every screen reads the database out of
@@ -145,6 +159,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [session],
   )
 
+  /**
+   * The exchange of progress, which the app starts and never requires. It fails
+   * silently: there is nothing for somebody to do about a server that is
+   * switched off, and everything the app does works without one. A device that
+   * has gone quiet shows up on the web dashboard instead. See
+   * docs/decisions/0047-the-phone-syncs-when-it-can.md.
+   */
+  const running = useRef<Promise<SyncOutcome | null> | null>(null)
+
+  const sync = useCallback(async (): Promise<SyncOutcome | null> => {
+    if (!stores || !client || !device || !content) return null
+    // Launch, foreground and the end of a session can all land at once, and one
+    // exchange answers all three.
+    if (running.current) return running.current
+
+    const exchange = (async () => {
+      setSyncing(true)
+      try {
+        const outcome = await syncProgress({ db: stores.db, content, client, device })
+
+        if (outcome.received.attempts + outcome.received.learned + outcome.received.tiers > 0) {
+          setTiers(await readTrackTiers(stores.db))
+          setProgressRevision((revision) => revision + 1)
+        }
+        return outcome
+      } catch {
+        return null
+      } finally {
+        setSyncing(false)
+        running.current = null
+      }
+    })()
+
+    running.current = exchange
+    return exchange
+  }, [stores, client, device, content])
+
+  // On launch, as soon as there is something to exchange and something to
+  // exchange it against. A device that signs in before it downloads the
+  // curriculum syncs when the download lands rather than not at all.
+  const syncedOnLaunch = useRef(false)
+  const ready = status === 'ready' && Boolean(stores && client && device && content)
+
+  useEffect(() => {
+    if (!ready || syncedOnLaunch.current) return
+    syncedOnLaunch.current = true
+    void sync()
+  }, [ready, sync])
+
+  // And on coming back to it, which is the moment a phone carried around all day
+  // is most likely to be on the tailnet again.
+  useEffect(() => {
+    const subscription = NativeAppState.addEventListener('change', (next) => {
+      if (next === 'active') void sync()
+    })
+
+    return () => subscription.remove()
+  }, [sync])
+
   const value = useMemo<AppState>(
     () => ({
       status,
@@ -156,7 +229,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       files: stores?.files ?? null,
       client,
       refreshing,
+      syncing,
+      progressRevision,
       problem,
+      sync,
 
       async signIn(address, email, password) {
         if (!stores) throw new Error('The app has not finished starting')
@@ -199,7 +275,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       },
     }),
-    [status, session, device, content, tiers, refreshing, problem, stores, client, loadLocal],
+    [
+      status,
+      session,
+      device,
+      content,
+      tiers,
+      refreshing,
+      syncing,
+      progressRevision,
+      problem,
+      stores,
+      client,
+      loadLocal,
+      sync,
+    ],
   )
 
   return <AppStateContext.Provider value={value}>{children}</AppStateContext.Provider>

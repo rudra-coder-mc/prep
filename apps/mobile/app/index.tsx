@@ -36,7 +36,11 @@ export default function HomeScreen() {
       return () => {
         cancelled = true
       }
-    }, [content, db]),
+      // The revision is a dependency and not a value this reads: a sync landing
+      // while this screen is open changes the rows behind the count, and
+      // without it the number would stand until something else took focus.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [content, db, app.progressRevision]),
   )
 
   const tracks = useMemo(

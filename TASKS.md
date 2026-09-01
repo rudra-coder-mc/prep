@@ -186,22 +186,20 @@ whose recording is not on the device is left out, and a lesson with none of them
 shows no player at all. Marking a topic learned moved here from the track screen,
 which now lists a track's topics and opens one.
 
-## 33. The phone syncs
+Task 33 is done: the phone syncs on launch, on returning to the foreground and
+at the end of a review session, one exchange at a time, and a failure is silent.
+`apps/mobile/src/sync/sync.ts` is the device's half of
+`apps/web/src/lib/sync.ts`, merging by the same three rules and rebuilding the
+schedule, the last-reviewed marks and the day counts from the attempts it
+receives. See `docs/decisions/0047-the-phone-syncs-when-it-can.md`.
 
-Blocked by nothing.
-
-A sync on launch, on returning to the foreground, and at the end of a review
-session. Failure is silent, and the app keeps working entirely from what it
-already holds.
-
-The device now writes its own schedule, last-reviewed marks and day counts, so
-ingesting attempts has to rebuild them the way `rebuildSchedules`,
-`rebuildLastReviewed` and `rebuildActivity` do in `apps/web/src/lib/sync.ts`.
-`attempts.synced` is what says which ones to send.
-
-Done when a session answered on the phone and a session answered on the laptop
-merge in both directions with no attempt lost, and the app with the stack off
-neither blocks nor complains.
+Two things it settled. The archive is a download and the attempts are not, so
+this side can be handed an answer to a question it holds no copy of: every
+exchange replays any question that has attempts and no ladder row, which is what
+makes a stale archive repair itself. And `enrolLearnedTopics` now exists on the
+phone as well, in `apps/mobile/src/library/learn.ts`, because a tier picked on
+the laptop has to bring what is already learned up to it here too. Task 34 wants
+the same function for its pick.
 
 ## 34. The dashboard, the tier pick and the exercises
 
@@ -226,7 +224,7 @@ exercises included.
 
 ## 35. An installable APK
 
-Blocked by 33.
+Blocked by nothing.
 
 EAS Build on the personal Expo account, downloaded and sideloaded onto the
 phone. `.easignore` excludes `content/` and the built archive, so what leaves
@@ -316,6 +314,27 @@ clear the app's storage and download the track again.
 
 Done when a refresh drops the recordings no current key names, and a test proves
 a script that did not change keeps its recording across one.
+
+## 42. A topic learned elsewhere while the archive was too old to hold it
+
+A sync stores every learned mark it receives, and enrols the questions of the
+ones it can find in the archive. A mark for a topic this device has no copy of
+enrols nothing, and nothing enrols it later: the mark is already stored, so the
+next sync sees it as unmoved and the topic reads as learned with none of its
+questions in recall. `enrolNewlyLearned` in `apps/mobile/src/sync/sync.ts` is
+where it is skipped.
+
+It needs a topic added to `content/` and marked learned on the laptop before the
+phone refreshes, so it is narrow. It is also silent, which is the argument for
+fixing it rather than leaving it: the topic looks done and never asks a question.
+
+The likely answer is enrolling every learned topic up to its track's tier after a
+refresh installs a new archive, which is cheap and idempotent. Note that it would
+also enrol questions added to a topic that was already learned, which neither
+surface does today, so decide whether that is wanted before writing it.
+
+Done when a mark that arrived before the archive did has its questions in recall
+after the refresh, with a test that fails if it does not.
 
 ---
 

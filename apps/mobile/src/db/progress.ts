@@ -1,4 +1,5 @@
 import type { AttemptRecord, Tier } from '@prep/core'
+import type { SyncTierPick } from '../server/client'
 import type { Database } from './sqlite'
 
 /**
@@ -15,6 +16,21 @@ export async function readTrackTiers(db: Database): Promise<Map<string, Tier>> {
     'select technology, tier from track_tier',
   )
   return new Map(rows.map((row) => [row.technology, row.tier]))
+}
+
+/**
+ * The picks with the timestamps a sync merges them by. The map above is what a
+ * screen reads; this is what goes on the wire.
+ */
+export async function readTierPicks(db: Database): Promise<SyncTierPick[]> {
+  const rows = await db.all<{ technology: string; tier: Tier; updated_at: string }>(
+    'select technology, tier, updated_at from track_tier',
+  )
+  return rows.map((row) => ({
+    technology: row.technology,
+    tier: row.tier,
+    updatedAt: new Date(row.updated_at),
+  }))
 }
 
 /**

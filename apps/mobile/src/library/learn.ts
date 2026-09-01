@@ -1,5 +1,6 @@
-import type { ArchiveContent } from '@prep/content/archive/types'
+import type { ArchiveContent, ArchiveTopic } from '@prep/content/archive/types'
 import { questionKey, questionsUpTo, type Tier } from '@prep/core'
+import { readLearnedTopics } from '../db/progress'
 import { enrol } from '../db/schedule'
 import type { Database } from '../db/sqlite'
 
@@ -30,12 +31,54 @@ export async function markTopicLearned(
     [topicSlug, at],
   )
 
+  await enrolTopicQuestions(db, topic, tier, now)
+}
+
+/**
+ * The enrolment on its own, for the marks that arrive from another device. A
+ * sync has already written the mark by the time it gets here, and it enrols each
+ * topic as of when it was learned rather than now, so a topic read offline on
+ * Monday has its questions due from Monday.
+ */
+export async function enrolTopicQuestions(
+  db: Database,
+  topic: ArchiveTopic,
+  tier: Tier,
+  now: Date,
+): Promise<void> {
+  await enrol(db, enrolments(topic, tier), now)
+}
+
+/**
+ * Brings everything already learned on one track up to a tier, which is what a
+ * changed pick means: without it the pick would only apply to topics learned
+ * after it. This mirrors `enrolLearnedTopics` in apps/web/src/lib/progress.ts.
+ *
+ * Stepping down enrols nothing and removes nothing. A question already on the
+ * ladder is something you have started remembering.
+ */
+export async function enrolLearnedTopics(
+  db: Database,
+  content: ArchiveContent,
+  technology: string,
+  tier: Tier,
+  now: Date,
+): Promise<void> {
+  const learned = await readLearnedTopics(db)
+  const topics = content.topics.filter(
+    (topic) => topic.technology === technology && learned.has(topic.slug),
+  )
+
   await enrol(
     db,
-    questionsUpTo(topic.questions, tier).map((question) => ({
-      questionId: questionKey(topicSlug, question.id),
-      topicSlug,
-    })),
+    topics.flatMap((topic) => enrolments(topic, tier)),
     now,
   )
+}
+
+function enrolments(topic: ArchiveTopic, tier: Tier) {
+  return questionsUpTo(topic.questions, tier).map((question) => ({
+    questionId: questionKey(topic.slug, question.id),
+    topicSlug: topic.slug,
+  }))
 }
