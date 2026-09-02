@@ -158,6 +158,32 @@ built by EAS Build on a personal Expo account. That is the one hosted service
 this project uses and the reasoning is in
 `docs/decisions/0038-expo-is-the-one-hosted-service.md`.
 
+### Building the APK
+
+```bash
+cd apps/mobile
+eas build --platform android --profile production
+```
+
+Log in first with `eas login`, on the personal Expo account named in
+`docs/decisions/0038-expo-is-the-one-hosted-service.md`. The build runs on
+Expo's servers and answers with a URL. Download the APK from it and sideload it
+onto the phone.
+
+The profile builds an APK for internal distribution rather than the AAB a store
+expects, and it raises `versionCode` in `app.json` on every build. Commit that
+change. Android refuses to install a build whose `versionCode` is not higher
+than the one already on the phone.
+
+`.easignore` at the root of the repository decides what the build uploads, and
+`scripts/easignore.test.ts` is what stops that going wrong quietly. Two things
+about the file are worth knowing before you edit it. EAS reads `.easignore`
+instead of `.gitignore`, so every rule `.gitignore` carries has to be written
+again there. EAS also builds the upload from a shallow clone of this
+repository, and it drops that clone only if `.easignore` names `.git` exactly.
+An entry written `.git/` keeps the clone, and the clone carries the whole
+curriculum.
+
 ## How it fits together
 
 The repository is an npm workspace with four members, so the phone can share

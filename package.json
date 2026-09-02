@@ -46,6 +46,7 @@
     "eslint-config-prettier": "^10.1.8",
     "fflate": "^0.8.3",
     "husky": "^9.1.7",
+    "ignore": "^5.3.2",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
     "tsx": "^4.23.12",

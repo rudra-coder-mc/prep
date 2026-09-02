@@ -1,0 +1,40 @@
+# What EAS Build is allowed to upload.
+#
+# EAS reads this file INSTEAD of .gitignore, not as well as it, so everything
+# .gitignore says has to be said again here. Anything not named goes to Expo.
+# See docs/decisions/0038-expo-is-the-one-hosted-service.md for why Expo is the
+# one hosted service this project uses, and CLAUDE.md for the rule it excepts.
+#
+# No entry here has a trailing slash, and that is load-bearing rather than a
+# style. EAS builds the archive by shallow-cloning this repository and then
+# asking whether `.git` itself is ignored, matching the bare string. A
+# `.git/` never matches it, the clone survives, and the whole curriculum
+# leaves the machine inside a pack file with every ignore rule apparently
+# obeyed. `scripts/check-easignore.ts` is the test that says so.
+
+# The curriculum, and everything built from it. This is the reason the file
+# exists. `.git` is here for the same reason: a shallow clone still carries
+# every file of the commit it was cut from.
+packages/content/content
+.content-archive
+.content-archive-e2e
+.git
+
+# The recordings. Not in git, but they sit in the working tree beside it.
+.speech-cache
+.speech-cache-e2e
+
+# Secrets.
+.env
+.env.*
+
+# Installed or built on this machine. The build server makes its own.
+node_modules
+.next
+.expo
+coverage
+playwright-report
+test-results
+*.tsbuildinfo
+
+.DS_Store

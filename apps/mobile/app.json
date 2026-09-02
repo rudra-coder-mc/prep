@@ -9,7 +9,8 @@
     "newArchEnabled": true,
     "backgroundColor": "#0b0e15",
     "android": {
-      "package": "test.prep.app",
+      "package": "dev.atul.prep",
+      "versionCode": 1,
       "edgeToEdgeEnabled": true
     },
     "plugins": ["expo-router"]
