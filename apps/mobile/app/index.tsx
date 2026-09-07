@@ -239,7 +239,7 @@ export default function HomeScreen() {
         </ScrollView>
       )}
 
-      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, space.xs) }]}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, space.sm) }]}>
         <Pressable
           accessibilityRole="tab"
           accessibilityLabel="Learn tab"
@@ -247,7 +247,6 @@ export default function HomeScreen() {
           onPress={() => setTab('learn')}
           style={[styles.tabButton, tab === 'learn' && styles.tabButtonActive]}
         >
-          <Text style={[styles.tabIcon, tab === 'learn' && styles.tabIconActive]}>📚</Text>
           <Text style={[styles.tabLabel, tab === 'learn' && styles.tabLabelActive]}>Learn</Text>
         </Pressable>
 
@@ -258,7 +257,6 @@ export default function HomeScreen() {
           onPress={() => setTab('settings')}
           style={[styles.tabButton, tab === 'settings' && styles.tabButtonActive]}
         >
-          <Text style={[styles.tabIcon, tab === 'settings' && styles.tabIconActive]}>⚙️</Text>
           <Text style={[styles.tabLabel, tab === 'settings' && styles.tabLabelActive]}>
             Settings & Sync
           </Text>
@@ -491,29 +489,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    paddingTop: space.xs,
+    paddingTop: space.sm,
     paddingHorizontal: space.lg,
+    gap: space.sm,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: space.xs,
+    paddingVertical: space.sm,
     borderRadius: radius.control,
-    gap: 2,
   },
   tabButtonActive: {
     backgroundColor: colors.raised,
   },
-  tabIcon: {
-    fontSize: 18,
-    opacity: 0.5,
-  },
-  tabIconActive: {
-    opacity: 1,
-  },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '500',
     color: colors.muted,
   },
