@@ -5,6 +5,7 @@ import {
   type StyleProp,
   StyleSheet,
   Text,
+  type TextStyle,
   View,
   type ViewStyle,
 } from 'react-native'
@@ -12,12 +13,18 @@ import { colors, radius, space } from './theme'
 
 /** The few pieces every screen is made of. Anything used once stays in its screen. */
 
-export function Heading({ children }: { children: ReactNode }) {
-  return <Text style={styles.heading}>{children}</Text>
+export function Heading({
+  children,
+  style,
+}: {
+  children: ReactNode
+  style?: StyleProp<TextStyle>
+}) {
+  return <Text style={[styles.heading, style]}>{children}</Text>
 }
 
-export function Muted({ children }: { children: ReactNode }) {
-  return <Text style={styles.muted}>{children}</Text>
+export function Muted({ children, style }: { children: ReactNode; style?: StyleProp<TextStyle> }) {
+  return <Text style={[styles.muted, style]}>{children}</Text>
 }
 
 export function Card({ children }: { children: ReactNode }) {
@@ -127,8 +134,8 @@ export function Waiting({ label }: { label: string }) {
 }
 
 const styles = StyleSheet.create({
-  heading: { color: colors.fg, fontSize: 22, fontWeight: '600' },
-  muted: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  heading: { color: colors.fg, fontSize: 16, fontWeight: '600', lineHeight: 22 },
+  muted: { color: colors.muted, fontSize: 13, lineHeight: 18 },
   card: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -139,14 +146,14 @@ const styles = StyleSheet.create({
   },
   button: {
     borderRadius: radius.control,
-    paddingVertical: space.md,
+    paddingVertical: space.sm + 2,
     paddingHorizontal: space.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 44,
   },
   buttonCompact: {
-    minHeight: 38,
+    minHeight: 34,
     paddingVertical: space.xs,
     paddingHorizontal: space.md,
   },
@@ -154,9 +161,9 @@ const styles = StyleSheet.create({
   buttonQuiet: { backgroundColor: colors.raised, borderColor: colors.border, borderWidth: 1 },
   buttonOff: { opacity: 0.5 },
   buttonPressed: { opacity: 0.8 },
-  buttonAccentText: { color: colors.accentFg, fontSize: 16, fontWeight: '600' },
-  buttonQuietText: { color: colors.fg, fontSize: 16, fontWeight: '500' },
-  buttonCompactText: { fontSize: 14 },
+  buttonAccentText: { color: colors.accentFg, fontSize: 15, fontWeight: '600' },
+  buttonQuietText: { color: colors.fg, fontSize: 15, fontWeight: '500' },
+  buttonCompactText: { fontSize: 13 },
   problem: {
     backgroundColor: colors.raised,
     borderLeftColor: colors.weak,
@@ -164,7 +171,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.control,
     padding: space.md,
   },
-  problemText: { color: colors.muted, fontSize: 14, lineHeight: 20 },
+  problemText: { color: colors.muted, fontSize: 13, lineHeight: 18 },
   waiting: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   bar: {
     height: 6,

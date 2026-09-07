@@ -96,7 +96,7 @@ export default function HomeScreen() {
 
           {!app.content ? (
             <Card>
-              <Heading>No curriculum downloaded yet</Heading>
+              <Text style={styles.cardTitle}>No curriculum downloaded yet</Text>
               <Muted>
                 Download the study tracks and questions to prepare offline with zero lag.
               </Muted>
@@ -110,9 +110,9 @@ export default function HomeScreen() {
             <Card>
               <View style={styles.todayHead}>
                 <View style={styles.todayText}>
-                  <Heading>
+                  <Text style={styles.cardTitle}>
                     {today.dueToday > 0 ? `${today.dueToday} due today` : 'Nothing due'}
-                  </Heading>
+                  </Text>
                   <Muted>{describeToday(today)}</Muted>
                 </View>
                 {dashboard ? <Streak streak={dashboard.streak} /> : null}
@@ -201,9 +201,9 @@ export default function HomeScreen() {
           <View style={styles.section}>
             <Heading>Curriculum & Resources</Heading>
             <Card>
-              <Heading>
+              <Text style={styles.cardTitle}>
                 {app.content ? `Version ${app.content.version}` : 'No archive downloaded'}
-              </Heading>
+              </Text>
               <Muted>
                 {app.content
                   ? 'All tracks, lessons, exercises, and questions run locally on this phone without network.'
@@ -327,9 +327,6 @@ function TrackRow({
       >
         <View style={styles.rowText}>
           <Text style={styles.rowTitle}>{label}</Text>
-          {/* The readiness line below carries the counts when there is one,
-              so this says the thing that line cannot: that a track with
-              nothing at the pick still has lessons worth reading. */}
           <Text style={styles.rowMeta}>
             {ready
               ? `Preparing for ${TIER_LABELS[tier]}`
@@ -346,8 +343,6 @@ function TrackRow({
             tone="pass"
             label={`${label} readiness for ${TIER_LABELS[tier]}`}
           />
-          {/* The count carries the share, because a tier this bank is thin at
-              would otherwise read as a confident percentage of almost nothing. */}
           <Text style={styles.rowMeta}>
             {ready.readiness.percent}% ready · {ready.readiness.retained} of {ready.readiness.total}{' '}
             questions retained · {ready.started} of {ready.total} topics started
@@ -426,19 +421,25 @@ function describeToday({ dueToday, asking }: { dueToday: number; asking: number 
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  page: { padding: space.lg, gap: space.xl, paddingBottom: space.xl * 2 },
+  page: { padding: space.lg, gap: space.lg, paddingBottom: space.xl * 2 },
   brandTitle: {
     color: colors.fg,
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
+  },
+  cardTitle: {
+    color: colors.fg,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
   },
   section: { gap: space.sm },
   actions: { marginTop: space.sm },
   todayHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space.lg },
-  todayText: { flex: 1, gap: space.sm },
+  todayText: { flex: 1, gap: space.xs },
   streak: { alignItems: 'flex-end' },
-  streakCount: { color: colors.fg, fontSize: 34, fontWeight: '600', lineHeight: 36 },
+  streakCount: { color: colors.fg, fontSize: 26, fontWeight: '600', lineHeight: 28 },
   streakLabel: { color: colors.muted, fontSize: 11 },
   track: {
     backgroundColor: colors.surface,
@@ -474,10 +475,10 @@ const styles = StyleSheet.create({
   rowPressed: { backgroundColor: colors.raised },
   rowHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   rowText: { flex: 1, gap: 2 },
-  rowTitle: { color: colors.fg, fontSize: 17, fontWeight: '600', flex: 1 },
-  rowMeta: { color: colors.faint, fontSize: 12, lineHeight: 17 },
+  rowTitle: { color: colors.fg, fontSize: 15, fontWeight: '600', flex: 1 },
+  rowMeta: { color: colors.faint, fontSize: 12, lineHeight: 16 },
   status: { fontSize: 12, fontWeight: '600' },
-  chevron: { color: colors.faint, fontSize: 22 },
+  chevron: { color: colors.faint, fontSize: 20 },
   stat: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -486,8 +487,8 @@ const styles = StyleSheet.create({
     paddingVertical: space.xs,
   },
   statLabel: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flex: 1 },
-  statText: { color: colors.muted, fontSize: 14 },
-  statValue: { color: colors.fg, fontSize: 14, fontWeight: '600' },
+  statText: { color: colors.muted, fontSize: 13 },
+  statValue: { color: colors.fg, fontSize: 13, fontWeight: '600' },
   dot: { width: 6, height: 6, borderRadius: 3 },
   settingRow: {
     flexDirection: 'row',
@@ -497,11 +498,11 @@ const styles = StyleSheet.create({
   },
   settingLabel: {
     color: colors.muted,
-    fontSize: 14,
+    fontSize: 13,
   },
   settingValue: {
     color: colors.fg,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
   },
   bottomBar: {
@@ -524,7 +525,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.raised,
   },
   tabLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: colors.muted,
   },
