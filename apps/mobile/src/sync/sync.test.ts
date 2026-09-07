@@ -1,3 +1,4 @@
+import { zipSync } from 'fflate'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { dayCounts } from '@prep/core'
 import { recordAttempt } from '../db/attempts'
@@ -8,6 +9,7 @@ import { readSchedule } from '../db/schedule'
 import { readSetting } from '../db/settings'
 import { setExerciseStatus, readExerciseProgress } from '../db/exercises'
 import { markTopicLearned } from '../library/learn'
+import { refreshArchive } from '../archive/refresh'
 import {
   ServerError,
   type ServerClient,
@@ -17,6 +19,7 @@ import {
 } from '../server/client'
 import { syncProgress } from './sync'
 import { createTestDatabase } from '../../test-support/database'
+import { createTestFileStore } from '../../test-support/file-store'
 import { archiveContent, archiveQuestion, archiveTopic } from '../../test-support/content'
 
 /**
@@ -445,5 +448,55 @@ describe('taking exercise progress recorded elsewhere', () => {
 
     expect(again.received.exercises).toBe(0)
     expect(await readExerciseProgress(db)).toHaveLength(1)
+  })
+})
+
+describe('a topic learned elsewhere before the archive held it', () => {
+  it('is skipped initially, and enrolled once an archive refresh delivers the topic', async () => {
+    await exchange(
+      serverReturning({
+        topicProgress: [{ topicSlug: 'javascript/prototypes', learnedAt: MONDAY }],
+      }).client,
+    )
+
+    expect(await readLearnedTopics(db)).toEqual(new Map([['javascript/prototypes', MONDAY]]))
+    expect(await readSchedule(db)).toEqual([])
+
+    const newerContent = archiveContent([
+      ...content.topics,
+      archiveTopic({
+        slug: 'javascript/prototypes',
+        technology: 'javascript',
+        directory: 'prototypes',
+        questions: [archiveQuestion({ id: 'chain', tier: 'swe-1' })],
+      }),
+    ])
+
+    const files = await createTestFileStore()
+    const refreshClient = {
+      signIn: vi.fn(),
+      checkSession: vi.fn(),
+      archiveVersion: vi.fn(async () => ({
+        version: 'v2',
+        bytes: 200,
+        topics: 2,
+        questions: 4,
+        exercises: 0,
+        narrationSections: 0,
+      })),
+      downloadArchive: vi.fn(async () =>
+        zipSync({
+          'content.json': new TextEncoder().encode(JSON.stringify(newerContent)),
+        }),
+      ),
+    } as unknown as ServerClient
+
+    await refreshArchive({ db, files, client: refreshClient })
+
+    const schedule = await readSchedule(db)
+    expect(schedule.map((row) => row.questionId)).toContain('javascript/prototypes#chain')
+    expect(schedule.find((row) => row.questionId === 'javascript/prototypes#chain')?.dueAt).toEqual(
+      MONDAY,
+    )
   })
 })

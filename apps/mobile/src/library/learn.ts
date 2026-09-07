@@ -1,6 +1,6 @@
 import type { ArchiveContent, ArchiveTopic } from '@prep/content/archive/types'
-import { questionKey, questionsUpTo, type Tier } from '@prep/core'
-import { readLearnedTopics } from '../db/progress'
+import { DEFAULT_TIER, questionKey, questionsUpTo, type Tier } from '@prep/core'
+import { readLearnedTopics, readTrackTiers } from '../db/progress'
 import { enrol } from '../db/schedule'
 import type { Database } from '../db/sqlite'
 
@@ -99,6 +99,29 @@ export async function enrolLearnedTopics(
     topics.flatMap((topic) => enrolments(topic, tier)),
     now,
   )
+}
+
+/**
+ * Enrols questions for all topics that have already been marked learned, up to
+ * each track's chosen tier.
+ *
+ * This is called after a refresh installs a new archive, so that any topic
+ * marked learned on another device while this device held an older archive
+ * has its questions enrolled into recall as soon as the archive catches up.
+ * See task 42 in TASKS.md.
+ */
+export async function enrolAllLearned(db: Database, content: ArchiveContent): Promise<void> {
+  const learned = await readLearnedTopics(db)
+  if (learned.size === 0) return
+
+  const tiers = await readTrackTiers(db)
+  for (const topic of content.topics) {
+    const learnedAt = learned.get(topic.slug)
+    if (!learnedAt) continue
+
+    const tier = tiers.get(topic.technology) ?? DEFAULT_TIER
+    await enrolTopicQuestions(db, topic, tier, learnedAt)
+  }
 }
 
 function enrolments(topic: ArchiveTopic, tier: Tier) {
