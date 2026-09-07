@@ -5,6 +5,7 @@ import { installArchive, installedVersion } from './install'
 import { readArchiveContent } from './content'
 import { enrolAllLearned } from '../library/learn'
 import { replayAttemptedQuestions } from '../sync/sync'
+import { pruneAudioLibrary } from '../audio/library'
 
 /**
  * A refresh: replacing the curriculum the device holds with the one the server
@@ -43,6 +44,7 @@ export async function refreshArchive({
   const content = await readArchiveContent(db, files)
   await enrolAllLearned(db, content)
   await replayAttemptedQuestions(db, content)
+  await pruneAudioLibrary(files, content)
 
   return { kind: 'installed', version, previous: held }
 }

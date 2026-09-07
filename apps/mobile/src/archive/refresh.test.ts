@@ -9,6 +9,7 @@ import { archiveContent, archiveQuestion, archiveTopic } from '../../test-suppor
 import { ServerError, type ServerClient } from '../server/client'
 import { installedVersion } from './install'
 import { refreshArchive } from './refresh'
+import { AUDIO_ROOT, recordingPath } from '../audio/library'
 
 /**
  * The one exchange that replaces the curriculum.
@@ -249,5 +250,41 @@ describe('refreshing the content', () => {
     const [scheduled] = await readSchedule(db)
     expect(scheduled?.questionId).toBe('javascript/prototypes#chain')
     expect(scheduled?.intervalStep).toBe(1)
+  })
+
+  it('drops recordings no current key names while keeping unchanged scripts across a refresh', async () => {
+    const keptKey = '1'.repeat(64)
+    const staleKey = '2'.repeat(64)
+
+    await files.makeDirectory(AUDIO_ROOT)
+    await files.writeBytes(recordingPath(keptKey), new Uint8Array(100))
+    await files.writeBytes(recordingPath(staleKey), new Uint8Array(100))
+
+    const updatedCurriculum = archiveContent([
+      archiveTopic({
+        slug: 'javascript/prototypes',
+        directory: 'prototypes',
+        technology: 'javascript',
+        narration: [{ title: 'Intro', heading: 'Intro', script: '...', audioKey: keptKey }],
+        questions: [],
+      }),
+    ])
+
+    const client = {
+      archiveVersion: vi.fn(async () => ({
+        version: 'v2',
+        bytes: 200,
+        topics: 1,
+        questions: 0,
+        exercises: 0,
+        narrationSections: 1,
+      })),
+      downloadArchive: vi.fn(async () => archiveWithContent('v2', updatedCurriculum)),
+    } as unknown as ServerClient
+
+    await refreshArchive({ db, files, client })
+
+    expect(await files.exists(recordingPath(keptKey))).toBe(true)
+    expect(await files.exists(recordingPath(staleKey))).toBe(false)
   })
 })

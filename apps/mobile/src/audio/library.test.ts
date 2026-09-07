@@ -1,7 +1,15 @@
 import type { ArchiveContent } from '@prep/content/archive/types'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createTestFileStore } from '../../test-support/file-store'
-import { AUDIO_ROOT, heldBytes, heldRecordings, recordingPath, trackAudioKeys } from './library'
+import {
+  AUDIO_ROOT,
+  archiveAudioKeys,
+  heldBytes,
+  heldRecordings,
+  pruneAudioLibrary,
+  recordingPath,
+  trackAudioKeys,
+} from './library'
 
 /**
  * Which recordings a track needs and which of them the device holds. Both are
@@ -88,6 +96,19 @@ describe('trackAudioKeys', () => {
   })
 })
 
+describe('archiveAudioKeys', () => {
+  it('gathers all audio keys across all tracks and topics', () => {
+    const content = contentOf(
+      topic('a', 'javascript', [key('1')], [[key('2'), key('3')]]),
+      topic('b', 'browser', [key('4')], [[key('5'), key('6')]]),
+    )
+
+    expect(archiveAudioKeys(content)).toEqual(
+      new Set([key('1'), key('2'), key('3'), key('4'), key('5'), key('6')]),
+    )
+  })
+})
+
 describe('what the device holds', () => {
   it('finds nothing before anything has been downloaded', async () => {
     expect(await heldRecordings(files, [key('a')])).toEqual(new Set())
@@ -122,5 +143,37 @@ describe('what the device holds', () => {
 
   it('counts a key it holds nothing for as nothing rather than failing', async () => {
     expect(await heldBytes(files, [key('a')])).toBe(0)
+  })
+})
+
+describe('pruning the audio library', () => {
+  it('deletes recordings no longer referenced by the archive while keeping active ones', async () => {
+    await files.makeDirectory(AUDIO_ROOT)
+    await files.writeBytes(recordingPath(key('1')), new Uint8Array(10))
+    await files.writeBytes(recordingPath(key('2')), new Uint8Array(20))
+
+    const content = contentOf(topic('a', 'javascript', [key('1')], []))
+
+    const result = await pruneAudioLibrary(files, content)
+    expect(result).toEqual({ deleted: [key('2')], kept: 1 })
+
+    expect(await files.exists(recordingPath(key('1')))).toBe(true)
+    expect(await files.exists(recordingPath(key('2')))).toBe(false)
+  })
+
+  it('handles an empty audio directory without throwing', async () => {
+    const content = contentOf(topic('a', 'javascript', [key('1')], []))
+    const result = await pruneAudioLibrary(files, content)
+    expect(result).toEqual({ deleted: [], kept: 0 })
+  })
+
+  it('ignores non-recording files in the audio directory', async () => {
+    await files.makeDirectory(AUDIO_ROOT)
+    await files.writeBytes(`${AUDIO_ROOT}/not-a-recording.txt`, new Uint8Array(5))
+
+    const content = contentOf()
+    const result = await pruneAudioLibrary(files, content)
+    expect(result).toEqual({ deleted: [], kept: 0 })
+    expect(await files.exists(`${AUDIO_ROOT}/not-a-recording.txt`)).toBe(true)
   })
 })
