@@ -83,10 +83,17 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen options={{ title: tab === 'learn' ? 'prep' : 'Settings & Sync' }} />
+      <Stack.Screen options={{ headerShown: false }} />
 
       {tab === 'learn' ? (
-        <ScrollView contentContainerStyle={styles.page}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.page,
+            { paddingTop: Math.max(insets.top, space.md) + space.sm },
+          ]}
+        >
+          <Text style={styles.brandTitle}>prep</Text>
+
           {!app.content ? (
             <Card>
               <Heading>No curriculum downloaded yet</Heading>
@@ -183,7 +190,14 @@ export default function HomeScreen() {
           ) : null}
         </ScrollView>
       ) : (
-        <ScrollView contentContainerStyle={styles.page}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.page,
+            { paddingTop: Math.max(insets.top, space.md) + space.sm },
+          ]}
+        >
+          <Text style={styles.brandTitle}>Settings & Sync</Text>
+
           <View style={styles.section}>
             <Heading>Curriculum & Resources</Heading>
             <Card>
@@ -413,6 +427,12 @@ function describeToday({ dueToday, asking }: { dueToday: number; asking: number 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   page: { padding: space.lg, gap: space.xl, paddingBottom: space.xl * 2 },
+  brandTitle: {
+    color: colors.fg,
+    fontSize: 26,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
   section: { gap: space.sm },
   actions: { marginTop: space.sm },
   todayHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space.lg },
