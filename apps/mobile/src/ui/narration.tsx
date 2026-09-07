@@ -27,6 +27,7 @@ export function Narration({
   const player = useAudioPlayer()
   const status = useAudioPlayerStatus(player)
   const [index, setIndex] = useState(0)
+  const [minimized, setMinimized] = useState(false)
   /**
    * On from the moment a section starts until the last one ends, exactly as on
    * the web: a reader who never pressed play gets the page it already was.
@@ -87,8 +88,58 @@ export function Narration({
     else playFrom(index)
   }
 
+  if (minimized) {
+    return (
+      <View style={styles.floatingContainer} pointerEvents="box-none">
+        <View style={[styles.minimizedPill, status.playing && styles.minimizedPillActive]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Expand narration player"
+            onPress={() => setMinimized(false)}
+            style={({ pressed }) => [styles.pillTouch, pressed && styles.pressed]}
+          >
+            <Text style={styles.pillIcon}>🎧</Text>
+            <Text style={styles.pillText}>
+              {index + 1}/{sections.length}
+            </Text>
+            <Text style={styles.pillExpand}>▼</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={status.playing ? 'Pause narration' : 'Play narration'}
+            onPress={toggle}
+            style={({ pressed }) => [
+              styles.miniPlayBtn,
+              status.playing && styles.miniPlayBtnActive,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={status.playing ? styles.miniPauseText : styles.miniPlayText}>
+              {status.playing ? '❚❚' : '▶'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    )
+  }
+
   return (
     <View style={styles.card}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={status.playing ? 'Pause narration' : 'Play narration'}
+        onPress={toggle}
+        style={({ pressed }) => [
+          styles.playBtn,
+          status.playing && styles.playBtnActive,
+          pressed && styles.pressed,
+        ]}
+      >
+        <Text style={status.playing ? styles.pauseText : styles.playText}>
+          {status.playing ? '❚❚' : '▶'}
+        </Text>
+      </Pressable>
+
       <View style={styles.head}>
         <Text style={styles.title} numberOfLines={1}>
           {section.title}
@@ -99,12 +150,6 @@ export function Narration({
       </View>
 
       <View style={styles.controls}>
-        <Control
-          label={status.playing ? 'Pause narration' : 'Play narration'}
-          text={status.playing ? '■' : '▶'}
-          tone="accent"
-          onPress={toggle}
-        />
         <Control
           label="Previous section"
           text="‹"
@@ -117,6 +162,14 @@ export function Narration({
           disabled={index >= sections.length - 1}
           onPress={() => playFrom(index + 1)}
         />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Minimize narration to read"
+          onPress={() => setMinimized(true)}
+          style={({ pressed }) => [styles.minBtn, pressed && styles.pressed]}
+        >
+          <Text style={styles.minBtnText}>▲</Text>
+        </Pressable>
       </View>
     </View>
   )
@@ -127,13 +180,11 @@ function Control({
   text,
   onPress,
   disabled = false,
-  tone = 'quiet',
 }: {
   label: string
   text: string
   onPress: () => void
   disabled?: boolean
-  tone?: 'accent' | 'quiet'
 }) {
   return (
     <Pressable
@@ -142,14 +193,9 @@ function Control({
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.control,
-        tone === 'accent' && styles.accent,
-        disabled && styles.off,
-        pressed && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.control, disabled && styles.off, pressed && styles.pressed]}
     >
-      <Text style={[styles.controlText, tone === 'accent' && styles.accentText]}>{text}</Text>
+      <Text style={styles.controlText}>{text}</Text>
     </Pressable>
   )
 }
@@ -159,26 +205,147 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
-    paddingHorizontal: space.lg,
-    paddingVertical: space.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: space.sm,
+    minHeight: 46,
   },
-  head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  title: { color: colors.fg, fontSize: 15, fontWeight: '500', flex: 1 },
-  position: { color: colors.faint, fontSize: 12 },
-  controls: { flexDirection: 'row', gap: space.sm },
+  playBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playBtnActive: {
+    backgroundColor: colors.accent,
+  },
+  playText: {
+    color: colors.accentFg,
+    fontSize: 13,
+    marginLeft: 2,
+  },
+  pauseText: {
+    color: colors.accentFg,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  head: {
+    flex: 1,
+    gap: 1,
+    justifyContent: 'center',
+  },
+  title: {
+    color: colors.fg,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  position: {
+    color: colors.faint,
+    fontSize: 11,
+  },
+  controls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+  },
   control: {
-    width: 44,
-    height: 40,
+    width: 30,
+    height: 30,
     alignItems: 'center',
     justifyContent: 'center',
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radius.control,
   },
-  accent: { borderColor: colors.accent },
-  off: { opacity: 0.35 },
-  pressed: { backgroundColor: colors.raised },
-  controlText: { color: colors.muted, fontSize: 16 },
-  accentText: { color: colors.accent },
+  controlText: {
+    color: colors.muted,
+    fontSize: 15,
+  },
+  minBtn: {
+    width: 26,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
+  },
+  minBtnText: {
+    color: colors.faint,
+    fontSize: 12,
+  },
+  floatingContainer: {
+    position: 'absolute',
+    top: space.sm,
+    right: space.sm,
+    zIndex: 20,
+    elevation: 6,
+  },
+  minimizedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingLeft: space.sm,
+    paddingRight: 4,
+    paddingVertical: 3,
+    gap: space.xs,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  minimizedPillActive: {
+    borderColor: colors.accent,
+  },
+  pillTouch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  pillIcon: {
+    fontSize: 13,
+  },
+  pillText: {
+    color: colors.fg,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  pillExpand: {
+    color: colors.accent,
+    fontSize: 10,
+    marginLeft: 2,
+  },
+  miniPlayBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniPlayBtnActive: {
+    backgroundColor: colors.accent,
+  },
+  miniPlayText: {
+    color: colors.accentFg,
+    fontSize: 10,
+    marginLeft: 1,
+  },
+  miniPauseText: {
+    color: colors.accentFg,
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  off: {
+    opacity: 0.35,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
 })
