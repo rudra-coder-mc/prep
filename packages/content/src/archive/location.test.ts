@@ -36,3 +36,15 @@ describe('archiveDirectory', () => {
     expect(archiveDirectory()).toBe(fromRoot)
   })
 })
+
+describe('workspaceRoot', () => {
+  it('finds the root directory containing package-lock.json', () => {
+    const root = workspaceRoot()
+    expect(workspaceRoot(path.join(root, 'apps', 'web', 'src'))).toBe(root)
+  })
+
+  it('throws an error if no package-lock.json is found above the search start', () => {
+    const fsRoot = path.parse(process.cwd()).root
+    expect(() => workspaceRoot(fsRoot)).toThrow(/no package-lock\.json above/)
+  })
+})

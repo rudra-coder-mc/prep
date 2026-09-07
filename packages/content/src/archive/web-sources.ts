@@ -1,5 +1,5 @@
-import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { workspaceRoot } from './location'
 
 /**
  * Every file a lesson page is built from other than the lesson itself.
@@ -17,21 +17,6 @@ import path from 'node:path'
  * whole of the change. See
  * docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md.
  */
-
-/**
- * The workspace root, found by walking up for the lockfile only the root has.
- * The same walk the recording cache does, and for the same reason: the scripts
- * run from the root and the tests run from wherever vitest was started.
- */
-function workspaceRoot(): string {
-  let dir = process.cwd()
-  for (;;) {
-    if (existsSync(path.join(dir, 'package-lock.json'))) return dir
-    const parent = path.dirname(dir)
-    if (parent === dir) throw new Error('no package-lock.json above ' + process.cwd())
-    dir = parent
-  }
-}
 
 const ROOT = workspaceRoot()
 
