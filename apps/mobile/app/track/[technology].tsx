@@ -1,4 +1,4 @@
-import { Link, Stack, useFocusEffect, useLocalSearchParams } from 'expo-router'
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { DEFAULT_TIER, technologyLabel, type Tier } from '@prep/core'
@@ -33,6 +33,7 @@ import { TrackAudio } from '../../src/ui/track-audio'
  */
 export default function TrackScreen() {
   const app = useApp()
+  const router = useRouter()
   const { client, content, db, files, tiers } = app
   const { technology } = useLocalSearchParams<{ technology: string }>()
   const [topics, setTopics] = useState<TopicSummary[] | null>(null)
@@ -113,23 +114,23 @@ export default function TrackScreen() {
         ) : null}
         {topics.length === 0 ? <Muted>This track has no topics in the archive.</Muted> : null}
         {topics.map((topic) => (
-          <Link key={topic.slug} href={`/topic/${technology}/${topic.directory}`} asChild>
-            <Pressable
-              accessibilityRole="link"
-              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-            >
-              <View style={styles.rowHead}>
-                <Text style={styles.title}>{topic.title}</Text>
-                <Text style={[styles.status, { color: statusColour[topic.status] }]}>
-                  {STATUS_LABELS[topic.status]}
-                </Text>
-              </View>
-              <Text style={styles.summary}>{topic.summary}</Text>
-              <Text style={styles.meta}>
-                {topic.questions} questions · {topic.progress}% passing
+          <Pressable
+            key={topic.slug}
+            accessibilityRole="link"
+            onPress={() => router.push(`/topic/${technology}/${topic.directory}`)}
+            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+          >
+            <View style={styles.rowHead}>
+              <Text style={styles.title}>{topic.title}</Text>
+              <Text style={[styles.status, { color: statusColour[topic.status] }]}>
+                {STATUS_LABELS[topic.status]}
               </Text>
-            </Pressable>
-          </Link>
+            </View>
+            <Text style={styles.summary}>{topic.summary}</Text>
+            <Text style={styles.meta}>
+              {topic.questions} questions · {topic.progress}% passing
+            </Text>
+          </Pressable>
         ))}
       </ScrollView>
     </>

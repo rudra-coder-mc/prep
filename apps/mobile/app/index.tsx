@@ -1,4 +1,4 @@
-import { Link, Redirect, useFocusEffect, useRouter } from 'expo-router'
+import { Redirect, useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { STATUS_LABELS, TIER_LABELS, type Dashboard, type TopicStatus, type Tier } from '@prep/core'
@@ -162,21 +162,21 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <Heading>Slipping</Heading>
           {dashboard.weakest.map((topic) => (
-            <Link key={topic.slug} href={`/topic/${topic.technology}/${topic.directory}`} asChild>
-              <Pressable
-                accessibilityRole="link"
-                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-              >
-                <View style={styles.rowHead}>
-                  <Text style={styles.rowTitle}>{topic.title}</Text>
-                  <Text style={[styles.status, { color: statusColour[topic.status] }]}>
-                    {STATUS_LABELS[topic.status]}
-                  </Text>
-                </View>
-                <Bar value={topic.progress} tone="weak" label={`${topic.title} progress`} />
-                <Text style={styles.rowMeta}>{topic.progress}% of its questions passing</Text>
-              </Pressable>
-            </Link>
+            <Pressable
+              key={topic.slug}
+              accessibilityRole="link"
+              onPress={() => router.push(`/topic/${topic.technology}/${topic.directory}`)}
+              style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+            >
+              <View style={styles.rowHead}>
+                <Text style={styles.rowTitle}>{topic.title}</Text>
+                <Text style={[styles.status, { color: statusColour[topic.status] }]}>
+                  {STATUS_LABELS[topic.status]}
+                </Text>
+              </View>
+              <Bar value={topic.progress} tone="weak" label={`${topic.title} progress`} />
+              <Text style={styles.rowMeta}>{topic.progress}% of its questions passing</Text>
+            </Pressable>
           ))}
         </View>
       ) : null}
@@ -229,27 +229,28 @@ function TrackRow({
   ready: Dashboard['tracks'][number] | undefined
   onStepUp: (tier: Tier) => void
 }) {
+  const router = useRouter()
+
   return (
     <View style={styles.track}>
-      <Link href={`/track/${id}`} asChild>
-        <Pressable
-          accessibilityRole="link"
-          style={({ pressed }) => [styles.trackHead, pressed && styles.rowPressed]}
-        >
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>{label}</Text>
-            {/* The readiness line below carries the counts when there is one,
-                so this says the thing that line cannot: that a track with
-                nothing at the pick still has lessons worth reading. */}
-            <Text style={styles.rowMeta}>
-              {ready
-                ? `Preparing for ${TIER_LABELS[tier]}`
-                : `${topics} topics, none asked at ${TIER_LABELS[tier]}`}
-            </Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-      </Link>
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push(`/track/${id}`)}
+        style={({ pressed }) => [styles.trackHead, pressed && styles.rowPressed]}
+      >
+        <View style={styles.rowText}>
+          <Text style={styles.rowTitle}>{label}</Text>
+          {/* The readiness line below carries the counts when there is one,
+              so this says the thing that line cannot: that a track with
+              nothing at the pick still has lessons worth reading. */}
+          <Text style={styles.rowMeta}>
+            {ready
+              ? `Preparing for ${TIER_LABELS[tier]}`
+              : `${topics} topics, none asked at ${TIER_LABELS[tier]}`}
+          </Text>
+        </View>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
 
       {ready ? (
         <View style={styles.trackReady}>
