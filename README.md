@@ -36,7 +36,7 @@ The architecture supports adding TypeScript, React, Next.js, Node, Express,
 NestJS, MongoDB and PostgreSQL later without schema changes. Adding a topic is
 adding a directory under `content/`, and adding a track is the same thing.
 
-## Running it
+## Running it locally
 
 ```bash
 docker compose up
@@ -49,70 +49,38 @@ Nothing else to install. Postgres, the migrations and the seed user are all
 handled inside the stack, and that stack is two containers: the app and the
 database.
 
-The speech engine is not one of them. On a laptop it stays behind a compose
-profile, so a voice model does not sit in memory while you work on something
-else, and the commands that need it start it themselves. On the machine that
-serves the platform it runs with the app, because that is where recordings are
-made. Its first start builds the image, which downloads the voice model and
-takes a few minutes.
+The speech engine is kept behind a compose profile (`speech`), so the neural
+voice model does not consume memory while doing other work. The commands that
+need it start it themselves, or you can start it explicitly with:
+`docker compose up -d tts` (or `docker compose --profile speech up`). Its first
+start builds the image, downloads the voice model, and takes a few minutes.
 
-Without it, a topic plays whatever is already in `.speech-cache` and says the
-voice is unavailable for the rest. To listen while you write, start it:
-`docker compose up -d tts`.
+Without it running, a topic plays whatever is already in `.speech-cache` and
+reports the voice as unavailable for un-synthesized lines.
 
-Two commands act on that cache directly, and nothing depends on either:
+Commands that manage narration:
 
 ```bash
 npm run narration:build -- javascript            # record a whole track ahead of time
 npm run narration:build -- javascript/closures   # or one topic of it
-npm run speech:prune                             # delete what no script says any more
+npm run speech:prune                             # delete orphaned recordings
 ```
 
-One more command builds what the phone reads, and it needs neither the stack nor
-the database running:
+### Packaging content for mobile
+
+One command builds what the phone reads, needing neither the app nor the database:
 
 ```bash
-npm run content:archive                          # every topic, plus a lesson page each
+npm run content:archive                          # every topic, plus pre-rendered lesson pages
 ```
 
-It writes `.content-archive/`: the whole curriculum as one JSON file, one
-pre-rendered lesson page per topic, the chunk and stylesheet those pages share,
-and `archive.zip` holding all of it, which is the one file a device downloads.
-The version it prints is a hash of the files it was built from, and that is what
-a device compares to decide whether to refresh. Audio is not in it.
+It writes `.content-archive/`: the entire curriculum as JSON, pre-rendered lesson
+pages, shared scripts/styles, and `archive.zip` which the mobile device downloads.
+The version is a content hash of the files it was built from. Run this command
+whenever you edit or add lesson content so the mobile app can download the updates.
 
-The server serves what this wrote and never builds it itself, at
-`/api/device/archive/version` and `/api/device/archive`. So content edited and
-not rebuilt is invisible to a phone. `npm run deploy` runs this first for that
-reason.
-
-Audio has two endpoints of its own, because a device downloads it a track at a
-time rather than with the archive. `POST /api/device/audio` says what a set of
-keys weighs and which of them have been recorded, and
-`GET /api/device/audio/<key>` sends one recording. Neither ever synthesises:
-`npm run narration:build` makes recordings ahead of being asked for them.
-
-## Running it on the machine that serves it
-
-The platform also runs on a spare Ubuntu machine, `work`, published at
-<https://work.tailba5bc0.ts.net>. To send it what is in the working tree:
-
-```bash
-npm run deploy
-```
-
-That builds the content archive, rsyncs the tree over Tailscale, rebuilds the
-image with the speech profile on, and waits until both the app and the voice
-answer again. `.speech-cache` and `.env` stay here. The server records what it is asked for, and keeps its own
-`.env`, holding the public URL, its auth secret and the login password.
-
-The URL is fixed. It comes from the machine name and the tailnet name, so it
-survives reboots and deploys, and the certificate is Tailscale's to renew.
-
-That address is on the public internet, and the single seeded account is the
-only thing in front of the data. `sudo tailscale funnel --https=443 off` on the
-machine unpublishes it. See
-`docs/decisions/0026-the-platform-is-served-from-one-machine-over-tailscale.md`.
+Audio is served separately via `/api/device/audio/<key>`, downloading on demand
+track-by-track rather than inside the archive zip.
 
 ## Writing content or changing the app
 
@@ -120,43 +88,32 @@ machine unpublishes it. See
 npm run dev:docker
 ```
 
-Short for `docker compose -f compose.yaml -f compose.dev.yaml up`. Same stack
-with the app's sources, the shared packages and the curriculum bind-mounted and
-hot reload on, so editing a lesson or a component shows up immediately.
+Short for `docker compose -f compose.yaml -f compose.dev.yaml up`. Runs the stack
+with the app sources, shared packages, and curriculum bind-mounted with hot
+reloading enabled. Edits to lessons, questions, or web components reflect immediately.
 
-Plain `docker compose up` runs the built image and does not pick up edits at
-all. Use this profile while working, that one to just use the platform, and
-`docker compose up --build` after changing code you want the plain profile to
-serve.
+## The mobile app (Offline-First)
 
-Plain `docker compose up` runs the image as it was last built, so anything
-changed since then needs `--build`. Under this profile that is only the
-manifests, `apps/web/next.config.ts` and the Dockerfile, since the source
-directories are mounted:
+The mobile app (`apps/mobile`) exists so you **do not need an always-on server or
+always-on Docker container**. The desktop workstation acts as the single source
+of truth on demand, and the mobile app is completely offline-first:
 
-```bash
-npm run dev:docker -- --build
-```
+1. **Start Docker on your PC**: Run `docker compose up` on your workstation.
+2. **Connect over Local Wi-Fi**: Open the mobile app (or `npm run mobile` for Expo Go)
+   on your phone connected to the same Wi-Fi network as your PC.
+3. **Log in**: Enter your PC's local network IP and port (e.g., `http://192.168.1.50:3000`)
+   along with your login credentials.
+4. **Download curriculum & audio**: The mobile app fetches `archive.zip` and caches
+   audio locally.
+5. **Use offline anywhere**: Shut down Docker on your PC. The phone holds the entire
+   curriculum, pre-rendered lesson WebViews, and spaced-repetition schedules in
+   local SQLite. You can study, read, and answer recall questions on the go with zero
+   network connection.
+6. **Sync progress**: Whenever you want to sync your answered questions and progress
+   back to your PC (or fetch newly added lessons), simply start Docker on your PC,
+   open the mobile app on your local Wi-Fi, and it syncs bidirectionally.
 
-## Running the phone app
-
-```bash
-npm run mobile
-```
-
-Starts the Expo development server. Open Expo Go on the phone and scan the code;
-both have to be on the same network, or on the tailnet.
-
-On first run it asks for the address of whichever machine is serving the stack
-and for the login. After that it holds the curriculum, the progress and the
-session itself, and works with everything switched off, which is the point of it.
-Sign in while the server is up, download the curriculum once, and the phone needs
-nothing afterwards.
-
-The app is developed in Expo Go rather than a development build, and the APK is
-built by EAS Build on a personal Expo account. That is the one hosted service
-this project uses and the reasoning is in
-`docs/decisions/0038-expo-is-the-one-hosted-service.md`.
+There are no remote servers, no cloud VMs, and no VPN/Tailscale networks required.
 
 ### Building the APK
 
@@ -165,66 +122,28 @@ cd apps/mobile
 eas build --platform android --profile production
 ```
 
-Log in first with `eas login`, on the personal Expo account named in
-`docs/decisions/0038-expo-is-the-one-hosted-service.md`. The build runs on
-Expo's servers and answers with a URL. Download the APK from it and sideload it
-onto the phone.
-
-The profile builds an APK for internal distribution rather than the AAB a store
-expects, and it raises `versionCode` in `app.json` on every build. Commit that
-change. Android refuses to install a build whose `versionCode` is not higher
-than the one already on the phone.
-
-`.easignore` at the root of the repository decides what the build uploads, and
-`scripts/easignore.test.ts` is what stops that going wrong quietly. Two things
-about the file are worth knowing before you edit it. EAS reads `.easignore`
-instead of `.gitignore`, so every rule `.gitignore` carries has to be written
-again there. EAS also builds the upload from a shallow clone of this
-repository, and it drops that clone only if `.easignore` names `.git` exactly.
-An entry written `.git/` keeps the clone, and the clone carries the whole
-curriculum.
+Builds an installable APK for Android using EAS Build. Once completed, download
+the generated `.apk` and sideload it directly onto your Android device.
 
 ## How it fits together
 
-The repository is an npm workspace with four members, so the phone can share
-the logic that decides when a question is due rather than reimplementing it. See
-`docs/decisions/0035-the-repository-is-a-workspace-and-the-logic-is-shared-once.md`.
+The repository is an npm workspace with four members, sharing logic without duplication:
 
-- `packages/core/` is the definition of the platform: the interval ladder, what
-  a tier covers, readiness, the daily queue, grading, and the schema the content
-  is written against. Pure functions over rows, with no database, DOM or
-  filesystem anywhere in it.
-- `packages/content/` is the curriculum and the code that reads it.
-  `content/<technology>/<topic>/` holds an MDX lesson with its questions and
-  exercises beside it, version-controlled rather than stored in the database.
-- `apps/web/` is the Next application: everything that touches Postgres,
-  better-auth or the DOM.
-- `apps/mobile/` is the Expo app for Android, which holds everything it needs and
-  works with the server switched off. Its screens are in `app/`, its logic in
-  `src/`, and every platform module it uses sits behind an interface with a
-  Node-backed twin in `test-support/`, so the logic is tested without a phone.
-- `packages/content/src/archive/` builds the content archive: the curriculum as
-  data, and every lesson compiled into a page that opens on its own. It bundles
-  the web app's own lesson components rather than a copy of them, so a lesson
-  reads the same on both surfaces. See
-  `docs/decisions/0039-the-archive-bundles-the-web-apps-lesson-components.md`.
-- `apps/web/src/components/visuals/` is the reusable animation library the
-  lessons import, and the one the archive compiles into its pages.
-- `apps/web/src/app/(app)/` is everything behind the login, under one persistent
-  top bar.
-- `apps/web/src/components/{chrome,ui,motion}/` are the shell, the UI
-  primitives, and the single entrance animation the whole app uses.
-- `apps/web/src/db/` holds the Drizzle schema and migrations. It stores users
-  and their progress, nothing else.
-- `apps/web/src/lib/speech/` turns a narration script into audio and caches it
-  by content. `services/tts/` is the Piper container it talks to, and no text
-  leaves the machine. A recording is made the first time it is asked for and
-  kept for good, addressed by a hash of the words, so a page asks for audio with
-  a key and the server turns that key back into the script.
-- `apps/web/src/components/speech/` is the player on a topic page, which reads
-  that topic's `narration.ts` aloud a section at a time, and the speaker button
-  on a question, which reads the prompt and then the answer once it has been
-  given.
+- `packages/core/`: The platform core: interval ladder, tiers, readiness, daily
+  queue calculations, grading, and content schemas. Pure functions over data rows
+  with zero DB or DOM dependencies, shared identically by web and mobile.
+- `packages/content/`: Curriculum definitions, loader, and validator.
+  `content/<technology>/<topic>/` holds MDX lessons, questions, and coding exercises.
+- `apps/web/`: Next.js 15 application handling Postgres, authentication, the
+  desktop browser interface, and device API endpoints (`/api/device/*`).
+- `apps/mobile/`: Expo / React Native Android app. Completely offline-first with
+  local SQLite storage mirroring progress tables, pre-rendered lesson WebView bridge,
+  and local spaced-repetition loop.
+- `packages/content/src/archive/`: Compiles and bundles curriculum content and
+  pre-rendered lesson pages into `.content-archive/archive.zip`.
+- `apps/web/src/components/visuals/`: Interactive animation library imported by
+  lessons and bundled into the mobile archive pages.
+- `services/tts/`: Piper neural TTS service running locally in Docker to
+  synthesize audio narration into `.speech-cache/`.
 
-See `docs/architecture.md` for the full picture and `docs/decisions/` for why
-it is shaped this way.
+See `docs/architecture.md` for architecture details and `docs/decisions/` for ADRs.

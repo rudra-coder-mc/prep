@@ -1,24 +1,29 @@
 /**
  * The one address the app talks to, which is whichever machine is serving the
- * stack: the laptop while the laptop is it, the tailnet hostname once the spare
- * machine is running again. It is typed in rather than compiled in, because
- * changing it otherwise means another APK. See
- * docs/decisions/0033-the-mobile-client-is-offline-first.md.
+ * stack: the local desktop machine running Docker on the local network / Wi-Fi.
+ * It is typed in rather than compiled in, because changing it otherwise means
+ * another APK. See docs/decisions/0033-the-mobile-client-is-offline-first.md.
  */
 
 /**
  * A typed address as an origin, or null when it is not one.
  *
  * Everything is stored as an origin so that endpoints can be named relative to
- * it without either side worrying about a slash. A hostname with no scheme is
- * assumed to be https, which is what the tailnet serves and what a phone
- * keyboard makes it tempting to leave out.
+ * it without either side worrying about a slash. Local IPs and localhost default
+ * to http://, while other bare hostnames default to https://.
  */
 export function serverAddress(input: string): string | null {
   const trimmed = input.trim()
   if (trimmed === '') return null
 
-  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`
+  let withScheme: string
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
+    withScheme = trimmed
+  } else if (/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|localhost)(:\d+)?(\/.*)?$/i.test(trimmed)) {
+    withScheme = `http://${trimmed}`
+  } else {
+    withScheme = `https://${trimmed}`
+  }
 
   let url: URL
   try {

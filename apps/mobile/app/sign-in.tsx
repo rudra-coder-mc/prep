@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router'
 import { useState, type ReactNode } from 'react'
 import {
   KeyboardAvoidingView,
@@ -9,19 +8,12 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { useRouter } from 'expo-router'
 import { serverAddress } from '../src/server/address'
-import { Button, Heading, Muted, Problem } from '../src/ui/components'
 import { useApp } from '../src/ui/app-state'
+import { Button, Heading, Muted, Problem } from '../src/ui/components'
 import { colors, radius, space } from '../src/ui/theme'
 
-/**
- * The one screen that needs the server, and the one request that carries a
- * password. Everything after this works with the server switched off.
- *
- * The address is typed in rather than compiled in, because the machine serving
- * the stack changes and rebuilding an APK to say so is not a way to live. See
- * docs/decisions/0033-the-mobile-client-is-offline-first.md.
- */
 export default function SignInScreen() {
   const app = useApp()
   const router = useRouter()
@@ -35,7 +27,7 @@ export default function SignInScreen() {
   async function submit() {
     const origin = serverAddress(address)
     if (!origin) {
-      setProblem('That is not an address. A tailnet hostname on its own is enough')
+      setProblem('That is not an address. Enter your desktop IP or address (e.g. 192.168.1.5:3000)')
       return
     }
     if (email.trim() === '' || password === '') {
@@ -73,7 +65,7 @@ export default function SignInScreen() {
             style={styles.input}
             value={address}
             onChangeText={setAddress}
-            placeholder="work"
+            placeholder="192.168.1.5:3000"
             placeholderTextColor={colors.faint}
             autoCapitalize="none"
             autoCorrect={false}

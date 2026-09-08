@@ -217,7 +217,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [ready, sync])
 
   // And on coming back to it, which is the moment a phone carried around all day
-  // is most likely to be on the tailnet again.
+  // is most likely to be back on the local Wi-Fi network again.
   useEffect(() => {
     const subscription = NativeAppState.addEventListener('change', (next) => {
       if (next === 'active') void sync()

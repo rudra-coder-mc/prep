@@ -8,6 +8,16 @@ This is Atul's personal project, running on his personal workstation.
 The repository is hosted on GitHub as a public repository (`rudra-coder-mc/prep`).
 Online connectivity, remote git synchronization, external builds (such as EAS Build), and hosted integrations are fully supported.
 
+### Infrastructure & Deployment Invariant
+
+- **Local Workstation Only**: There is no live remote server, no cloud deployment, and no Tailscale network. The web app and backend run strictly on the local machine via Docker when needed (`docker compose up`).
+- **Offline-First Mobile Loop**: The mobile app exists specifically to avoid running always-on servers or background Docker containers.
+  1. Start Docker on the local workstation.
+  2. Connect the mobile app to the workstation over local Wi-Fi (`http://<local-ip>:3000`).
+  3. Download lessons, curriculum archive, and audio recordings.
+  4. Shut down Docker. Use the mobile app completely offline for lessons, audio, and active recall.
+  5. Reconnect to the local workstation over local Wi-Fi when on-demand progress synchronization or new content fetching is desired.
+
 ## Task & Ticket Tracking (Linear)
 
 Task and ticket tracking is managed via **Linear**.
@@ -37,6 +47,7 @@ Work proceeds step-by-step with clear scope, incremental commits, and thorough v
 ## Architecture & Codebase Guidelines
 
 The codebase is an npm workspaces monorepo:
+
 - `packages/core`: Pure shared business logic (`@prep/core`).
   - Scheduling algorithms (`replaySchedule`), daily review queues (`buildDailyQueue`), scoring, and shared schemas (`EXERCISE_STATUSES`).
   - Invariant: The web app and mobile app share the exact same core functions so state and progress calculations never diverge.

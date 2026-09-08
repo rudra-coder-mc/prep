@@ -30,11 +30,18 @@ export default defineConfig({
           setupFiles: ['./apps/web/vitest.setup.ts'],
           include: [
             'apps/web/src/**/*.test.{ts,tsx}',
-            'apps/mobile/src/**/*.test.ts',
             'packages/*/src/**/*.test.ts',
             'scripts/**/*.test.ts',
           ],
           exclude: ['apps/web/src/**/*.integration.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'mobile',
+          environment: 'node',
+          include: ['apps/mobile/src/**/*.test.ts'],
         },
       },
       {

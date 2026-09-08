@@ -31,9 +31,7 @@ receives come out of the same build.
 
 The archive directory is a bind mount named by `CONTENT_ARCHIVE_DIR`, the way
 the recording cache is (`0022`). It is not baked into the image, so rebuilding
-the archive does not rebuild anything. `scripts/deploy.sh` builds it before it
-copies, so the server cannot end up serving an archive older than the content
-deployed beside it.
+the archive does not rebuild anything. `npm run content:archive` builds it on the host so the server serves the updated archive.
 
 Three endpoints, all authenticating the way every other endpoint does (`0040`).
 
@@ -84,9 +82,7 @@ distinction in a query parameter, where a caller can get it wrong.
 A device can go from holding nothing to holding the whole curriculum, and the
 web app is untouched.
 
-Content edited and not rebuilt is invisible to a device. A deploy covers the
-server, since it builds the archive first. On a laptop serving the stack it is a
-command to remember, and the build takes about a second.
+Content edited and not rebuilt is invisible to a device. `npm run content:archive` is run on the workstation after editing lessons, and the build takes about a second.
 
 The archive is 934 KB at 46 topics, which is one download over a phone
 connection rather than something to think about.

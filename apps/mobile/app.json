@@ -6,12 +6,10 @@
     "orientation": "portrait",
     "scheme": "prep",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
     "backgroundColor": "#0b0e15",
     "android": {
       "package": "dev.atul.prep",
-      "versionCode": 2,
-      "edgeToEdgeEnabled": true
+      "versionCode": 3
     },
     "plugins": ["expo-router"],
     "extra": {
