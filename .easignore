@@ -2,8 +2,7 @@
 #
 # EAS reads this file INSTEAD of .gitignore, not as well as it, so everything
 # .gitignore says has to be said again here. Anything not named goes to Expo.
-# See docs/decisions/0038-expo-is-the-one-hosted-service.md for why Expo is the
-# one hosted service this project uses, and CLAUDE.md for the rule it excepts.
+# See docs/decisions/0038-expo-is-the-one-hosted-service.md and agent.md.
 #
 # No entry here has a trailing slash, and that is load-bearing rather than a
 # style. EAS builds the archive by shallow-cloning this repository and then
@@ -27,14 +26,3 @@ packages/content/content
 # Secrets.
 .env
 .env.*
-
-# Installed or built on this machine. The build server makes its own.
-node_modules
-.next
-.expo
-coverage
-playwright-report
-test-results
-*.tsbuildinfo
-
-.DS_Store

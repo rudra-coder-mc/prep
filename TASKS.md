@@ -3,9 +3,7 @@
 Pending work only. Delete an entry when it is done, since the history of what
 was done lives in git and `docs/`.
 
-This file carries the whole task, not a link to one. There is no ticket tracker:
-`CLAUDE.md` explains why. Everything a person needs to pick a task up cold is
-written here, or in the brief a task points at under `docs/tasks/`.
+This file historically carried tasks. Ongoing task and ticket tracking is managed via Linear (see `agent.md`). Everything a person needs to pick a task up cold is written here, in the Linear ticket, or in the brief a task points at under `docs/tasks/`.
 
 The plan behind this file turns a bank of questions into a path with a promise at
 the end of it: finish a tier and you are prepared for that level of interview.
@@ -224,7 +222,7 @@ phone. `.easignore` excludes `content/` and the built archive, so what leaves
 the machine is application source and nothing else. Check what the upload
 actually contained rather than trusting the ignore file to be right.
 
-Read `0038`, and the Expo exception in `CLAUDE.md` before it.
+Read `0038`, and the project setup in `agent.md`.
 
 Done when the APK is on the phone, logs in against the tailnet hostname, pulls
 the archive and a track's audio, and runs a review session with the

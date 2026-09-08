@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   // the workspace packages it imports are carried into the image with it.
   outputFileTracingRoot: path.join(import.meta.dirname, '..', '..'),
   pageExtensions: ['ts', 'tsx', 'mdx'],
-  // CLAUDE.md is hand written policy for this repo. Next appends its own block
+  // agent.md is hand written policy for this repo. Next appends its own block
   // to it on every dev run, which is not ours to keep.
   agentRules: false,
   typedRoutes: true,

@@ -39,7 +39,7 @@ const ignoresForChecking = ignores('')
 /** `Ignore.createForCopyingAsync`: `.git` and `node_modules` are always out. */
 const ignoresForCopying = ignores('\n.git\nnode_modules\n')
 
-/** Nothing under these may leave the machine. `CLAUDE.md` is the rule. */
+/** Nothing under these may leave the machine in an EAS build. `agent.md` is the rule. */
 const forbidden = [
   'packages/content/content',
   '.content-archive',
