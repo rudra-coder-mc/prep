@@ -26,9 +26,12 @@
    - Decluttered track headers and eliminated redundant boilerplate text across the mobile app.
 6. **Task 35: EAS Production Android APK Build**:
    - Configured EAS project `@for_coding/prep` (`3de84ee0-a702-4fdf-841e-6bb09dd4a56c`).
-   - Sideloadable Android APK build triggered via EAS (`npx eas build --platform android --profile production --non-interactive`).
-   - Build ID: `6788a92f-2492-41aa-a0cc-de969cd496df`, Version Code: `5`.
-   - Live EAS Build logs: `https://expo.dev/accounts/for_coding/projects/prep/builds/6788a92f-2492-41aa-a0cc-de969cd496df`.
+   - Sideloadable Android APK build succeeded on EAS:
+     - **Build ID**: `6788a92f-2492-41aa-a0cc-de969cd496df`
+     - **Version Code**: `5` (`0.1.0`)
+     - **Direct APK Download**: [Download APK (expo.dev)](https://expo.dev/artifacts/eas/2h1v563PfvH7j796hCqB3y.apk)
+     - **S3 Archive URL**: [Download APK (S3)](https://build-artifacts.s3.us-east-2.amazonaws.com/3de84ee0-a702-4fdf-841e-6bb09dd4a56c/android/e4bf3cb3027b4754d924df0869a8b139.apk)
+     - **Build Logs**: [Expo Build Dashboard](https://expo.dev/accounts/for_coding/projects/prep/builds/6788a92f-2492-41aa-a0cc-de969cd496df)
 7. **Code Quality & Validation**:
    - Typecheck: Passed cleanly (`npm run typecheck`).
    - Linter: Passed cleanly (`npm run lint`).
