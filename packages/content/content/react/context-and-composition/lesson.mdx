@@ -1,0 +1,158 @@
+## Why this matters
+
+In React, data flows strictly from top to bottom through props (one-way data flow). While this keeps component logic predictable and traceable, it creates a practical dilemma when many deeply nested components all need the same piece of information—such as the current user's authentication profile, an active color theme, or localization settings.
+
+Passing props down through layers of intermediate components that have no interest in the data themselves is known as **prop drilling**.
+
+React offers two primary techniques to eliminate prop drilling: **Component Composition** (passing elements as `children` or JSX slots) and the **Context API** (`createContext` and `useContext`).
+
+For an entry-level engineer, knowing when to leverage simple composition before reaching for Context, how Context broadcasts values down the tree, and how to avoid rendering performance bottlenecks are essential architecture skills.
+
+## The prop drilling dilemma
+
+Consider an application where the logged-in user profile is needed by an avatar component deep inside the navigation bar:
+
+```
+App (holds 'user' state)
+ └── PageLayout (does not use 'user')
+      └── NavigationBar (does not use 'user')
+           └── UserMenu (does not use 'user')
+                └── Avatar (needs 'user')
+```
+
+To deliver `user` to `Avatar`, every intermediate component (`PageLayout`, `NavigationBar`, `UserMenu`) must accept `user` as a prop and pass it down.
+
+Prop drilling makes intermediate components brittle:
+
+- They become tightly coupled to data they do not care about.
+- Refactoring or renaming props requires editing every file in the chain.
+- Testing intermediate components becomes tedious because you must provide dummy mock props.
+
+## Component composition as the first solution
+
+Before reaching for Context or an external state library, the official React recommendation is to check whether **Component Composition** solves the problem.
+
+Instead of passing the raw `user` prop through every intermediate layer, pass the rendered component directly through using the `children` prop:
+
+```tsx
+// PageLayout accepts children instead of user
+function PageLayout({ children }: { children: React.ReactNode }) {
+  return <div className="layout">{children}</div>
+}
+
+// In App, compose Avatar directly:
+function App() {
+  const [user, setUser] = useState<User>({ name: 'Ada' })
+
+  return (
+    <PageLayout>
+      <NavigationBar>
+        <UserMenu>
+          <Avatar user={user} />
+        </UserMenu>
+      </NavigationBar>
+    </PageLayout>
+  )
+}
+```
+
+Now, `PageLayout`, `NavigationBar`, and `UserMenu` only accept `children`. They know nothing about `user`. If `Avatar` needs new props tomorrow, only `App` and `Avatar` need changes.
+
+## The Context API
+
+When data genuinely needs to be accessed by _many_ components scattered across entirely different branches of your tree, composition alone is not enough. This is where React Context excels.
+
+Context allows a parent component to provide data to the entire subtree below it without passing props manually.
+
+### 1. Create the Context
+
+```tsx
+// ThemeContext.ts
+import { createContext } from 'react'
+
+export type Theme = 'light' | 'dark'
+
+export const ThemeContext = createContext<Theme>('light')
+```
+
+The argument passed to `createContext` is the **default value**. This value is used only when a consumer component renders without _any_ matching Provider above it in the tree.
+
+### 2. Provide the Value
+
+Wrap the subtree with the Context Provider:
+
+```tsx
+// App.tsx
+import { useState } from 'react'
+import { ThemeContext, Theme } from './ThemeContext'
+
+export function App() {
+  const [theme, setTheme] = useState<Theme>('light')
+
+  return (
+    <ThemeContext.Provider value={theme}>
+      <MainContent />
+    </ThemeContext.Provider>
+  )
+}
+```
+
+### 3. Consume the Value
+
+Any child component inside the Provider can read the value using the `useContext` hook:
+
+```tsx
+import { useContext } from 'react'
+import { ThemeContext } from './ThemeContext'
+
+export function ThemedButton() {
+  const theme = useContext(ThemeContext)
+
+  return <button className={`btn-${theme}`}>Themed Button</button>
+}
+```
+
+## Context performance and best practices
+
+While Context is convenient, it carries an important performance characteristic: **whenever a Context Provider's `value` changes, every component that consumes that Context via `useContext` will automatically re-render**.
+
+To avoid unnecessary performance slowdowns, follow these best practices:
+
+### 1. Split Independent Contexts
+
+Never dump your entire application state into a single monolithic context object:
+
+```tsx
+// BAD: Any update to 'count' re-renders components that only care about 'user'!
+const AppContext = createContext({ user, count, theme, cart })
+```
+
+Instead, split separate concerns into focused contexts (`ThemeContext`, `AuthContext`, `CartContext`). Components reading only `ThemeContext` will not re-render when the cart changes.
+
+### 2. Memoize the Provider Value
+
+If your context value is an object, wrap it in `useMemo` so it doesn't create a new reference on every parent render:
+
+```tsx
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+
+  const value = useMemo(() => ({ user, setUser }), [user])
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+```
+
+### 3. Create Custom Consumer Hooks
+
+Encapsulate the `useContext` call in a custom hook that checks for a missing provider:
+
+```tsx
+export function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider')
+  }
+  return context
+}
+```

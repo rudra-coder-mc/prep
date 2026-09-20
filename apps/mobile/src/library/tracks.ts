@@ -38,11 +38,17 @@ export type TopicSummary = {
   progress: number
   /** When it was marked learned, which is what enrolled its questions. */
   learnedAt: Date | null
+  /** Whether this topic has any questions within the picked tier. */
+  inScope: boolean
 }
 
-export function trackSummaries(content: ArchiveContent, tiers: Map<string, Tier>): TrackSummary[] {
+export function trackSummaries(
+  content: ArchiveContent,
+  tiers: Map<string, Tier>,
+  defaultTier: Tier = DEFAULT_TIER,
+): TrackSummary[] {
   return content.technologies.map(({ id }) => {
-    const tier = tiers.get(id) ?? DEFAULT_TIER
+    const tier = tiers.get(id) ?? defaultTier
     const topics = topicsIn(content, id)
 
     return {
@@ -86,6 +92,7 @@ export function topicSummaries(
       status: summary.status,
       progress: summary.progress,
       learnedAt,
+      inScope: questions.length > 0,
     }
   })
 }

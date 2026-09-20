@@ -3,6 +3,7 @@ import { Redirect, useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { RESULT_LABELS, TIER_LABELS, type Result } from '@prep/core'
+import type { FileStore } from '../src/archive/files'
 import { readSchedule } from '../src/db/schedule'
 import type { Database } from '../src/db/sqlite'
 import {
@@ -21,19 +22,12 @@ import { Listen } from '../src/ui/listen'
 import { colors, radius, space } from '../src/ui/theme'
 
 /**
- * The day's review, run entirely from what the device holds.
+ * Answering today's questions.
  *
- * Nothing here reaches the network. The queue comes from the archive and the
- * ladder rows beside it, the answer is graded by the same @prep/core functions
- * the server runs, and the attempt waits in SQLite for a sync. See
- * docs/decisions/0033-the-mobile-client-is-offline-first.md.
- *
- * The one part of the web's guarantee that survives offline is the order of
- * events: the answer in full is on this device the whole time, and it is not
- * rendered until the question has been answered.
- *
- * The prompt can be listened to when this track's audio has been downloaded,
- * which is the track screen's job. There is no control at all when it has not.
+ * Runs locally: the queue is built from the schedule in SQLite, the grading
+ * is done on this device, and the next interval is computed and written here.
+ * The session closes by syncing whatever was answered, but it never waits for
+ * a network to do it.
  */
 
 const RESULTS: Result[] = ['passed', 'weak', 'failed']
@@ -45,7 +39,7 @@ const RESULT_COLOURS: Record<Result, string> = {
   failed: colors.fail,
 }
 
-type Tally = Record<Result, number>
+type Tally = { passed: number; weak: number; failed: number }
 
 export default function ReviewScreen() {
   const app = useApp()
@@ -118,20 +112,26 @@ export default function ReviewScreen() {
               ? 'Mark a topic learned to put its questions into recall.'
               : describeSession(queue.length, app.syncing, handedOver)}
           </Muted>
+
           {queue.length > 0 ? (
             <View style={styles.tally}>
-              {RESULTS.map((result) => (
-                <View key={result}>
-                  <Text style={styles.tallyLabel}>{RESULT_LABELS[result]}</Text>
-                  <Text style={[styles.tallyCount, { color: RESULT_COLOURS[result] }]}>
-                    {tally[result]}
-                  </Text>
-                </View>
-              ))}
+              <View>
+                <Text style={styles.tallyLabel}>Passed</Text>
+                <Text style={[styles.tallyCount, { color: colors.pass }]}>{tally.passed}</Text>
+              </View>
+              <View>
+                <Text style={styles.tallyLabel}>Weak</Text>
+                <Text style={[styles.tallyCount, { color: colors.weak }]}>{tally.weak}</Text>
+              </View>
+              <View>
+                <Text style={styles.tallyLabel}>Failed</Text>
+                <Text style={[styles.tallyCount, { color: colors.fail }]}>{tally.failed}</Text>
+              </View>
             </View>
           ) : null}
+
           <View style={styles.actions}>
-            <Button label="Done" onPress={() => router.replace('/')} />
+            <Button label="Done" onPress={() => router.push('/')} />
           </View>
         </Card>
       </ScrollView>
@@ -175,6 +175,7 @@ export default function ReviewScreen() {
         key={item.key}
         item={item}
         db={db}
+        files={files}
         onGraded={advance}
         onProblem={setProblem}
         makeId={randomUUID}
@@ -234,8 +235,16 @@ function Hints({ hints, shown, onShow }: { hints: string[]; shown: number; onSho
   )
 }
 
-/** The answer in full, and the explanation when there is one to add. */
-function AnswerCard({ revealed, heading }: { revealed: Revealed; heading: ReactNode }) {
+/** The answer in full, audio playback, and the explanation when there is one to add. */
+function AnswerCard({
+  revealed,
+  heading,
+  files,
+}: {
+  revealed: Revealed
+  heading: ReactNode
+  files: FileStore | null
+}) {
   return (
     <Card>
       {heading}
@@ -245,6 +254,11 @@ function AnswerCard({ revealed, heading }: { revealed: Revealed; heading: ReactN
           <Text style={styles.label}>Worth adding</Text>
           <Text style={styles.explanation}>{revealed.explanation}</Text>
         </>
+      ) : null}
+      {revealed.answerAudioKey ? (
+        <View style={styles.answerAudio}>
+          <Listen files={files} audioKey={revealed.answerAudioKey} label="Listen to explanation" />
+        </View>
       ) : null}
     </Card>
   )
@@ -261,6 +275,7 @@ function Outcome({ correct }: { correct: boolean }) {
 type FormProps = {
   item: QueuedItem
   db: Database
+  files: FileStore | null
   onGraded: (result: Result) => void
   onProblem: (problem: string | null) => void
   makeId: () => string
@@ -280,6 +295,7 @@ function ChoiceQuestion({
   item,
   options,
   db,
+  files,
   onGraded,
   onProblem,
   makeId,
@@ -337,7 +353,11 @@ function ChoiceQuestion({
 
       {outcome ? (
         <>
-          <AnswerCard revealed={outcome} heading={<Outcome correct={outcome.correct} />} />
+          <AnswerCard
+            revealed={outcome}
+            heading={<Outcome correct={outcome.correct} />}
+            files={files}
+          />
           <NextQuestion dueAt={outcome.dueAt} onPress={() => onGraded(outcome.result)} />
         </>
       ) : null}
@@ -354,13 +374,13 @@ function optionTone(correctOption: number | undefined, chosen: number | null, in
 
 /**
  * The ordering form: tap the lines in the order the program prints them, and
- * tap one again to take it back out. Nothing says how many of them print, since
- * that is most of the answer on a question about what runs.
+ * tap one again to take it back out.
  */
 function OrderingQuestion({
   item,
   items,
   db,
+  files,
   onGraded,
   onProblem,
   makeId,
@@ -405,10 +425,7 @@ function OrderingQuestion({
         />
       ) : null}
 
-      <Muted>
-        Tap the lines in the order they print. Not everything here prints. Tap one again to take it
-        back out.
-      </Muted>
+      {!outcome ? <Muted>Tap lines in execution order</Muted> : null}
 
       <View style={styles.options} accessibilityLabel="Lines to order">
         {items.map((line, index) => {
@@ -455,7 +472,11 @@ function OrderingQuestion({
               ))}
             </Card>
           ) : null}
-          <AnswerCard revealed={outcome} heading={<Outcome correct={outcome.correct} />} />
+          <AnswerCard
+            revealed={outcome}
+            heading={<Outcome correct={outcome.correct} />}
+            files={files}
+          />
           <NextQuestion dueAt={outcome.dueAt} onPress={() => onGraded(outcome.result)} />
         </>
       )}
@@ -471,10 +492,9 @@ function lineTone(correctOrder: number[] | undefined, chosen: number[], index: n
 }
 
 /**
- * The open form: answer it out loud, reveal, then mark yourself. The only form
- * nothing can grade, so it is the only one that asks.
+ * The open form: answer it out loud, reveal, then self-grade.
  */
-function OpenQuestion({ item, db, onGraded, onProblem, makeId }: FormProps) {
+function OpenQuestion({ item, db, files, onGraded, onProblem, makeId }: FormProps) {
   const [hintsShown, setHintsShown] = useState(0)
   const [revealed, setRevealed] = useState<Revealed | null>(null)
   const [busy, setBusy] = useState(false)
@@ -500,19 +520,19 @@ function OpenQuestion({ item, db, onGraded, onProblem, makeId }: FormProps) {
           shown={hintsShown}
           onShow={() => setHintsShown(hintsShown + 1)}
         />
-        <Muted>
-          Answer it out loud, as you would in the room. Then reveal and mark yourself against what
-          you actually said.
-        </Muted>
-        <Button label="Reveal the answer" onPress={() => setRevealed(revealAnswer(item))} />
+        <Muted>Answer out loud, then reveal to self-grade.</Muted>
+        <Button label="Reveal answer" onPress={() => setRevealed(revealAnswer(item))} />
       </>
     )
   }
 
   return (
     <>
-      <AnswerCard revealed={revealed} heading={<Text style={styles.label}>The answer</Text>} />
-      <Muted>How much of that did you say?</Muted>
+      <AnswerCard
+        revealed={revealed}
+        heading={<Text style={styles.label}>The answer</Text>}
+        files={files}
+      />
       <View style={styles.grades}>
         {RESULTS.map((result) => (
           <Pressable
@@ -617,6 +637,12 @@ const styles = StyleSheet.create({
   label: { color: colors.faint, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 },
   answer: { color: colors.fg, fontSize: 15, lineHeight: 23 },
   explanation: { color: colors.muted, fontSize: 14, lineHeight: 21 },
+  answerAudio: {
+    marginTop: space.sm,
+    paddingTop: space.sm,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+  },
   outcome: { fontSize: 16, fontWeight: '600' },
   grades: { flexDirection: 'row', gap: space.sm },
   grade: {

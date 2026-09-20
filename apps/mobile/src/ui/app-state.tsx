@@ -1,5 +1,5 @@
 import type { ArchiveContent } from '@prep/content/archive/types'
-import type { Tier } from '@prep/core'
+import { DEFAULT_TIER, TIERS, type Tier } from '@prep/core'
 import {
   createContext,
   useCallback,
@@ -19,6 +19,7 @@ import { refreshArchive, type RefreshResult } from '../archive/refresh'
 import { openDatabase } from '../db/expo'
 import { migrate } from '../db/migrate'
 import { readTrackTiers } from '../db/progress'
+import { readSetting, writeSetting } from '../db/settings'
 import type { Database } from '../db/sqlite'
 import { readDeviceIdentity } from '../device/expo'
 import type { DeviceIdentity } from '../device/identity'
@@ -48,6 +49,8 @@ export type AppState = {
   /** The curriculum this device holds, or null until a refresh has brought one. */
   content: ArchiveContent | null
   tiers: Map<string, Tier>
+  /** The target interview tier across tracks (defaulting to SWE-1). */
+  defaultTier: Tier
   db: Database | null
   /** The device's storage, which holds the archive and the audio library. */
   files: FileStore | null
@@ -74,6 +77,10 @@ export type AppState = {
    * that offers it because every screen reads the pick out of `tiers`.
    */
   pickTier(technology: string, tier: Tier): Promise<void>
+  /**
+   * Sets the target interview tier across tracks and updates all existing tracks.
+   */
+  setDefaultTier(tier: Tier): Promise<void>
 }
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -93,6 +100,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [device, setDevice] = useState<DeviceIdentity | null>(null)
   const [content, setContent] = useState<ArchiveContent | null>(null)
   const [tiers, setTiers] = useState<Map<string, Tier>>(new Map())
+  const [defaultTier, setDefaultTierState] = useState<Tier>(DEFAULT_TIER)
   const [refreshing, setRefreshing] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [progressRevision, setProgressRevision] = useState(0)
@@ -109,6 +117,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
    */
   const loadLocal = useCallback(async ({ db, files }: Stores) => {
     setTiers(await readTrackTiers(db))
+    const savedTier = await readSetting(db, 'default-tier')
+    if (savedTier && (TIERS as readonly string[]).includes(savedTier)) {
+      setDefaultTierState(savedTier as Tier)
+    }
 
     if (!(await installedVersion(db))) {
       setContent(null)
@@ -233,6 +245,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       device,
       content,
       tiers,
+      defaultTier,
       db: stores?.db ?? null,
       files: stores?.files ?? null,
       client,
@@ -277,6 +290,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setProgressRevision((revision) => revision + 1)
       },
 
+      async setDefaultTier(tier) {
+        if (!stores) return
+
+        setProblem(null)
+        await writeSetting(stores.db, 'default-tier', tier)
+        setDefaultTierState(tier)
+        if (content) {
+          const now = new Date()
+          for (const tech of content.technologies) {
+            await pickTrackTier(stores.db, content, tech.id, tier, now)
+          }
+          setTiers(await readTrackTiers(stores.db))
+        }
+        setProgressRevision((revision) => revision + 1)
+      },
+
       async refresh() {
         if (!stores || !client) return null
 
@@ -300,6 +329,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       device,
       content,
       tiers,
+      defaultTier,
       refreshing,
       syncing,
       progressRevision,

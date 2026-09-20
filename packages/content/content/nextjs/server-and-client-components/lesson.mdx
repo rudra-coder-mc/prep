@@ -1,0 +1,120 @@
+## Why this matters
+
+In traditional React single-page applications, every single component you write is bundled into JavaScript and sent down to the user's browser. Even if a component merely reads a database query or renders static marketing copy, the browser must download, parse, and execute its JavaScript code before displaying the UI.
+
+The Next.js App Router changes this model by introducing React Server Components (RSC) as the foundational default. Instead of sending all component code to the client, Server Components run exclusively on the server, generating HTML and a lightweight data description (the RSC payload).
+
+For an entry-level engineer, understanding the boundary between Server Components and Client Components is critical. You need to know when to use `'use client'`, why Client Components still render on the server during initial page load, and how to compose Server and Client components without accidentally pulling server-only logic into browser bundles.
+
+## The default is server
+
+By default, every component created inside the `app/` directory is a React Server Component. You do not need to add any special annotation to make a component run on the server.
+
+Because Server Components run only in Node.js or edge runtimes on the server:
+
+- **Zero client JavaScript bundle size**: Their component code, imported helper libraries, and dependencies are never shipped to the browser. If you import a 50KB Markdown parser or an internal database client inside a Server Component, zero bytes of that library reach the client.
+- **Direct backend access**: Server Components can directly access databases, file systems, internal microservices, and environment secrets without exposing API keys to the browser.
+- **No client lifecycle or state**: Because Server Components never run in the browser, they cannot use state hooks (`useState`, `useReducer`), effect hooks (`useEffect`), or browser-only APIs (`window`, `localStorage`, `navigator`).
+
+```tsx
+// app/profile/page.tsx - Server Component by default
+import db from '@/lib/db'
+
+export default async function ProfilePage() {
+  const user = await db.user.findFirst()
+
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>{user.bio}</p>
+    </div>
+  )
+}
+```
+
+## The 'use client' boundary
+
+When you need interactivity—such as click handlers, text inputs, form state, or browser animations—you explicitly mark the file with the `'use client'` directive at the very top of the file, before any import statements.
+
+A common misconception is that `'use client'` means "this component only runs in the browser." That is incorrect.
+
+Instead, `'use client'` defines a **module boundary**. It signals to the bundler that this file and all modules it imports belong to the client bundle.
+
+- **Initial Server-Side Rendering (SSR)**: Client Components are still pre-rendered to HTML on the server during the initial page request so the user receives readable content immediately.
+- **Hydration**: In the browser, React downloads the Client Component bundle and hydrates the static HTML, attaching event listeners and initializing state.
+
+```tsx
+'use client'
+
+import { useState } from 'react'
+
+export function Counter() {
+  const [count, setCount] = useState(0)
+
+  return <button onClick={() => setCount(count + 1)}>Clicked {count} times</button>
+}
+```
+
+Keep your client boundaries as low in your component tree as possible (at the "leaves" of the tree). Wrapping your entire page or layout in `'use client'` eliminates the bundle size advantages of React Server Components.
+
+## Composing server and client components
+
+A frequent architecture challenge is putting a Server Component inside a Client Component.
+
+Because Client Components cannot directly import Server Components (doing so would force the Server Component into the client bundle and execute it in the browser where server APIs do not exist), you compose them using React's `children` prop or other JSX slot props.
+
+In this pattern, an outer Server Component imports both components and nests the Server Component inside the Client Component:
+
+```tsx
+// Client wrapper component
+'use client'
+
+import { useState } from 'react'
+
+export function CollapsibleSection({ children }: { children: React.ReactNode }) {
+  const [isOpen, setIsOpen] = useState(true)
+
+  return (
+    <section>
+      <button onClick={() => setIsOpen(!isOpen)}>Toggle</button>
+      {isOpen && <div>{children}</div>}
+    </section>
+  )
+}
+```
+
+```tsx
+// Server Component page
+import { CollapsibleSection } from './CollapsibleSection'
+import { HeavyServerFeed } from './HeavyServerFeed'
+
+export default function FeedPage() {
+  return (
+    <CollapsibleSection>
+      <HeavyServerFeed />
+    </CollapsibleSection>
+  )
+}
+```
+
+`HeavyServerFeed` executes entirely on the server and streams its rendered output. `CollapsibleSection` receives the already-rendered result as `children` and manages the client-side toggle state without needing the code for `HeavyServerFeed` in the browser bundle.
+
+## Boundary rules and serialization
+
+When a Server Component passes props to a Client Component, those props must cross the network boundary between the server process and the browser.
+
+To cross this boundary, props must be **serializable**:
+
+- **Allowed**: Strings, numbers, booleans, arrays, plain objects, `null`, `undefined`, and JSX elements (which serialize as RSC element descriptors).
+- **Forbidden**: Functions (including event handlers like `onClick`), class instances, symbols, and dates (unless converted to ISO strings or timestamps).
+
+Passing a function from a Server Component to a Client Component as a prop throws an error because JavaScript functions cannot be safely serialized across the network:
+
+```tsx
+// INVALID: Server Component cannot pass a function to a Client Component
+export default function ServerPage() {
+  return <ClientButton onClick={() => console.log('clicked')} /> // Throws serialization error!
+}
+```
+
+To handle user events, define event listener functions directly inside the Client Component where they will execute.

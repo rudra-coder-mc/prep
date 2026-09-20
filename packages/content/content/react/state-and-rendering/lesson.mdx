@@ -1,0 +1,107 @@
+## Why this matters
+
+The most frequent source of confusion for engineers learning React is expecting state variables to behave like ordinary mutable JavaScript variables.
+
+In plain JavaScript, if you reassign `let count = 0` to `count = count + 1`, the next line reads the incremented value. In React, calling `setCount(count + 1)` does not mutate the `count` variable in place. Instead, it asks React to re-render the component with a new value of `count` on the next render pass.
+
+Understanding that **rendering is a snapshot in time**, how React **automatically batches multiple updates**, and when an **updater function** is mandatory is what separates engineers who write fragile, race-condition-prone UI from those who build predictable applications.
+
+## State is a snapshot
+
+When React renders a component, it calls your function. The props, state, and event handlers declared in that function all belong to that specific render snapshot.
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0)
+
+  function handleClick() {
+    setCount(count + 1)
+    console.log(count) // Still prints 0!
+  }
+
+  return <button onClick={handleClick}>{count}</button>
+}
+```
+
+In `handleClick`, `count` is a constant value captured from the current render. When `setCount(count + 1)` executes:
+
+1. It queues a request to React: _"Re-render this component with `count` equal to 1"_.
+2. The current function continues running. The local `count` variable in this execution scope is still `0`.
+3. Only after the event handler completes does React trigger the next render, executing `Counter()` again with `count` equal to `1`.
+
+This snapshot behavior holds even across asynchronous code such as `setTimeout` or `fetch`: an event handler captures the state variables of the render in which it was created.
+
+## Batching state updates
+
+React does not trigger a separate re-render for every single `setState` call. Instead, it waits until all code in the event handler has finished running before processing the updates. This is called **batching**.
+
+```jsx
+function Form() {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+
+  function handleReset() {
+    setName('')
+    setEmail('')
+    // React batches these two updates into a SINGLE re-render
+  }
+}
+```
+
+Batching prevents half-finished renders where one state variable has updated but another has not, which would cause jarring layout shifts and unnecessary computational overhead.
+
+In modern React (React 18+), batching happens automatically across all contexts: event handlers, `setTimeout`, Promises, and native event listeners.
+
+## When to use updater functions
+
+Because state is a snapshot, calling a state setter multiple times in a row with the same captured variable will not accumulate updates:
+
+```jsx
+function Counter() {
+  const [count, setCount] = useState(0)
+
+  function handleTripleClick() {
+    setCount(count + 1) // setCount(0 + 1)
+    setCount(count + 1) // setCount(0 + 1)
+    setCount(count + 1) // setCount(0 + 1)
+    // Result on next render: 1, not 3!
+  }
+}
+```
+
+All three calls read `count` as `0` from the snapshot.
+
+To queue multiple updates that depend on the previous pending state, pass an **updater function**:
+
+```jsx
+function handleTripleClick() {
+  setCount((prev) => prev + 1)
+  setCount((prev) => prev + 1)
+  setCount((prev) => prev + 1)
+  // Result on next render: 3
+}
+```
+
+When you pass a function like `prev => prev + 1`, React puts it into a queue. During the next render, React loops through the queue, passing the pending state from each step to the next updater function.
+
+## Choosing state structure
+
+Structuring state poorly leads to redundant renders and synchronization bugs. Three core guidelines keep state maintainable:
+
+**Avoid redundant state.** If a value can be computed from existing props or state, do not store it in state. Calculate it during rendering.
+
+```jsx
+// Bad: Redundant state that can become out of sync
+const [firstName, setFirstName] = useState('')
+const [lastName, setLastName] = useState('')
+const [fullName, setFullName] = useState('')
+
+// Good: Derived value calculated during render
+const [firstName, setFirstName] = useState('')
+const [lastName, setLastName] = useState('')
+const fullName = `${firstName} ${lastName}`.trim()
+```
+
+**Avoid duplicate state.** If two state variables mirror the exact same object or ID, store only the ID and derive the object.
+
+**Group related state.** If two or more state fields always change together (such as `x` and `y` coordinates for a cursor), group them into a single state object.

@@ -9,6 +9,7 @@ import { trackSummaries } from '../src/library/tracks'
 import { buildReviewQueue } from '../src/review/queue'
 import { useApp } from '../src/ui/app-state'
 import { Bar, Button, Card, Heading, Muted, Problem, Waiting } from '../src/ui/components'
+import { TierPicker } from '../src/ui/tier-picker'
 import { statusColour } from '../src/ui/status'
 import { colors, radius, space } from '../src/ui/theme'
 
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const [refreshed, setRefreshed] = useState<string | null>(null)
   const [today, setToday] = useState<{ dueToday: number; asking: number } | null>(null)
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
+  const [pickingTier, setPickingTier] = useState(false)
 
   const { content, db } = app
 
@@ -59,8 +61,8 @@ export default function HomeScreen() {
   )
 
   const tracks = useMemo(
-    () => (app.content ? trackSummaries(app.content, app.tiers) : []),
-    [app.content, app.tiers],
+    () => (app.content ? trackSummaries(app.content, app.tiers, app.defaultTier) : []),
+    [app.content, app.tiers, app.defaultTier],
   )
 
   if (app.status === 'starting') return <Waiting label="Opening what this device holds" />
@@ -77,6 +79,16 @@ export default function HomeScreen() {
           ? `Replaced ${result.previous} with ${result.version}`
           : `Downloaded ${result.version}`,
     )
+  }
+
+  async function pickDefaultTier(next: Tier) {
+    if (next === app.defaultTier) return
+    setPickingTier(true)
+    try {
+      await app.setDefaultTier(next)
+    } finally {
+      setPickingTier(false)
+    }
   }
 
   const readiness = new Map((dashboard?.tracks ?? []).map((track) => [track.id, track]))
@@ -199,6 +211,22 @@ export default function HomeScreen() {
           <Text style={styles.brandTitle}>Settings & Sync</Text>
 
           <View style={styles.section}>
+            <Heading>Target Interview Level</Heading>
+            <Card>
+              <Muted>
+                Sets your target interview level across all tracks. Topics and questions focus on
+                this level.
+              </Muted>
+              <TierPicker
+                label="Target Interview Level"
+                tier={app.defaultTier}
+                busy={pickingTier}
+                onPick={(next) => void pickDefaultTier(next)}
+              />
+            </Card>
+          </View>
+
+          <View style={styles.section}>
             <Heading>Curriculum & Resources</Heading>
             <Card>
               <Text style={styles.cardTitle}>
@@ -283,6 +311,8 @@ export default function HomeScreen() {
 const STATUS_ORDER: TopicStatus[] = ['mastered', 'understood', 'learning', 'weak', 'not_started']
 
 function Streak({ streak }: { streak: { current: number; longest: number } }) {
+  if (streak.current === 0) return null
+
   return (
     <View style={styles.streak}>
       <Text style={styles.streakCount}>{streak.current}</Text>
@@ -295,8 +325,6 @@ function Streak({ streak }: { streak: { current: number; longest: number } }) {
 }
 
 /**
- * One track: where it goes, and how ready it is for the tier picked on it.
- *
  * A track with no readiness has no questions the pick covers, so there is
  * nothing to be ready for. It is still listed, because its lessons are still
  * worth reading and its tier is still changeable from the screen behind it.

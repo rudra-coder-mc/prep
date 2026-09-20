@@ -1,0 +1,134 @@
+## Why this matters
+
+React is fundamentally declarative: you declare what the user interface should look like based on current props and state, and React handles mutating the browser DOM under the hood.
+
+However, real-world web applications occasionally need an escape hatch. You might need to focus a text input, scroll to a specific header, calculate the pixel dimensions of a container element, or control an imperative browser API like an HTML5 `<video>` or `<audio>` player.
+
+React provides **refs** via the `useRef` hook for these situations. For an entry-level engineer, understanding the difference between state and refs, knowing when it is safe to interact directly with the DOM, and maintaining render purity are critical frontend fundamentals.
+
+## Refs versus state
+
+When you call `useRef(initialValue)`, React returns a plain JavaScript object with a single mutable property:
+
+```tsx
+const myRef = useRef(initialValue)
+// Returns: { current: initialValue }
+```
+
+React preserves this exact object instance across every re-render of your component. You can freely read and mutate `myRef.current`.
+
+The fundamental difference between state and refs is:
+
+- **State (`useState`)**: Setting state triggers a re-render. State is meant for information that directly affects the visual output in your JSX return statement.
+- **Refs (`useRef`)**: Mutating `ref.current` **never triggers a re-render**. Refs are meant for information that does not affect what is displayed on the screen.
+
+```tsx
+import { useRef, useState } from 'react'
+
+export function Stopwatch() {
+  const [startTime, setStartTime] = useState<number | null>(null)
+  const [now, setNow] = useState<number | null>(null)
+  const timerRef = useRef<number | null>(null)
+
+  function handleStart() {
+    setStartTime(Date.now())
+    setNow(Date.now())
+
+    // Store the timer ID in a ref because it does not affect visual output
+    timerRef.current = window.setInterval(() => {
+      setNow(Date.now())
+    }, 10)
+  }
+
+  function handleStop() {
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current)
+    }
+  }
+
+  return (
+    <div>
+      <p>Elapsed: {startTime && now ? ((now - startTime) / 1000).toFixed(2) : 0}s</p>
+      <button onClick={handleStart}>Start</button>
+      <button onClick={handleStop}>Stop</button>
+    </div>
+  )
+}
+```
+
+If you store `timerRef` in `useState`, updating it would cause an unnecessary extra render. Storing it in a regular local variable would fail because local variables are re-instantiated from scratch on every render.
+
+## Accessing the DOM with refs
+
+The most common use case for refs is accessing the browser DOM directly. Pass your ref object to the `ref` attribute of any JSX element:
+
+```tsx
+import { useRef } from 'react'
+
+export function SearchInput() {
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function handleClick() {
+    // Access the real browser HTMLInputElement DOM node
+    inputRef.current?.focus()
+  }
+
+  return (
+    <div>
+      <input ref={inputRef} type="text" placeholder="Search docs..." />
+      <button onClick={handleClick}>Focus Input</button>
+    </div>
+  )
+}
+```
+
+When React creates the DOM node for `<input>`, it assigns `inputRef.current` to that DOM node. When the component unmounts and the node is removed from the screen, React resets `inputRef.current` to `null`.
+
+## Safe versus forbidden DOM manipulations
+
+Because React manages the DOM declaratively through reconciliation, manipulating the DOM imperatively behind React's back can break your application.
+
+### Safe Operations (Non-destructive)
+
+You can safely perform operations that do not modify the structure or children of the DOM nodes that React controls:
+
+- Focusing an input (`inputRef.current.focus()`)
+- Scrolling an element or window (`elementRef.current.scrollIntoView()`)
+- Reading measurements and layout geometry (`elementRef.current.getBoundingClientRect()`)
+- Invoking imperative media APIs (`videoRef.current.play()`, `videoRef.current.pause()`)
+
+### Forbidden Operations (Destructive)
+
+Avoid directly altering the DOM tree or properties that React manages:
+
+- Removing child nodes (`parentRef.current.removeChild(childNode)`)
+- Appending nodes directly (`parentRef.current.appendChild(newElement)`)
+- Overwriting children via `innerHTML` or `textContent`
+
+If you manually delete or append a DOM node that React expects to control, React will crash with runtime errors during the next re-render when trying to reconcile its virtual tree against the corrupted DOM.
+
+## Ref purity during render
+
+React assumes that your component rendering function is a **pure function**: given the same props and state, it should always produce the same JSX output without side effects.
+
+Therefore, you must **never read or write `ref.current` during the render phase**:
+
+```tsx
+// FORBIDDEN: Writing or reading ref.current during render
+function BrokenComponent() {
+  const countRef = useRef(0)
+
+  // BAD! Modifying ref during render phase
+  countRef.current = countRef.current + 1
+
+  // BAD! Reading ref to produce visual JSX
+  return <div>Render count: {countRef.current}</div>
+}
+```
+
+Reading or writing refs during rendering creates subtle bugs:
+
+1. If React pauses or restarts rendering in Concurrent Mode, the ref value will change unpredictably.
+2. If `ref.current` changes, React will not know it needs to re-render, leading to stale or inconsistent user interfaces.
+
+**Rule**: Read or write `ref.current` only inside **event handlers** (like `onClick`) or inside **`useEffect`** hooks.

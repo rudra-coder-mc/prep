@@ -1,61 +1,80 @@
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { DEFAULT_TIER, technologyLabel, type Tier } from '@prep/core'
+import React, { useCallback, useMemo, useState } from 'react'
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  DEFAULT_TIER,
+  STATUS_LABELS,
+  TIER_LABELS,
+  nextTier,
+  technologyLabel,
+  type AttemptRecord,
+  type Tier,
+} from '@prep/core'
 import { readAttemptsForTopics, readLearnedTopics } from '../../src/db/progress'
 import { topicSummaries, type TopicSummary } from '../../src/library/tracks'
 import { useApp } from '../../src/ui/app-state'
-import { Muted, Waiting } from '../../src/ui/components'
+import { Button, Card, Muted } from '../../src/ui/components'
 import { TierPicker } from '../../src/ui/tier-picker'
-import { STATUS_LABELS, statusColour } from '../../src/ui/status'
+import { statusColour } from '../../src/ui/status'
 import { colors, radius, space } from '../../src/ui/theme'
 import { TrackAudio } from '../../src/ui/track-audio'
+
+type ProgressCache = {
+  revision: number
+  learned: Map<string, Date>
+  attempts: Map<string, AttemptRecord[]>
+}
+
+const progressCache = new Map<string, ProgressCache>()
 
 /**
  * A track's topics and where each one stands.
  *
- * The status is @prep/core's `summariseTopic` over the attempts in SQLite, which
- * is the same function the web runs over the rows in Postgres. Nothing is
- * fetched: this screen is the reason the tables are mirrored rather than queried
- * over the network.
- *
- * A topic opens its lesson, and marking it learned is done there, at the end of
- * the reading that earns it. It is read again on focus so a mark made in a
- * lesson shows on the way back.
- *
- * The audio card at the top is the track's recordings, which are downloaded a
- * track at a time rather than with the archive: see
- * docs/decisions/0044-a-device-is-told-what-a-track-of-audio-weighs.md.
- *
- * The tier is picked here, beside the topics it decides the membership of. A
- * changed pick brings what is already learned up to it, which is why it goes
- * through the app rather than writing the row from this screen.
+ * Scoped to the selected tier for instant opening and zero jank. Uses a
+ * virtualized FlatList with memoized cards to render 30+ topics smoothly.
  */
 export default function TrackScreen() {
   const app = useApp()
   const router = useRouter()
-  const { client, content, db, files, tiers } = app
+  const { client, content, db, files, tiers, defaultTier } = app
   const { technology } = useLocalSearchParams<{ technology: string }>()
-  const [topics, setTopics] = useState<TopicSummary[] | null>(null)
-  const [picking, setPicking] = useState(false)
 
-  const tier = technology ? (tiers.get(technology) ?? DEFAULT_TIER) : DEFAULT_TIER
+  const selectedTier = technology ? tiers.get(technology) : undefined
+  const tier: Tier = selectedTier || defaultTier || DEFAULT_TIER
+  const [picking, setPicking] = useState(false)
+  const [showAbove, setShowAbove] = useState(false)
+
+  // Initialize topics synchronously from memory cache if available, or compute immediately
+  // from content so the screen doesn't show a blank/spinner frame on initial render.
+  const [topics, setTopics] = useState<TopicSummary[]>(() => {
+    if (!content || !technology) return []
+    const cached = progressCache.get(technology)
+    return topicSummaries(content, technology, {
+      tier,
+      learned: cached?.learned ?? new Map(),
+      attempts: cached?.attempts ?? new Map(),
+    })
+  })
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false
       if (!content || !db || !technology) return
 
-      void (async () => {
-        const slugs = content.topics
-          .filter((topic) => topic.technology === technology)
-          .map((topic) => topic.slug)
+      const slugs = (content.technologies.find((t) => t.id === technology)?.topics ?? []).slice()
 
+      void (async () => {
         const [learned, attempts] = await Promise.all([
           readLearnedTopics(db),
           readAttemptsForTopics(db, slugs),
         ])
         if (cancelled) return
+
+        progressCache.set(technology, {
+          revision: app.progressRevision,
+          learned,
+          attempts,
+        })
 
         setTopics(topicSummaries(content, technology, { tier, learned, attempts }))
       })()
@@ -63,44 +82,52 @@ export default function TrackScreen() {
       return () => {
         cancelled = true
       }
-      // The revision is a dependency and not a value this reads: a sync landing
-      // while this screen is open moves the statuses under it.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [content, db, technology, tier, app.progressRevision]),
   )
 
   const title = technology ? technologyLabel(technology) : 'Track'
 
-  async function pick(next: Tier) {
-    if (!technology || next === tier) return
+  const pick = useCallback(
+    async (next: Tier) => {
+      if (!technology || next === tier) return
 
-    setPicking(true)
-    try {
-      await app.pickTier(technology, next)
-    } finally {
-      setPicking(false)
-    }
-  }
+      setPicking(true)
+      try {
+        await app.pickTier(technology, next)
+      } finally {
+        setPicking(false)
+      }
+    },
+    [technology, tier, app],
+  )
 
-  if (!topics) {
-    return (
-      <>
-        <Stack.Screen options={{ title }} />
-        <Waiting label="Reading what this device holds" />
-      </>
-    )
-  }
+  const inScopeTopics = useMemo(() => topics.filter((t) => t.inScope), [topics])
+  const aboveTopics = useMemo(() => topics.filter((t) => !t.inScope), [topics])
+  const displayTopics = useMemo(
+    () => (showAbove ? topics : inScopeTopics),
+    [showAbove, topics, inScopeTopics],
+  )
 
-  return (
-    <>
-      <Stack.Screen options={{ title }} />
-      <ScrollView contentContainerStyle={styles.page}>
+  const next = nextTier(tier)
+  const isTierComplete =
+    inScopeTopics.length > 0 &&
+    inScopeTopics.every((t) => t.status === 'mastered' || t.status === 'understood')
+
+  const renderItem = useCallback(
+    ({ item }: { item: TopicSummary }) => (
+      <TopicCard
+        topic={item}
+        onPress={() => router.push(`/topic/${technology}/${item.directory}`)}
+      />
+    ),
+    [router, technology],
+  )
+
+  const listHeader = useMemo(
+    () => (
+      <View style={styles.header}>
         {technology ? (
           <View style={styles.picker}>
-            <Muted>
-              Preparing for an interview at which level. It decides which topics are on the path and
-              which of their questions marking one learned enrols.
-            </Muted>
             <TierPicker
               label={title}
               tier={tier}
@@ -109,49 +136,192 @@ export default function TrackScreen() {
             />
           </View>
         ) : null}
+
         {content && files && technology ? (
           <TrackAudio content={content} files={files} client={client} technology={technology} />
         ) : null}
-        {topics.length === 0 ? <Muted>This track has no topics in the archive.</Muted> : null}
-        {topics.map((topic) => (
-          <Pressable
-            key={topic.slug}
-            accessibilityRole="link"
-            onPress={() => router.push(`/topic/${technology}/${topic.directory}`)}
-            style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-          >
-            <View style={styles.rowHead}>
-              <Text style={styles.title}>{topic.title}</Text>
-              <Text style={[styles.status, { color: statusColour[topic.status] }]}>
-                {STATUS_LABELS[topic.status]}
+
+        <View style={styles.scopeHeader}>
+          <Text style={styles.scopeCount}>
+            {inScopeTopics.length} {inScopeTopics.length === 1 ? 'topic' : 'topics'} on{' '}
+            {TIER_LABELS[tier]} path
+          </Text>
+        </View>
+      </View>
+    ),
+    [technology, title, tier, picking, pick, content, files, client, inScopeTopics.length],
+  )
+
+  const listFooter = useMemo(
+    () => (
+      <View style={styles.footer}>
+        {isTierComplete && next ? (
+          <Card>
+            <View style={styles.stepUpHead}>
+              <Text style={styles.stepUpLead}>
+                Ready for {TIER_LABELS[next]} in {title}
               </Text>
+              <Muted>
+                You have finished {TIER_LABELS[tier]}. Step up to {TIER_LABELS[next]} to enrol
+                next-level interview questions.
+              </Muted>
             </View>
-            <Text style={styles.summary}>{topic.summary}</Text>
-            <Text style={styles.meta}>
-              {topic.questions} questions · {topic.progress}% passing
+            <View style={styles.stepUpAction}>
+              <Button
+                label={`Step up to ${TIER_LABELS[next]}`}
+                onPress={() => void pick(next)}
+                busy={picking}
+              />
+            </View>
+          </Card>
+        ) : null}
+
+        {aboveTopics.length > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setShowAbove((prev) => !prev)}
+            style={({ pressed }) => [styles.toggleAbove, pressed && styles.toggleAbovePressed]}
+          >
+            <Text style={styles.toggleAboveText}>
+              {showAbove
+                ? `Hide ${aboveTopics.length} topics introduced in later tiers`
+                : `Show ${aboveTopics.length} topics introduced in later tiers`}
             </Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        ) : null}
+
+        {displayTopics.length === 0 ? <Muted>No topics found on this path.</Muted> : null}
+      </View>
+    ),
+    [
+      isTierComplete,
+      next,
+      title,
+      tier,
+      picking,
+      pick,
+      aboveTopics.length,
+      showAbove,
+      displayTopics.length,
+    ],
+  )
+
+  return (
+    <>
+      <Stack.Screen options={{ title }} />
+      <FlatList
+        data={displayTopics}
+        keyExtractor={(item) => item.slug}
+        renderItem={renderItem}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews={true}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        contentContainerStyle={styles.page}
+      />
     </>
   )
 }
 
+const TopicCard = React.memo(function TopicCard({
+  topic,
+  onPress,
+}: {
+  topic: TopicSummary
+  onPress: () => void
+}) {
+  return (
+    <Pressable
+      accessibilityRole="link"
+      accessibilityLabel={`${topic.title}, ${STATUS_LABELS[topic.status]}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.topic,
+        !topic.inScope && styles.topicOutOfScope,
+        pressed && styles.topicPressed,
+      ]}
+    >
+      <View style={styles.head}>
+        <Text style={[styles.title, !topic.inScope && styles.textMuted]}>{topic.title}</Text>
+        <Text style={[styles.status, { color: statusColour[topic.status] }]}>
+          {STATUS_LABELS[topic.status]}
+        </Text>
+      </View>
+
+      <Text
+        style={[styles.summary, !topic.inScope && styles.textMuted]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
+        {topic.summary}
+      </Text>
+
+      <View style={styles.meta}>
+        <Text style={styles.counts}>
+          {topic.inScope
+            ? `${topic.questions} ${topic.questions === 1 ? 'question' : 'questions'}`
+            : 'Introduced in later interview levels'}
+        </Text>
+        <Text style={styles.chevron}>›</Text>
+      </View>
+    </Pressable>
+  )
+})
+
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.md },
-  picker: { gap: space.sm },
-  row: {
+  page: { padding: space.lg, gap: space.md, paddingBottom: space.xl * 2 },
+  header: { gap: space.md, marginBottom: space.sm },
+  footer: { gap: space.md, marginTop: space.sm },
+  picker: { gap: space.xs },
+  scopeHeader: {
+    paddingHorizontal: space.xs,
+    paddingTop: space.xs,
+  },
+  scopeCount: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.muted,
+  },
+  stepUpHead: { gap: space.xs },
+  stepUpLead: { color: colors.pass, fontSize: 14, fontWeight: '600' },
+  stepUpAction: { marginTop: space.sm },
+  toggleAbove: {
+    padding: space.md,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.card,
+    alignItems: 'center',
+  },
+  toggleAbovePressed: { backgroundColor: colors.raised },
+  toggleAboveText: { color: colors.muted, fontSize: 13, fontWeight: '500' },
+  topic: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderWidth: 1,
     borderRadius: radius.card,
     padding: space.lg,
-    gap: space.xs,
+    gap: space.sm,
   },
-  rowPressed: { backgroundColor: colors.raised },
-  rowHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  title: { color: colors.fg, fontSize: 17, fontWeight: '600', flex: 1 },
+  topicOutOfScope: {
+    opacity: 0.6,
+  },
+  textMuted: {
+    color: colors.muted,
+  },
+  topicPressed: { backgroundColor: colors.raised },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  title: { color: colors.fg, fontSize: 16, fontWeight: '600', flex: 1 },
   status: { fontSize: 12, fontWeight: '600' },
   summary: { color: colors.muted, fontSize: 14, lineHeight: 20 },
-  meta: { color: colors.faint, fontSize: 12 },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: space.xs,
+  },
+  counts: { color: colors.faint, fontSize: 12 },
+  chevron: { color: colors.faint, fontSize: 18 },
 })

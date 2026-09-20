@@ -9,14 +9,15 @@
     "backgroundColor": "#0b0e15",
     "android": {
       "package": "dev.atul.prep",
-      "versionCode": 3
+      "versionCode": 4
     },
     "plugins": ["expo-router"],
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "7a3a891e-57f3-4358-b37c-1884f89cc1fb"
+        "projectId": "3de84ee0-a702-4fdf-841e-6bb09dd4a56c"
       }
-    }
+    },
+    "owner": "for_coding"
   }
 }

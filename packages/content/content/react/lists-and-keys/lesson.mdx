@@ -1,0 +1,109 @@
+## Why this matters
+
+Almost every user interface displays dynamic collections: lists of products, feeds of comments, tabular data rows, or navigation menus.
+
+In React, you do not write imperative `for` loops that mutate the DOM. Instead, you transform data arrays into arrays of JSX elements using standard JavaScript array methods.
+
+However, rendering dynamic lists introduces a fundamental challenge for React's reconciliation engine: when an item is added, moved, or deleted, how does React know which DOM elements to update, move, or tear down?
+
+This is where the `key` prop comes in. For an entry-level engineer, understanding how React reconciliation works with keys, and knowing why using array indices as keys leads to insidious state corruption bugs, is one of the most frequently tested interview topics.
+
+## Rendering lists with map()
+
+The idiomatic way to render collections in React is by calling the array `.map()` method inline within JSX:
+
+```tsx
+interface Product {
+  id: string
+  name: string
+  price: number
+}
+
+export function ProductList({ products }: { products: Product[] }) {
+  return (
+    <ul>
+      {products.map((product) => (
+        <li key={product.id}>
+          <span>{product.name}</span> - ${product.price}
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+Notice the `key={product.id}` attribute on the `<li>`. The `key` prop must always be placed on the **outermost JSX element** directly returned inside the `.map()` callback. If you return a custom component, put `key` on the custom component:
+
+```tsx
+{
+  products.map((product) => <ProductCard key={product.id} product={product} />)
+}
+```
+
+If you need to render multiple sibling elements per item without adding an extra wrapper `<div>` to the DOM, use a keyed `<React.Fragment>`:
+
+```tsx
+import React from 'react'
+
+{
+  items.map((item) => (
+    <React.Fragment key={item.id}>
+      <dt>{item.term}</dt>
+      <dd>{item.definition}</dd>
+    </React.Fragment>
+  ))
+}
+```
+
+_(Note: The shorthand syntax `<> ... </>` cannot accept attributes or keys.)_
+
+## The purpose of the key prop
+
+When a component re-renders, React generates a new virtual element tree and compares it against the previous one (reconciliation).
+
+By default, without keys, React compares elements by their index position in the array. But when list items can be re-ordered, filtered, or prepended, index position is completely untrustworthy.
+
+Keys provide a **stable identity** for each element across renders:
+
+- If a key exists in the new tree that was in the old tree, React preserves that component instance and reuses its underlying DOM node, simply updating any changed props.
+- If a key from the old tree is missing in the new tree, React unmounts that component and removes its DOM node.
+- If a new key appears, React mounts a fresh component and creates a new DOM node.
+
+## Why array index as key causes bugs
+
+A widespread beginner shortcut is using the array index as the key:
+
+```tsx
+// DANGEROUS: Using array index as key in a dynamic list
+{
+  todos.map((todo, index) => <TodoItem key={index} todo={todo} />)
+}
+```
+
+While React will not print a console warning when `key={index}` is provided, doing so introduces severe visual and state corruption bugs whenever the list can be:
+
+1. **Reordered or sorted** (e.g. sorting by name or date)
+2. **Filtered or searched**
+3. **Inserted into or removed from the beginning or middle**
+
+### What actually breaks:
+
+Imagine a list of 3 items, each containing an uncontrolled `<input>` field or a checked checkbox.
+
+If you delete item 0:
+
+- The old item 1 now moves to index 0.
+- React compares the new index 0 with the old index 0. Because both have `key={0}`, React assumes it is the _same_ component instance!
+- React keeps the existing DOM node and its internal input state.
+- Result: The text typed into the first input remains on screen, now attached to the second item, while the actual intended deletion seems to have deleted the last item instead.
+
+## Best practices for stable keys
+
+To ensure your lists render correctly and performantly, adhere to these golden rules:
+
+1. **Keys must be unique among siblings**: Keys do not need to be globally unique across your entire app, but they must be unique among sibling elements in the same array.
+2. **Keys must be stable across renders**:
+   - **Do NOT** generate keys on the fly during render, such as `key={Math.random()}` or `key={crypto.randomUUID()}`. Generating new keys every render forces React to destroy and recreate every single DOM node and component state on every update, ruining performance and causing inputs to lose focus.
+   - **Do** use stable unique IDs from your data model, such as database primary keys (`user.id`, `product.uuid`).
+3. **Only use index if the list is strictly static**:
+   Using `key={index}` is only acceptable if the list is static (never filtered, sorted, paginated, or mutated) and the items have no internal state.
