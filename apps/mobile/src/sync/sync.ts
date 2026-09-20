@@ -14,7 +14,7 @@ import { readSchedule } from '../db/schedule'
 import { readLearnedTopics, readTierPicks, readTrackTiers } from '../db/progress'
 import { readSetting, writeSetting } from '../db/settings'
 import type { Database } from '../db/sqlite'
-import { enrolLearnedTopics, enrolTopicQuestions } from '../library/learn'
+import { enrolLearnedTopics, enrolTopicQuestions, reconcileEnrolments } from '../library/learn'
 import type {
   ServerClient,
   SyncAttempt,
@@ -94,6 +94,7 @@ export async function syncProgress(
   }
 
   await rebuildSchedules(db, content, [...ingested.questionKeys, ...(await unscheduled(db))])
+  await reconcileEnrolments(db, content, tiers)
   await rebuildLastReviewed(db, ingested.topicSlugs)
   await rebuildActivity(db, ingested.days, now)
 

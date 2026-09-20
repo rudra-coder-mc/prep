@@ -3,7 +3,7 @@ import { DEFAULT_TIER, questionsUpTo, TIER_LABELS } from '@prep/core'
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { openURL } from 'expo-linking'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 import { heldRecordings } from '../../../src/audio/library'
 import { readLearnedTopics } from '../../../src/db/progress'
@@ -15,8 +15,9 @@ import { lessonTheme } from '../../../src/lesson/theme'
 import { findTopic } from '../../../src/library/tracks'
 import { markTopicLearned } from '../../../src/library/learn'
 import { useApp } from '../../../src/ui/app-state'
-import { Button, Muted, Problem, Waiting } from '../../../src/ui/components'
+import { Button, Muted, Problem } from '../../../src/ui/components'
 import { Narration } from '../../../src/ui/narration'
+import { TopicSkeleton } from '../../../src/ui/skeletons'
 import { colors, radius, space } from '../../../src/ui/theme'
 
 /**
@@ -52,6 +53,30 @@ export default function TopicScreen() {
   const [problem, setProblem] = useState<string | null>(null)
   const [footerMinimized, setFooterMinimized] = useState(false)
   const [showFooterInfo, setShowFooterInfo] = useState(false)
+  const [interactionsDone, setInteractionsDone] = useState(false)
+
+  // Allow native push transition to complete smoothly before mounting heavy WebView
+  useEffect(() => {
+    let finished = false
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!finished) {
+        finished = true
+        setInteractionsDone(true)
+      }
+    })
+    const timer = setTimeout(() => {
+      if (!finished) {
+        finished = true
+        setInteractionsDone(true)
+      }
+    }, 250)
+
+    return () => {
+      finished = true
+      task.cancel()
+      clearTimeout(timer)
+    }
+  }, [])
 
   const { content, db, files } = app
   const topic =
@@ -108,13 +133,14 @@ export default function TopicScreen() {
   }
 
   async function markLearned() {
-    if (!content || !db || !topic) return
+    if (!db || !content || !topic) return
 
     setMarking(true)
     setProblem(null)
     try {
-      await markTopicLearned(db, content, topic.slug, tier, new Date())
-      setLearnedAt(new Date())
+      const now = new Date()
+      await markTopicLearned(db, content, topic.slug, tier, now)
+      setLearnedAt(now)
     } catch (error) {
       setProblem(error instanceof Error ? error.message : String(error))
     } finally {
@@ -122,10 +148,8 @@ export default function TopicScreen() {
     }
   }
 
-  if (app.status === 'starting') return <Waiting label="Opening what this device holds" />
+  if (app.status === 'starting') return <TopicSkeleton />
   if (app.status === 'signed-out') return <Redirect href="/sign-in" />
-  if (!content) return <Redirect href="/" />
-
   if (!topic) {
     return (
       <View style={styles.empty}>
@@ -154,7 +178,7 @@ export default function TopicScreen() {
             The archive on this device holds no page for this topic. Refresh the curriculum.
           </Problem>
         </View>
-      ) : uri ? (
+      ) : uri && interactionsDone ? (
         <WebView
           ref={page}
           source={{ uri }}
@@ -173,7 +197,7 @@ export default function TopicScreen() {
           style={styles.page}
         />
       ) : (
-        <Waiting label="Opening the lesson" />
+        <TopicSkeleton />
       )}
 
       {footerMinimized ? (
@@ -259,90 +283,89 @@ export default function TopicScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  // The WebView paints white until the page does, and the page is dark.
+  empty: { flex: 1, justifyContent: 'center', padding: space.lg },
+  notice: { paddingHorizontal: space.lg, paddingTop: space.sm },
   page: { flex: 1, backgroundColor: colors.bg },
-  empty: { flex: 1, padding: space.lg },
-  notice: { padding: space.md, paddingBottom: 0 },
   footer: {
     backgroundColor: colors.surface,
-    borderTopColor: colors.border,
+    borderColor: colors.border,
     borderTopWidth: 1,
-    paddingHorizontal: space.sm,
-    paddingVertical: space.xs,
-    gap: space.xs,
+    padding: space.md,
+    gap: space.sm,
   },
   footerInfo: {
-    paddingHorizontal: space.sm,
-    paddingTop: space.xs,
+    paddingBottom: space.xs,
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.xs,
+    gap: space.sm,
   },
   footerActions: {
     flex: 1,
     flexDirection: 'row',
-    gap: space.xs,
+    gap: space.sm,
   },
   actionBtnWrapper: {
     flex: 1,
   },
   iconBtn: {
-    width: 32,
-    height: 38,
+    width: 36,
+    height: 36,
+    borderRadius: radius.control,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.control,
+    backgroundColor: colors.raised,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   iconBtnActive: {
-    backgroundColor: colors.raised,
+    backgroundColor: colors.border,
   },
   chevronIcon: {
-    color: colors.faint,
     fontSize: 12,
+    color: colors.fg,
   },
   infoIcon: {
+    fontSize: 14,
     color: colors.muted,
-    fontSize: 16,
   },
   infoIconActive: {
-    color: colors.accent,
+    color: colors.fg,
   },
   floatingFooter: {
     position: 'absolute',
-    bottom: space.md,
-    right: space.md,
-    zIndex: 20,
-    elevation: 6,
+    bottom: space.lg,
+    right: space.lg,
+    zIndex: 10,
   },
   floatingPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
     gap: space.xs,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   floatingPillLearned: {
     borderColor: colors.pass,
   },
   floatingPillText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: colors.fg,
-    fontSize: 12,
-    fontWeight: '500',
   },
   floatingPillChevron: {
-    color: colors.accent,
     fontSize: 10,
+    color: colors.muted,
   },
   pressed: {
     opacity: 0.7,

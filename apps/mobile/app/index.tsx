@@ -2,7 +2,15 @@ import { Redirect, Stack, useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { STATUS_LABELS, TIER_LABELS, type Dashboard, type TopicStatus, type Tier } from '@prep/core'
+import {
+  DAILY_QUEUE_CAP,
+  STATUS_LABELS,
+  TIER_LABELS,
+  technologyLabel,
+  type Dashboard,
+  type TopicStatus,
+  type Tier,
+} from '@prep/core'
 import { readSchedule } from '../src/db/schedule'
 import { readDashboard } from '../src/library/dashboard'
 import { trackSummaries } from '../src/library/tracks'
@@ -31,6 +39,7 @@ export default function HomeScreen() {
   const [today, setToday] = useState<{ dueToday: number; asking: number } | null>(null)
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [pickingTier, setPickingTier] = useState(false)
+  const [pickingTrack, setPickingTrack] = useState<string | null>(null)
 
   const { content, db } = app
 
@@ -42,7 +51,14 @@ export default function HomeScreen() {
       if (!content || !db) return
 
       void (async () => {
-        const { items, dueToday } = buildReviewQueue(content, await readSchedule(db), new Date())
+        const { items, dueToday } = buildReviewQueue(
+          content,
+          await readSchedule(db),
+          new Date(),
+          DAILY_QUEUE_CAP,
+          app.tiers,
+          app.defaultTier,
+        )
         const summary = await readDashboard(db, content)
         if (cancelled) return
 
@@ -57,7 +73,7 @@ export default function HomeScreen() {
       // while this screen is open changes the rows behind the counts, and
       // without it they would stand until something else took focus.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [content, db, app.progressRevision]),
+    }, [content, db, app.progressRevision, app.tiers, app.defaultTier]),
   )
 
   const tracks = useMemo(
@@ -91,6 +107,17 @@ export default function HomeScreen() {
     }
   }
 
+  async function pickTrackTier(technology: string, next: Tier) {
+    const current = app.tiers.get(technology) ?? app.defaultTier
+    if (next === current) return
+    setPickingTrack(technology)
+    try {
+      await app.pickTier(technology, next)
+    } finally {
+      setPickingTrack(null)
+    }
+  }
+
   const readiness = new Map((dashboard?.tracks ?? []).map((track) => [track.id, track]))
 
   return (
@@ -108,22 +135,29 @@ export default function HomeScreen() {
 
           {!app.content ? (
             <Card>
-              <Text style={styles.cardTitle}>No curriculum downloaded yet</Text>
+              <Text style={styles.cardTitle}>Nothing downloaded yet</Text>
               <Muted>
-                Download the study tracks and questions to prepare offline with zero lag.
+                Download the curriculum once, and every track, lesson and recall exercise runs
+                locally on this device.
               </Muted>
               <View style={styles.actions}>
-                <Button label="Go to Settings & Sync" onPress={() => setTab('settings')} />
+                <Button
+                  label="Download the curriculum"
+                  onPress={() => void refresh()}
+                  busy={app.refreshing}
+                />
               </View>
             </Card>
           ) : null}
 
-          {app.content && today ? (
+          {today ? (
             <Card>
               <View style={styles.todayHead}>
                 <View style={styles.todayText}>
                   <Text style={styles.cardTitle}>
-                    {today.dueToday > 0 ? `${today.dueToday} due today` : 'Nothing due'}
+                    {today.dueToday > 0
+                      ? `${today.dueToday} ${today.dueToday === 1 ? 'question' : 'questions'} due today`
+                      : 'All caught up'}
                   </Text>
                   <Muted>{describeToday(today)}</Muted>
                 </View>
@@ -131,51 +165,29 @@ export default function HomeScreen() {
               </View>
               {today.asking > 0 ? (
                 <View style={styles.actions}>
-                  <Button label="Start review" onPress={() => router.push('/review')} />
+                  <Button
+                    label={`Start review (${today.asking})`}
+                    onPress={() => router.push('/review')}
+                  />
                 </View>
               ) : null}
             </Card>
           ) : null}
 
-          {tracks.length > 0 ? (
-            <View style={styles.section}>
-              <Heading>Readiness</Heading>
-              {tracks.map((track) => (
-                <TrackRow
-                  key={track.id}
-                  id={track.id}
-                  label={track.label}
-                  tier={track.tier}
-                  topics={track.topics}
-                  ready={readiness.get(track.id)}
-                  onStepUp={(tier) => void app.pickTier(track.id, tier)}
-                />
-              ))}
-            </View>
-          ) : null}
-
-          {dashboard && dashboard.weakest.length > 0 ? (
-            <View style={styles.section}>
-              <Heading>Slipping</Heading>
-              {dashboard.weakest.map((topic) => (
-                <Pressable
-                  key={topic.slug}
-                  accessibilityRole="link"
-                  onPress={() => router.push(`/topic/${topic.technology}/${topic.directory}`)}
-                  style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                >
-                  <View style={styles.rowHead}>
-                    <Text style={styles.rowTitle}>{topic.title}</Text>
-                    <Text style={[styles.status, { color: statusColour[topic.status] }]}>
-                      {STATUS_LABELS[topic.status]}
-                    </Text>
-                  </View>
-                  <Bar value={topic.progress} tone="weak" label={`${topic.title} progress`} />
-                  <Text style={styles.rowMeta}>{topic.progress}% of its questions passing</Text>
-                </Pressable>
-              ))}
-            </View>
-          ) : null}
+          <View style={styles.section}>
+            <Heading>Tracks</Heading>
+            {tracks.map((track) => (
+              <TrackRow
+                key={track.id}
+                id={track.id}
+                label={track.label}
+                tier={track.tier}
+                topics={track.topics}
+                ready={readiness.get(track.id)}
+                onStepUp={(tier) => void app.pickTier(track.id, tier)}
+              />
+            ))}
+          </View>
 
           {dashboard ? (
             <View style={styles.section}>
@@ -211,19 +223,53 @@ export default function HomeScreen() {
           <Text style={styles.brandTitle}>Settings & Sync</Text>
 
           <View style={styles.section}>
-            <Heading>Target Interview Level</Heading>
+            <Heading>Default Interview Level</Heading>
             <Card>
               <Muted>
                 Sets your target interview level across all tracks. Topics and questions focus on
-                this level.
+                this level unless overridden per track below.
               </Muted>
               <TierPicker
-                label="Target Interview Level"
+                label="Default Interview Level"
                 tier={app.defaultTier}
                 busy={pickingTier}
                 onPick={(next) => void pickDefaultTier(next)}
               />
             </Card>
+          </View>
+
+          <View style={styles.section}>
+            <Heading>Track Target Levels</Heading>
+            <Muted>
+              Customize interview target levels per track. Each track focuses on questions up to its
+              selected level.
+            </Muted>
+            {app.content ? (
+              app.content.technologies.map((tech) => {
+                const trackTier = app.tiers.get(tech.id) ?? app.defaultTier
+                const isBusy = pickingTrack === tech.id
+                return (
+                  <Card key={tech.id}>
+                    <View style={styles.trackTierHeader}>
+                      <Text style={styles.trackTierTitle}>{technologyLabel(tech.id)}</Text>
+                      <View style={styles.trackTierBadge}>
+                        <Text style={styles.trackTierBadgeText}>{TIER_LABELS[trackTier]}</Text>
+                      </View>
+                    </View>
+                    <TierPicker
+                      label={technologyLabel(tech.id)}
+                      tier={trackTier}
+                      busy={isBusy}
+                      onPick={(next) => void pickTrackTier(tech.id, next)}
+                    />
+                  </Card>
+                )
+              })
+            ) : (
+              <Card>
+                <Muted>Download the curriculum to configure per-track levels.</Muted>
+              </Card>
+            )}
           </View>
 
           <View style={styles.section}>
@@ -492,6 +538,31 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   stepUpLead: { color: colors.pass, fontSize: 14, fontWeight: '600' },
+  trackTierHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: space.sm,
+  },
+  trackTierTitle: {
+    color: colors.fg,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  trackTierBadge: {
+    backgroundColor: colors.raised,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.control,
+    paddingHorizontal: space.sm,
+    paddingVertical: 2,
+  },
+  trackTierBadgeText: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
   row: {
     backgroundColor: colors.surface,
     borderColor: colors.border,

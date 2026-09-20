@@ -7,6 +7,7 @@ Following the deployment of APK build `versionCode: 5` (Build ID: `6788a92f-2492
 ---
 
 ### Bug 1: Review Queue Leaking SWE-2 Questions for SWE-1 Topics
+
 - **Symptom**: In the "Start Review" session (and "due today" counter on the home dashboard), users who selected `SWE-1` are being asked `SWE-2` questions for topics where they only studied and completed `SWE-1`.
 - **Root Cause**:
   - In `apps/mobile/src/review/queue.ts`, `buildReviewQueue(content, schedule, now)` takes the schedule directly from SQLite (`readSchedule(db)`) and checks only `index.has(row.questionId)`.
@@ -21,6 +22,7 @@ Following the deployment of APK build `versionCode: 5` (Build ID: `6788a92f-2492
 ---
 
 ### Bug 2: Missing Granular (Per-Track) Level Controls & Cluttered Track Header
+
 - **Symptom**:
   - In `Settings & Sync`, the app only offers a single global level picker ("all-or-nothing"), with no way to configure JavaScript as `SWE-1`, Browser as `SWE-2`, etc.
   - In `TrackScreen` (`apps/mobile/app/track/[technology].tsx`), there is still an in-screen `TierPicker` in the header, which clutters the reading flow.
@@ -31,6 +33,7 @@ Following the deployment of APK build `versionCode: 5` (Build ID: `6788a92f-2492
 ---
 
 ### Bug 3: Screen Freeze / Lack of Skeleton or Loading Indicator on Navigation
+
 - **Symptom**:
   - When tapping a track (e.g. Browser, JavaScript, React) or opening a topic lesson from the track list, the UI appears to hang/freeze for 300–800ms with zero loading indicator, skeleton, or visual feedback before suddenly rendering.
 - **Root Cause**:

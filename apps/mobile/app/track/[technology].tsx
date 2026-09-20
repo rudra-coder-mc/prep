@@ -1,6 +1,6 @@
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import React, { useCallback, useMemo, useState } from 'react'
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { FlatList, InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native'
 import {
   DEFAULT_TIER,
   STATUS_LABELS,
@@ -14,7 +14,7 @@ import { readAttemptsForTopics, readLearnedTopics } from '../../src/db/progress'
 import { topicSummaries, type TopicSummary } from '../../src/library/tracks'
 import { useApp } from '../../src/ui/app-state'
 import { Button, Card, Muted } from '../../src/ui/components'
-import { TierPicker } from '../../src/ui/tier-picker'
+import { TrackSkeleton } from '../../src/ui/skeletons'
 import { statusColour } from '../../src/ui/status'
 import { colors, radius, space } from '../../src/ui/theme'
 import { TrackAudio } from '../../src/ui/track-audio'
@@ -43,16 +43,41 @@ export default function TrackScreen() {
   const tier: Tier = selectedTier || defaultTier || DEFAULT_TIER
   const [picking, setPicking] = useState(false)
   const [showAbove, setShowAbove] = useState(false)
+  const [interactionsDone, setInteractionsDone] = useState(false)
 
-  // Initialize topics synchronously from memory cache if available, or compute immediately
-  // from content so the screen doesn't show a blank/spinner frame on initial render.
+  const title = technology ? technologyLabel(technology) : 'Track'
+
+  // Allow native push transition to complete smoothly before loading heavy topic lists
+  useEffect(() => {
+    let finished = false
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!finished) {
+        finished = true
+        setInteractionsDone(true)
+      }
+    })
+    const timer = setTimeout(() => {
+      if (!finished) {
+        finished = true
+        setInteractionsDone(true)
+      }
+    }, 250)
+
+    return () => {
+      finished = true
+      task.cancel()
+      clearTimeout(timer)
+    }
+  }, [])
+
   const [topics, setTopics] = useState<TopicSummary[]>(() => {
     if (!content || !technology) return []
     const cached = progressCache.get(technology)
+    if (!cached) return []
     return topicSummaries(content, technology, {
       tier,
-      learned: cached?.learned ?? new Map(),
-      attempts: cached?.attempts ?? new Map(),
+      learned: cached.learned,
+      attempts: cached.attempts,
     })
   })
 
@@ -84,8 +109,6 @@ export default function TrackScreen() {
       }
     }, [content, db, technology, tier, app.progressRevision]),
   )
-
-  const title = technology ? technologyLabel(technology) : 'Track'
 
   const pick = useCallback(
     async (next: Tier) => {
@@ -126,16 +149,12 @@ export default function TrackScreen() {
   const listHeader = useMemo(
     () => (
       <View style={styles.header}>
-        {technology ? (
-          <View style={styles.picker}>
-            <TierPicker
-              label={title}
-              tier={tier}
-              busy={picking}
-              onPick={(next) => void pick(next)}
-            />
+        <View style={styles.trackInfo}>
+          <Text style={styles.trackTitle}>{title}</Text>
+          <View style={styles.scopeBadge}>
+            <Text style={styles.scopeBadgeText}>{TIER_LABELS[tier]}</Text>
           </View>
-        ) : null}
+        </View>
 
         {content && files && technology ? (
           <TrackAudio content={content} files={files} client={client} technology={technology} />
@@ -149,7 +168,7 @@ export default function TrackScreen() {
         </View>
       </View>
     ),
-    [technology, title, tier, picking, pick, content, files, client, inScopeTopics.length],
+    [title, tier, content, files, technology, client, inScopeTopics.length],
   )
 
   const listFooter = useMemo(
@@ -205,6 +224,15 @@ export default function TrackScreen() {
       displayTopics.length,
     ],
   )
+
+  if (!interactionsDone && topics.length === 0) {
+    return (
+      <>
+        <Stack.Screen options={{ title }} />
+        <TrackSkeleton title={title} />
+      </>
+    )
+  }
 
   return (
     <>
@@ -274,7 +302,32 @@ const styles = StyleSheet.create({
   page: { padding: space.lg, gap: space.md, paddingBottom: space.xl * 2 },
   header: { gap: space.md, marginBottom: space.sm },
   footer: { gap: space.md, marginTop: space.sm },
-  picker: { gap: space.xs },
+  trackInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: space.xs,
+    paddingTop: space.xs,
+  },
+  trackTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: colors.fg,
+  },
+  scopeBadge: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.control,
+    paddingHorizontal: space.sm,
+    paddingVertical: 3,
+  },
+  scopeBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.accent,
+    textTransform: 'uppercase',
+  },
   scopeHeader: {
     paddingHorizontal: space.xs,
     paddingTop: space.xs,

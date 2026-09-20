@@ -1,7 +1,7 @@
 import type { ArchiveContent, ArchiveTopic } from '@prep/content/archive/types'
-import { DEFAULT_TIER, questionKey, questionsUpTo, type Tier } from '@prep/core'
+import { DEFAULT_TIER, questionKey, questionsUpTo, tiersUpTo, type Tier } from '@prep/core'
 import { readLearnedTopics, readTrackTiers } from '../db/progress'
-import { enrol } from '../db/schedule'
+import { enrol, readSchedule } from '../db/schedule'
 import type { Database } from '../db/sqlite'
 
 /**
@@ -57,6 +57,9 @@ export async function enrolTopicQuestions(
  * with `now` because that timestamp is what a sync merges it by: the later pick
  * wins, whichever surface made it. This mirrors `pickTrackTier` in
  * apps/web/src/lib/progress.ts.
+ *
+ * It reconciles enrolled questions so any questions above the newly selected tier
+ * do not accumulate due dates in SQLite.
  */
 export async function pickTrackTier(
   db: Database,
@@ -72,15 +75,13 @@ export async function pickTrackTier(
   )
 
   await enrolLearnedTopics(db, content, technology, tier, now)
+  await reconcileTrackEnrolments(db, content, technology, tier)
 }
 
 /**
  * Brings everything already learned on one track up to a tier, which is what a
  * changed pick means: without it the pick would only apply to topics learned
  * after it. This mirrors `enrolLearnedTopics` in apps/web/src/lib/progress.ts.
- *
- * Stepping down enrols nothing and removes nothing. A question already on the
- * ladder is something you have started remembering.
  */
 export async function enrolLearnedTopics(
   db: Database,
@@ -122,6 +123,74 @@ export async function enrolAllLearned(db: Database, content: ArchiveContent): Pr
     const tier = tiers.get(topic.technology) ?? DEFAULT_TIER
     await enrolTopicQuestions(db, topic, tier, learnedAt)
   }
+  await reconcileEnrolments(db, content, tiers)
+}
+
+/**
+ * Removes scheduled questions from `review_schedule` for a specific track that exceed
+ * the active tier for that track.
+ */
+export async function reconcileTrackEnrolments(
+  db: Database,
+  content: ArchiveContent,
+  technology: string,
+  tier: Tier,
+): Promise<number> {
+  const schedule = await readSchedule(db)
+  if (schedule.length === 0) return 0
+
+  const questions = new Map<string, { technology: string; tier: Tier }>()
+  for (const topic of content.topics) {
+    if (topic.technology !== technology) continue
+    for (const q of topic.questions) {
+      questions.set(questionKey(topic.slug, q.id), {
+        technology: topic.technology,
+        tier: q.tier,
+      })
+    }
+  }
+
+  const allowedTiers = new Set(tiersUpTo(tier))
+  const outOfScopeIds: string[] = []
+
+  for (const row of schedule) {
+    const q = questions.get(row.questionId)
+    if (!q) continue
+    if (!allowedTiers.has(q.tier)) {
+      outOfScopeIds.push(row.questionId)
+    }
+  }
+
+  if (outOfScopeIds.length === 0) return 0
+
+  await db.transaction(async () => {
+    for (const id of outOfScopeIds) {
+      await db.run('delete from review_schedule where question_id = ?', [id])
+    }
+  })
+
+  return outOfScopeIds.length
+}
+
+/**
+ * Removes scheduled questions from `review_schedule` that exceed the active tier
+ * across all tracks.
+ *
+ * This reconciles the database so that when a user selects or steps down their
+ * target tier, questions from higher tiers do not linger or accumulate due dates.
+ */
+export async function reconcileEnrolments(
+  db: Database,
+  content: ArchiveContent,
+  tiers: Map<string, Tier>,
+  defaultTier: Tier = DEFAULT_TIER,
+): Promise<number> {
+  let count = 0
+  for (const tech of content.technologies) {
+    const activeTier = tiers.get(tech.id) ?? defaultTier
+    count += await reconcileTrackEnrolments(db, content, tech.id, activeTier)
+  }
+  return count
 }
 
 function enrolments(topic: ArchiveTopic, tier: Tier) {

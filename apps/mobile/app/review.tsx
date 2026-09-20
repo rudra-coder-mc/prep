@@ -2,7 +2,7 @@ import { randomUUID } from 'expo-crypto'
 import { Redirect, useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { RESULT_LABELS, TIER_LABELS, type Result } from '@prep/core'
+import { DAILY_QUEUE_CAP, RESULT_LABELS, TIER_LABELS, type Result } from '@prep/core'
 import type { FileStore } from '../src/archive/files'
 import { readSchedule } from '../src/db/schedule'
 import type { Database } from '../src/db/sqlite'
@@ -52,7 +52,7 @@ export default function ReviewScreen() {
   const [handedOver, setHandedOver] = useState<number | null>(null)
   const scroller = useRef<ScrollView>(null)
 
-  const { content, db, files, sync } = app
+  const { content, db, files, sync, tiers, defaultTier } = app
   const finished = queue !== null && queue.length > 0 && position >= queue.length
 
   useEffect(() => {
@@ -60,14 +60,21 @@ export default function ReviewScreen() {
     if (!content || !db) return
 
     void (async () => {
-      const { items } = buildReviewQueue(content, await readSchedule(db), new Date())
+      const { items } = buildReviewQueue(
+        content,
+        await readSchedule(db),
+        new Date(),
+        DAILY_QUEUE_CAP,
+        tiers,
+        defaultTier,
+      )
       if (!cancelled) setQueue(items)
     })()
 
     return () => {
       cancelled = true
     }
-  }, [content, db])
+  }, [content, db, tiers, defaultTier])
 
   // The end of a session is the one moment the device certainly has something
   // the server does not, so it is the third thing that starts an exchange.
