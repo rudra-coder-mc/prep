@@ -9,7 +9,7 @@
     "backgroundColor": "#0b0e15",
     "android": {
       "package": "dev.atul.prep",
-      "versionCode": 6
+      "versionCode": 7
     },
     "plugins": ["expo-router"],
     "extra": {

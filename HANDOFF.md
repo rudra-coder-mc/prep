@@ -70,3 +70,27 @@ Following the deployment of APK build `versionCode: 5` (Build ID: `6788a92f-2492
 - **Latest Build**: EAS Build ID `6788a92f-2492-41aa-a0cc-de969cd496df` (`versionCode: 5`).
   - [APK Download (Expo CDN)](https://expo.dev/artifacts/eas/2h1v563PfvH7j796hCqB3y.apk)
 - **User Credentials**: `atul@prep.in` / `atul`.
+
+---
+
+## 4. Release Status & Resolution Verification (Build 7)
+
+All three reported regressions have been fully resolved, verified with unit tests and lint checks, and built into a new sideloadable APK:
+
+- **EAS Build ID**: `75569b06-e531-4e37-95cc-6aec7e19ad01`
+- **Version Code**: `7` (App version: `0.1.0`)
+- **Direct APK Download**: [Download Updated APK (Expo CDN)](https://expo.dev/artifacts/eas/nFhUqQWqM4P4UeG1Z2JvVf.apk)
+- **Git Commit**: `b639d80` (pushed to branch `feature/35-installable-apk`)
+
+### Summary of Fixes:
+
+1. **Review Queue Tier Scoping & Auto-Reconciliation**:
+   - `buildReviewQueue` strictly filters scheduled questions with `tiersUpTo(activeTier)`. SWE-2 questions are never served for SWE-1 selections.
+   - Auto-reconciliation (`reconcileEnrolments` / `reconcileTrackEnrolments`) prunes or cleans up any orphan higher-tier schedules on boot and tier change.
+   - Home screen "Due Today" counter matches the exact active-tier queue filter.
+2. **Granular Per-Track Levels in Settings**:
+   - Removed the intrusive in-screen `TierPicker` from `TrackScreen`.
+   - Added a dedicated "Track Target Levels" section in `Settings` where each track (JavaScript, TypeScript, React, Next.js, Browser, etc.) has its own independent tier selector.
+3. **Smooth Screen Transitions & Pulsing Skeletons**:
+   - Created `<TrackSkeleton />` and `<TopicSkeleton />` with smooth opacity pulsing.
+   - Replaced frozen transition delays by running layout initialization and heavy computations behind `InteractionManager.runAfterInteractions`.
