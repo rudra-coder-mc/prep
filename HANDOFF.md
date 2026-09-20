@@ -4,9 +4,9 @@
 
 ### Work Completed
 
-1. **React & Next.js SD-1 Content**:
+1. **React & Next.js SWE-1 Content**:
    - 100% complete (6 React topics, 4 Next.js topics, 120 questions, 20 coding exercises).
-   - Fully verified with `npm run content:check` (0 errors) and bundled into `.content-archive/archive.zip`.
+   - Fully verified with `npm run content:check` (0 errors) and bundled into `.content-archive/archive.zip` (1.0 MB).
 2. **Spoken Audio Synthesis**:
    - 100% complete (152 React audio clips, 100 Next.js audio clips, 0 missing in `.speech-cache`).
 3. **Task 1: Track / Topic Opening Latency & Tier Selection in Settings**:
@@ -24,7 +24,12 @@
 5. **Task 3: UI Decluttering & Everyday User Experience**:
    - Streamlined `OrderingQuestion` and `OpenQuestion` instructional copy.
    - Decluttered track headers and eliminated redundant boilerplate text across the mobile app.
-6. **Code Quality & Validation**:
+6. **Task 35: EAS Production Android APK Build**:
+   - Configured EAS project `@for_coding/prep` (`3de84ee0-a702-4fdf-841e-6bb09dd4a56c`).
+   - Sideloadable Android APK build triggered via EAS (`npx eas build --platform android --profile production --non-interactive`).
+   - Build ID: `6788a92f-2492-41aa-a0cc-de969cd496df`, Version Code: `5`.
+   - Live EAS Build logs: `https://expo.dev/accounts/for_coding/projects/prep/builds/6788a92f-2492-41aa-a0cc-de969cd496df`.
+7. **Code Quality & Validation**:
    - Typecheck: Passed cleanly (`npm run typecheck`).
    - Linter: Passed cleanly (`npm run lint`).
    - Formatter: Prettier 100% formatted (`npm run format:check`).
@@ -37,3 +42,4 @@
 - **User**: `atul@prep.in`
 - **Password**: `atul`
 - **Advanced Curriculum Roadmap**: `docs/future-curriculum-advanced-topics.md` (SWE-2, Senior, and Staff curricula for React and Next.js).
+- **Git Branch**: `feature/35-installable-apk` (pushed to origin).
