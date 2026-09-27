@@ -111,8 +111,14 @@ export function buildDailyQueue(
   }
 
   // The final tiebreak keeps the queue stable, since rows come back unordered.
-  const byDueDate = (a: ScheduledQuestion, b: ScheduledQuestion) =>
-    a.dueAt.getTime() - b.dueAt.getTime() || a.questionId.localeCompare(b.questionId)
+  const byDueDate = (a: ScheduledQuestion, b: ScheduledQuestion) => {
+    const timeDiff = a.dueAt.getTime() - b.dueAt.getTime()
+    if (timeDiff !== 0) return timeDiff
+    const aNew = a.lastResult === null ? 0 : 1
+    const bNew = b.lastResult === null ? 0 : 1
+    if (aNew !== bNew) return aNew - bNew
+    return a.questionId.localeCompare(b.questionId)
+  }
 
   overdue.sort(byDueDate)
   due.sort(byDueDate)

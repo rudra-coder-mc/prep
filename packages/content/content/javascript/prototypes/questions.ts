@@ -33,7 +33,7 @@ The last option describes a language where inheritance exists for methods and no
     id: 'shadowing-output',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const parent = { greeting: 'hello' }
 const child = Object.create(parent)
@@ -66,7 +66,7 @@ Nothing in this reaches parent at any point after the first line, which is the f
     id: 'patching-a-built-in',
     type: 'interview',
     form: 'open',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt:
       'A library adds a helper to Array.prototype so that every array in the application can use it. What goes wrong, and what would you do instead?',
     answerInFull: `It works, and it works retroactively on every array that already exists, because an array holds a link to Array.prototype rather than a copy of it. That is the appeal, and it is also the whole problem: there is one Array.prototype per realm and every piece of code in the process is looking at it.
@@ -93,7 +93,7 @@ The answer that stops at "it is bad practice" is the one this question exists to
     id: 'proto-vs-prototype',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Given const d = new Dog(), which of these is true?',
     options: [
       'd.prototype === Dog.prototype',
@@ -125,7 +125,7 @@ d.__proto__ === Dog swaps the two sides. The instance links to Dog.prototype, no
     id: 'hasownproperty',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       "This is meant to list an object's own keys and includes inherited ones. Which fix is right, and safe on any object?",
     code: `function ownKeys(obj) {
@@ -167,7 +167,7 @@ in is the guard that looks right and does nothing. It answers the same question 
     id: 'method-lookup-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `class Animal {
   speak() {
@@ -217,7 +217,7 @@ true for hasOwn is the same copying belief measured directly. If the instance ha
     id: 'inherited-mutation',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const defaults = { tags: [], name: 'unnamed' }
 const item = Object.create(defaults)
@@ -250,7 +250,7 @@ The rule to say out loud: mutating an inherited object is shared, assigning is n
     id: 'object-create-null',
     type: 'scenario',
     form: 'choice',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'You are building a lookup keyed by strings that come from user input. Which statement about using Object.create(null) for it is right?',
     options: [
@@ -279,7 +279,7 @@ The Map comparison is the one to think about rather than dismiss, because a Map 
     id: 'implement-instanceof',
     type: 'coding',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt:
       'Your myInstanceOf walks the prototype chain of value looking for Constructor.prototype. What else does it need to be correct?',
     options: [
@@ -348,7 +348,7 @@ The private table option is the answer for private methods and fields declared w
     id: 'instanceof-choice',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does `a instanceof B` actually test?',
     options: [
       'Whether a was created by calling B',

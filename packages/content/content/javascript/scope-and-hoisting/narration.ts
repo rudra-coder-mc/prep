@@ -31,7 +31,7 @@ export const narration: Narration = [
       code is written, not by who called it. That is what the word lexical
       means, and it is why you can read a function and know what its names refer
       to without running anything. Hold onto that, because it is the whole
-      foundation of closures two topics from now.`,
+      foundation of closures in the next topic.`,
   },
   {
     title: 'What hoisting actually is',

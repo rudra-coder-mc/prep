@@ -5,7 +5,7 @@ export const questions: Question[] = [
     id: 'any-aggregate-error',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'Every promise passed to Promise.any rejects. What does the returned promise reject with?',
     options: [
@@ -34,7 +34,7 @@ The last reason sounds plausible because the set is complete by then, but nothin
     id: 'all-reject-ordering',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const slow = new Promise((resolve) => {
   setTimeout(() => {
@@ -71,7 +71,7 @@ The unhandled rejection line is the sharpest distractor. It would be right if fa
     id: 'dashboard-partial-failure',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A dashboard loads user, notifications and stats together. The notifications endpoint returns 404 and the whole dashboard renders empty. Which change keeps the working widgets rendering?',
     code: `const [user, notifications, stats] = await Promise.all([
@@ -110,7 +110,7 @@ Retrying inside the same all keeps the all-or-nothing shape. A transient failure
     id: 'retry-backoff-implementation',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'You are writing withRetry(task, attempts), which retries a failing async task with backoff and gives up after attempts tries. Which implementation is right?',
     options: [
@@ -151,7 +151,7 @@ Delegating to a library option is fine when the requirement really is "use the l
     id: 'analytics-fire-and-forget',
     type: 'scenario',
     form: 'choice',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'On page unload you send three analytics beacons. They are independent, nobody reads their responses, and one failing must neither break the page nor produce an unhandled rejection. Which approach is right?',
     options: [
@@ -182,7 +182,7 @@ Chaining serialises independent requests. It is the reflex from code where order
     id: 'mirror-fallback-design-interview',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'Design loadWithFallback(urls): fetch the same resource from several mirrors and get a result even if some mirrors fail. How do you decide between trying them in order and asking them all at once?',
     answerInFull: `- Sequential fallback: reduce over the urls, chaining each attempt onto the previous one's catch. Latency stacks — worst case is the sum of every mirror's timeout — but only one mirror gets hit at a time, which matters if mirrors rate-limit or bill per request.
@@ -203,7 +203,7 @@ Worth naming too: starting all requests eagerly versus lazily. In the parallel v
     id: 'when-inputs-start',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'When do the two requests behind Promise.all([fetchA(), fetchB()]) actually start?',
     options: [
       'When Promise.all is called, which schedules them as microtasks',
@@ -229,7 +229,7 @@ Walking the array one at a time describes sequential execution, which is what an
     id: 'any-first-success-timing',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print, and when?',
     code: `const a = new Promise((_, rej) =>
   setTimeout(() => rej(new Error('a')), 100),
@@ -297,7 +297,7 @@ The rejection clause is a real behaviour of all — it rejects instead of fulfil
     id: 'batched-concurrency-coding',
     type: 'coding',
     form: 'choice',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'You must process 300 ids against an API that allows 3 concurrent requests. Which approach caps concurrency correctly?',
     options: [
@@ -331,7 +331,7 @@ The trust-the-API option inverts responsibility. Client-side concurrency limits 
     id: 'map-async-undefined-results',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'results logs [undefined, undefined]. Why?',
     code: `const ids = ['a1', 'a2']
 

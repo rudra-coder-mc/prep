@@ -5,7 +5,7 @@ export const questions: Question[] = [
     id: 'unwinding-concept',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A throw happens four frames deep, and the only try/catch is in the outermost of them. What happens to the two frames in between?',
     options: [
@@ -34,7 +34,7 @@ Unwinding to the top first would mean every finally in the program ran before an
     id: 'finally-reassign-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `function read() {
   let value = 'from try'
@@ -80,7 +80,7 @@ Nothing here is unreachable. The finally block is reached on every path out of t
     id: 'try-catch-finally-ordering',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function run() {
   try {
@@ -167,7 +167,7 @@ The stack has nothing to do with where the try is. It is captured when the Error
     id: 'finally-return-swallows-debugging',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A disk failure inside work() is reported nowhere: withCleanup returns "done" and the caller carries on. What is swallowing the error?',
     code: `function withCleanup(work) {
@@ -251,7 +251,7 @@ An error thrown from the catch block still goes out through the finally, the sam
     id: 'finally-with-break-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does scan return?',
     code: `function scan(items) {
   const log = []
@@ -300,7 +300,7 @@ Getting stop into the log needs the push below the break to run. The break leave
     id: 'narrow-catch-coding',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A config loader parses JSON that users edit by hand, and should fall back to defaults when the file is malformed. Which catch is right?',
     code: `function loadConfig(raw) {
@@ -341,7 +341,7 @@ Replacing the error with a tidy message throws away the parser's line and column
     id: 'cleanup-masks-cause-scenario',
     type: 'scenario',
     form: 'choice',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'Every failed database call in production is reported as "connection already released". The real errors are nowhere in the logs. The handler releases its connection in a finally. What do you change?',
     options: [
@@ -415,7 +415,7 @@ The binding has been optional since ES2019 and is widely supported. Omitting it 
     id: 'where-to-catch-interview',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'How do you decide where in a call chain to catch an error, and what do you do with one you cannot handle?',
     answerInFull: `- The rule is that a catch belongs where a decision can be made. If this function knows what to do instead, it catches; if it does not, it lets the error past. Catching in order to log and continue is not a decision, it is hiding one.

@@ -92,6 +92,17 @@ describe('buildDailyQueue', () => {
     expect(queue.some((q) => q.questionId === 'weak')).toBe(false)
   })
 
+  it('prioritizes unattempted new questions before previously answered questions due at the same time', () => {
+    const queue = buildDailyQueue(
+      [
+        question('z-new', '2026-08-19T09:00:00Z', { lastResult: null, intervalStep: 0 }),
+        question('a-seen', '2026-08-19T09:00:00Z', { lastResult: 'passed', intervalStep: 1 }),
+      ],
+      NOW,
+    )
+    expect(queue.map((q) => q.questionId)).toEqual(['z-new', 'a-seen'])
+  })
+
   it('returns nothing for an empty schedule or a zero cap', () => {
     expect(buildDailyQueue([], NOW)).toEqual([])
     expect(buildDailyQueue([question('due', '2026-08-19T09:00:00Z')], NOW, 0)).toEqual([])

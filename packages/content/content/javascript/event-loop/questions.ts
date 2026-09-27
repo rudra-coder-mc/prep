@@ -31,7 +31,7 @@ rejection to handle and the catch callback is never called at all.`,
     id: 'microtask-vs-macrotask',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Which of these runs as a macrotask?',
     options: [
       'The callback passed to queueMicrotask',
@@ -62,7 +62,7 @@ The code after an await is the one people miss. An async function looks like a f
     id: 'async-await-ordering',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `async function a() {
   console.log('a start')
@@ -107,7 +107,7 @@ The last order suspends a() at the call to b() rather than at the await, which p
     id: 'blocking-loop',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A user reports the page freezes for two seconds when they click the button. Which change fixes it, for the right reason?',
     code: `button.addEventListener('click', () => {
@@ -143,7 +143,7 @@ async on the handler does nothing to its body. It makes the function return a pr
     id: 'nested-microtasks',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What order do these print?',
     code: `setTimeout(() => console.log('timeout'), 0)
 
@@ -175,7 +175,7 @@ The starvation option over-applies a true rule. An unbounded chain of microtasks
     id: 'settimeout-delay',
     type: 'interview',
     form: 'open',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Does setTimeout(fn, 1000) guarantee fn runs in exactly one second? Explain.',
     answerInFull: `No. It guarantees a minimum delay, not an exact time. After 1000ms the callback becomes eligible, and it runs when the loop next takes a macrotask and the stack is empty. If synchronous work is running, or a long queue is ahead of it, it runs later.
 
@@ -190,7 +190,7 @@ Two more details:
     id: 'render-timing',
     type: 'scenario',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'You set an element to show a loading spinner, then immediately run a long synchronous task. The spinner never appears. Which explanation fits?',
     options: [
@@ -217,7 +217,7 @@ Forcing layout is the sophisticated wrong answer. Reading offsetHeight really do
     id: 'starvation',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'You are processing a large array in chunks so the page keeps painting. Which yield between chunks does that?',
     options: [
@@ -281,7 +281,7 @@ a c d b drains the microtask between the two synchronous lines, which would mean
     id: 'microtask-drain-choice',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'How much of the microtask queue runs between two macrotasks?',
     options: [
       'Exactly one microtask',

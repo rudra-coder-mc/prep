@@ -1,6 +1,6 @@
 import { randomUUID } from 'expo-crypto'
 import { Redirect, useRouter } from 'expo-router'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { DAILY_QUEUE_CAP, RESULT_LABELS, TIER_LABELS, type Result } from '@prep/core'
 import type { FileStore } from '../src/archive/files'
@@ -211,12 +211,12 @@ function Question(props: FormProps) {
   const { item } = props
 
   if (item.question.form === 'choice' && item.question.options) {
-    return <ChoiceQuestion {...props} options={item.question.options} />
+    return <ChoiceQuestion key={item.question.id} {...props} options={item.question.options} />
   }
   if (item.question.form === 'ordering' && item.question.items) {
-    return <OrderingQuestion {...props} items={item.question.items} />
+    return <OrderingQuestion key={item.question.id} {...props} items={item.question.items} />
   }
-  return <OpenQuestion {...props} />
+  return <OpenQuestion key={item.question.id} {...props} />
 }
 
 function Chip({ children }: { children: string }) {
@@ -293,10 +293,26 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+type ShuffledMobileOption = {
+  option: string
+  originalIndex: number
+}
+
+function shuffleMobileOptions(options: string[]): ShuffledMobileOption[] {
+  const items = options.map((option, originalIndex) => ({ option, originalIndex }))
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const temp = items[i]!
+    items[i] = items[j]!
+    items[j] = temp
+  }
+  return items
+}
+
 /**
  * The choice form: pick one, find out immediately, read the full answer, move
- * on. The correct option is on the device, and nothing renders it until the
- * attempt has been written.
+ * on. Options are randomized in display order each time so learners cannot rely
+ * on rote ABCD memorization, while device SQLite grading evaluates against original indices.
  */
 function ChoiceQuestion({
   item,
@@ -309,23 +325,24 @@ function ChoiceQuestion({
 }: FormProps & {
   options: string[]
 }) {
-  const [chosen, setChosen] = useState<number | null>(null)
+  const shuffled = useMemo(() => shuffleMobileOptions(options), [options])
+  const [chosenOriginal, setChosenOriginal] = useState<number | null>(null)
   const [outcome, setOutcome] = useState<ChoiceOutcome | null>(null)
   const [hintsShown, setHintsShown] = useState(0)
   const [busy, setBusy] = useState(false)
 
-  async function choose(index: number) {
+  async function choose(originalIndex: number) {
     if (outcome || busy) return
 
     setBusy(true)
-    setChosen(index)
+    setChosenOriginal(originalIndex)
     onProblem(null)
     try {
-      setOutcome(await answerChoice(db, item, index, { id: makeId(), now: new Date() }))
+      setOutcome(await answerChoice(db, item, originalIndex, { id: makeId(), now: new Date() }))
     } catch (error) {
       // Nothing was recorded, so let the choice be made again rather than
       // leaving an option selected that means nothing.
-      setChosen(null)
+      setChosenOriginal(null)
       onProblem(describe(error))
     } finally {
       setBusy(false)
@@ -343,17 +360,23 @@ function ChoiceQuestion({
       ) : null}
 
       <View style={styles.options} accessibilityLabel="Answer options">
-        {options.map((option, index) => (
+        {shuffled.map((entry, index) => (
           <Pressable
-            key={option}
+            key={`${entry.originalIndex}-${entry.option}`}
             accessibilityRole="button"
-            accessibilityState={{ disabled: outcome !== null || busy, selected: chosen === index }}
+            accessibilityState={{
+              disabled: outcome !== null || busy,
+              selected: chosenOriginal === entry.originalIndex,
+            }}
             disabled={outcome !== null || busy}
-            onPress={() => void choose(index)}
-            style={[styles.option, optionTone(outcome?.correctOption, chosen, index)]}
+            onPress={() => void choose(entry.originalIndex)}
+            style={[
+              styles.option,
+              optionTone(outcome?.correctOption, chosenOriginal, entry.originalIndex),
+            ]}
           >
             <Text style={styles.optionLetter}>{OPTION_LETTERS[index] ?? index + 1}</Text>
-            <Text style={styles.optionText}>{option}</Text>
+            <Text style={styles.optionText}>{entry.option}</Text>
           </Pressable>
         ))}
       </View>
@@ -372,10 +395,16 @@ function ChoiceQuestion({
   )
 }
 
-function optionTone(correctOption: number | undefined, chosen: number | null, index: number) {
-  if (correctOption === undefined) return chosen === index ? styles.optionChosen : undefined
-  if (index === correctOption) return styles.optionRight
-  if (index === chosen) return styles.optionWrong
+function optionTone(
+  correctOption: number | undefined,
+  chosenOriginal: number | null,
+  originalIndex: number,
+) {
+  if (correctOption === undefined) {
+    return chosenOriginal === originalIndex ? styles.optionChosen : undefined
+  }
+  if (originalIndex === correctOption) return styles.optionRight
+  if (originalIndex === chosenOriginal) return styles.optionWrong
   return styles.optionSpent
 }
 

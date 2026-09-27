@@ -5,7 +5,7 @@ export const questions: Question[] = [
     id: 'live-binding-concept',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does an ES module importer actually receive from a named export?',
     options: [
       'A property on a shared namespace object it may reassign',
@@ -42,7 +42,7 @@ Reassigning is what the read only half forbids. A namespace object exists, and i
     id: 'destructured-require-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'A CommonJS file. What does it print?',
     code: `// state.cjs
 let count = 0
@@ -125,7 +125,7 @@ process.env is Node, not the module system, and it works fine in a module. Reach
     id: 'module-evaluation-ordering',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Two ES modules. Put the lines this prints in the order it prints them.',
     code: `// counter.mjs
 console.log('counter evaluated')
@@ -178,7 +178,7 @@ Putting "app body" first is the trap that catches most people. It is the first l
     id: 'static-structure-concept',
     type: 'concept',
     form: 'choice',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'Why does the specification force import specifiers to be string literals at the top level of a module?',
     options: [
@@ -207,7 +207,7 @@ Discouraging a practice is never how the language works here. Conditional loadin
     id: 'dynamic-import-shape-coding',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A charting library is 300kB and only some users open the chart. You load it on demand with import(). Which use is correct?',
     options: [
@@ -238,7 +238,7 @@ The last option is not syntax. import declarations take a literal, and awaiting 
     id: 'cycle-tdz-output',
     type: 'output',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'Two ES modules import each other. Running a.mjs, what happens?',
     code: `// a.mjs
 import { b } from './b.mjs'
@@ -283,7 +283,7 @@ There is no ordering that makes both work. Something has to run first, and in a 
     id: 'interop-named-imports-scenario',
     type: 'scenario',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'Migrating a service to ES modules, one dependency breaks: import { parse } from "old-cjs-lib" throws at load, while the package works fine under require. What is going on, and what do you do?',
     options: [
@@ -315,7 +315,7 @@ The extension rule is real for relative paths in Node modules and irrelevant to 
     id: 'top-level-await-concept',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A module uses await at its top level. What does that do to the modules that import it?',
     options: [
@@ -351,7 +351,7 @@ No importer has to do anything. It is not a syntax error anywhere in a module, a
     id: 'exports-reassignment-debugging',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'This CommonJS module exports nothing: require of it returns an empty object. What is wrong?',
     code: `function parse(input) {
@@ -390,7 +390,7 @@ Hoisting works in this file's favour, not against it: parse is initialised befor
     id: 'which-system-interview',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'Walk me through the differences between ES modules and CommonJS, and how you would decide what a new library should publish.',
     answerInFull: `- Resolution. Modules are parsed, resolved and linked before any evaluation; require resolves when the call runs. Everything else follows from that.

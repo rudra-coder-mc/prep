@@ -33,7 +33,7 @@ Reordering statements would be observable, and it is not. The registration rathe
     id: 'typeof-before-declaration-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `function report() {
   console.log(typeof count)
@@ -68,7 +68,7 @@ The ReferenceError is the temporal dead zone applied to var, which never has one
     id: 'function-then-var-order',
     type: 'output',
     form: 'ordering',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log(greet())
 
@@ -107,7 +107,7 @@ Note that the one misreading this pool cannot hold is early printed twice, which
     id: 'shadowed-var-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `var total = 10
 
@@ -136,7 +136,7 @@ The ReferenceError is the right answer to the let version of this question and t
     id: 'tdz-reference-error',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'This throws "ReferenceError: Cannot access \'fallback\' before initialization" whenever the list is empty. Why?',
     code: `function render(items) {
@@ -173,7 +173,7 @@ The closure option is invented. Closures read a variable whenever they run, and 
     id: 'module-pattern-scope',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'You want a counter whose state cannot be read or reassigned by any code in the surrounding scope, exposing only increment and read. Which of these does it?',
     options: [
@@ -212,7 +212,7 @@ The object version hides nothing. counter is in the surrounding scope and count 
     id: 'const-is-not-frozen',
     type: 'scenario',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'A colleague says the shared config object cannot change because it is declared with const. Values in it are changing at runtime anyway. What do you tell them, and what would you actually do?',
     answerInFull: `const prevents reassigning the binding, not mutating the value. config = {...} throws; config.retries = 5 does not, and that is what is happening.
@@ -262,7 +262,7 @@ The lint rule answer gives away that the temporal dead zone and block scoping ar
     id: 'tdz-typeof-choice',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What happens when this runs?',
     code: `console.log(typeof value)
 let value = 1`,
@@ -314,7 +314,7 @@ The arrow is the same as the anonymous function expression with shorter syntax, 
     id: 'global-property-choice',
     type: 'concept',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt:
       'A script at the top level declares var a = 1 and let b = 2. What is true of globalThis afterwards?',
     options: [
@@ -434,7 +434,7 @@ The silent last line is const read as a lint rule. Reassigning a const throws at
     id: 'accidental-global-bug',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'This function has worked for years in a file loaded with a script tag. Moved into an ES module and imported, it throws "ReferenceError: total is not defined". Why?',
     code: `function tally(items) {

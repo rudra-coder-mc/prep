@@ -78,7 +78,7 @@ export const narration: Narration = [
       Two things to know about iteration. The iterators are live: add an
       entry during a loop over the same Map and the loop will visit it. And
       JSON knows nothing about either collection, so stringify gives an
-      empty object. Convert first, which the JSON topic covers.`,
+      empty object. Convert with Object.fromEntries first before serializing.`,
   },
   {
     title: 'WeakMap and WeakSet',

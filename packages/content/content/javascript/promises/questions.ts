@@ -33,7 +33,7 @@ The last option has the irreversibility right and the handlers wrong. Attaching 
     id: 'all-vs-allsettled',
     type: 'interview',
     form: 'open',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Compare Promise.all, allSettled, race and any, with a practical use for each.',
     answerInFull: `- all: fulfils with every value, or rejects as soon as any one rejects. Use it when you need all of the results and any failure makes the whole thing pointless, such as loading data a page cannot render without.
 - allSettled: never rejects; fulfils with an array of status objects. Use it when you want everything attempted and reported, such as sending several independent analytics calls or a batch where partial success is fine.
@@ -49,7 +49,7 @@ The one that catches people out is that all does not cancel the others when it r
     id: 'sequential-vs-parallel',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'This takes three seconds when it should take one. Which change fixes it?',
     code: `async function loadAll(ids) {
   const results = []
@@ -86,7 +86,7 @@ The last option is the shape people reach for when "make it async" is the goal r
     id: 'settles-once-order',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log('script start')
 
@@ -131,7 +131,7 @@ Nothing here is affected by the timing of the promise. Replacing resolve('first'
     id: 'forgotten-return',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'This chain logs undefined instead of the posts. What is wrong?',
     code: `fetchUser(id)
   .then((user) => {
@@ -171,7 +171,7 @@ The last option is the version of this bug people reach for when a log shows a P
     id: 'await-error-handling',
     type: 'scenario',
     form: 'choice',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt: 'Reviewing this, which criticism is the one worth making?',
     code: `async function load(id) {
   try {
@@ -211,7 +211,7 @@ The last option misreads what returning from a catch does. It fulfils the promis
     id: 'timeout-race',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'You are writing withTimeout(promise, ms), which rejects if the promise has not settled in time. Which implementation is right?',
     options: [
@@ -250,7 +250,7 @@ Promise.any is race's optimistic sibling: it ignores rejections and waits for th
     id: 'unhandled-rejection',
     type: 'output',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'Does this produce an unhandled rejection?',
     code: `const p = Promise.reject(new Error('boom'))
 
@@ -335,7 +335,7 @@ undefined unless awaited is the reading where an async function is lazy, produci
     id: 'promise-all-rejection-choice',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'One of four promises passed to Promise.all rejects. What happens?',
     options: [
       'It waits for all four, then rejects with an array of reasons',

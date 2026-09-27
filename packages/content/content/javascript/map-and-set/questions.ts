@@ -5,7 +5,7 @@ export const questions: Question[] = [
     id: 'map-over-object-choice',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Which of these is NOT a reason to prefer a Map over a plain object?',
     options: [
       'A Map can use objects, functions and NaN as keys; an object converts every key to a string',
@@ -63,7 +63,7 @@ One entry in the Map would need the Map to stringify, which is precisely what it
     id: 'live-iteration-ordering',
     type: 'output',
     form: 'ordering',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const map = new Map([
   ['a', 1],
@@ -130,7 +130,7 @@ Wrapping in new String makes a new object each time, which would be a key that n
     id: 'dedupe-by-id-coding',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'Write uniqueBy(items, key) that returns the items with duplicates removed by item[key], keeping the first occurrence of each, in original order, in linear time. Which is correct?',
     options: [
@@ -167,7 +167,7 @@ The Map version is linear and keeps the last occurrence of each key, not the fir
     id: 'dom-metadata-scenario',
     type: 'scenario',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A library attaches state to DOM elements it decorates, using a Map keyed by element. In a single-page app that creates and removes thousands of elements, memory grows without bound even though the elements are gone from the page. What is the fix?',
     options: [
@@ -200,7 +200,7 @@ Clearing on a timer throws away state for elements that are still on the page.`,
     id: 'choose-a-collection-interview',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'For each of these, say which collection you would use and why: a config object read from a file; a cache from request object to parsed body; a lookup from user id to user, filled from an API; the set of ids the user has selected in a list; and a registry of which plugin instances have been initialised.',
     answerInFull: `Config from a file: a plain object. The keys are a fixed set of names known when the code is written, it arrived as JSON so it is already an object, and dot access reads as a record. A Map would add ceremony and nothing else.
@@ -222,7 +222,7 @@ The rule across all five: fixed string keys known at write time is an object; ke
     id: 'set-identity-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const set = new Set([1, '1', NaN, NaN, { a: 1 }, { a: 1 }, 0, -0])
 console.log(set.size)`,
@@ -245,7 +245,7 @@ That is 1, '1', NaN, the first object, the second object, and 0: six.`,
     id: 'weakmap-restrictions-choice',
     type: 'concept',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'Why can a WeakMap not be iterated, and why must its keys be objects?',
     options: [
       'Iteration was left out to keep the API small, and primitives are rejected because they cannot be hashed',
@@ -271,7 +271,7 @@ WeakMaps key by identity, not by hashed contents. Two objects with the same cont
     id: 'from-entries-stringifies-bug',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A Map keyed by user objects is converted with Object.fromEntries(map) so it can be sent as JSON. The result has one key, "[object Object]". What happened, and what is the right conversion?',
     options: [
@@ -303,7 +303,7 @@ A Map's default iterator is entries already. Asking for entries explicitly chang
     id: 'lru-with-map-choice',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'An LRU cache is built on a single Map, relying on insertion order. On get(key) for a present key, what is the correct way to mark it most recently used?',
     options: [
