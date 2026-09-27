@@ -26,3 +26,11 @@ packages/content/content
 # Secrets.
 .env
 .env.*
+
+# Build, cache and test output not needed by EAS mobile builds.
+.next
+apps/web/.next
+coverage
+playwright-report
+test-results
+.expo
