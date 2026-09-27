@@ -66,9 +66,8 @@ Following the deployment of APK build `versionCode: 5` (Build ID: `6788a92f-2492
 
 ## 3. Current Environment State
 
-- **Branch**: `feature/35-installable-apk` (clean, pushed to origin at `7207f78`).
-- **Latest Build**: EAS Build ID `6788a92f-2492-41aa-a0cc-de969cd496df` (`versionCode: 5`).
-  - [APK Download (Expo CDN)](https://expo.dev/artifacts/eas/2h1v563PfvH7j796hCqB3y.apk)
+- **Branch**: `main` (clean, pushed to origin).
+- **Latest Build**: EAS Build ID `b6ebede5-b27d-42e2-944a-cc626a9890b7` (`versionCode: 10`).
 - **User Credentials**: `atul@prep.in` / `atul`.
 
 ---
@@ -82,15 +81,25 @@ All three reported regressions have been fully resolved, verified with unit test
 - **Direct APK Download**: [Download Updated APK (Expo CDN)](https://expo.dev/artifacts/eas/nFhUqQWqM4P4UeG1Z2JvVf.apk)
 - **Git Commit**: `b639d80` (pushed to branch `feature/35-installable-apk`)
 
-### Summary of Fixes:
+---
 
-1. **Review Queue Tier Scoping & Auto-Reconciliation**:
-   - `buildReviewQueue` strictly filters scheduled questions with `tiersUpTo(activeTier)`. SWE-2 questions are never served for SWE-1 selections.
-   - Auto-reconciliation (`reconcileEnrolments` / `reconcileTrackEnrolments`) prunes or cleans up any orphan higher-tier schedules on boot and tier change.
-   - Home screen "Due Today" counter matches the exact active-tier queue filter.
-2. **Granular Per-Track Levels in Settings**:
-   - Removed the intrusive in-screen `TierPicker` from `TrackScreen`.
-   - Added a dedicated "Track Target Levels" section in `Settings` where each track (JavaScript, TypeScript, React, Next.js, Browser, etc.) has its own independent tier selector.
-3. **Smooth Screen Transitions & Pulsing Skeletons**:
-   - Created `<TrackSkeleton />` and `<TopicSkeleton />` with smooth opacity pulsing.
-   - Replaced frozen transition delays by running layout initialization and heavy computations behind `InteractionManager.runAfterInteractions`.
+## 5. Release Status (Build 10)
+
+Latest build deployed to production profile incorporating curriculum consolidation, audio rebuild, option scrambling, and review prioritization:
+
+- **EAS Build ID**: `b6ebede5-b27d-42e2-944a-cc626a9890b7`
+- **Version Code**: `10` (App version: `0.1.0`)
+- **Direct APK Download**: [Download APK (Expo CDN)](https://expo.dev/artifacts/eas/k18r8m2N7t9098g8QW279L.apk)
+- **EAS Dashboard**: [View Build b6ebede5](https://expo.dev/accounts/for_coding/projects/prep/builds/b6ebede5-b27d-42e2-944a-cc626a9890b7)
+- **Git Commit**: `1320fba` merged and pushed to `main`
+
+### Summary of Features in Build 10:
+
+1. **Dynamic Option Shuffling**:
+   - Randomizes choice order (A, B, C, D) dynamically across web and mobile without mutating the underlying database canonical choice indices.
+2. **Review Queue Prioritization**:
+   - Unattempted questions (`lastResult === null`) are prioritized before previously seen questions in daily review queues.
+3. **Consolidated JavaScript SDE-1 Curriculum**:
+   - Streamlined into 29 comprehensive, high-yield interview topics (362 questions).
+4. **Rebuilt Audio & Mobile Content Archive**:
+   - Transcoded with Opus speech engine and synchronized into the embedded mobile package (`archive.zip` manifest `60e4835d0a403eb9`).
