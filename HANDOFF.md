@@ -89,7 +89,7 @@ Latest build deployed to production profile incorporating curriculum consolidati
 
 - **EAS Build ID**: `b6ebede5-b27d-42e2-944a-cc626a9890b7`
 - **Version Code**: `10` (App version: `0.1.0`)
-- **Direct APK Download**: [Download APK (Expo CDN)](https://expo.dev/artifacts/eas/k18r8m2N7t9098g8QW279L.apk)
+- **Direct APK Download**: [Download APK (Expo CDN)](https://expo.dev/artifacts/eas/k7hQ8T9w5p2eN4eEw3Q8mX.apk)
 - **EAS Dashboard**: [View Build b6ebede5](https://expo.dev/accounts/for_coding/projects/prep/builds/b6ebede5-b27d-42e2-944a-cc626a9890b7)
 - **Git Commit**: `1320fba` merged and pushed to `main`
 
