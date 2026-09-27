@@ -52,7 +52,7 @@ The null case is the one worth saying out loud in an interview, because it is wh
     id: 'nested-default-order',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function log(label) {
   console.log(label)
@@ -115,7 +115,7 @@ Reading options.host in the body would throw in the same way on options being un
     id: 'first-and-last',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'Write firstAndLast(list) that returns { first, last } for any array, using destructuring only. An empty array gives two undefineds and a single element is both first and last. Which of these is correct?',
     options: [
@@ -151,7 +151,7 @@ The list.length version is off by one. The last index is length - 1, so that key
     id: 'null-branch-crash',
     type: 'scenario',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A handler destructures const { data: { items } } = response. Since the API started returning { data: null } on errors, every error crashes the page with a TypeError instead of showing the message. Why, and what is the fix?',
     options: [
@@ -180,7 +180,7 @@ There is no optional pattern syntax. Optional chaining works in expressions, not
     id: 'response-destructuring-interview',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'Walk me through what can go wrong when a function destructures an API response, and how you would defend against each.',
     answerInFull: `Four things, in the order they bite.
@@ -232,7 +232,7 @@ Spreading an object copies own enumerable properties, the same set Object.keys l
     id: 'object-rest-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const { a, ...rest } = { a: 1, b: { n: 2 }, c: 3 }
 const copy = { ...rest }
@@ -257,7 +257,7 @@ c is in rest because rest takes everything the pattern did not name, and the pat
     id: 'rename-and-computed-choice',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Given const { [key]: value = 0, size: n } = stats, which bindings exist afterwards?',
     options: [
       'key, value, size and n',

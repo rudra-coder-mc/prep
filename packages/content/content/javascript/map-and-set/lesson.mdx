@@ -111,7 +111,7 @@ Two things to know about iteration. The iterators are live: adding an entry
 during a `for...of` over the same `Map` will visit it, and deleting one that
 has not been visited yet skips it. And JSON knows nothing about either
 collection, so `JSON.stringify(map)` is `'{}'`; convert with `[...map]` or
-`Object.fromEntries` first, which the JSON topic covers.
+`Object.fromEntries(map)` first before serializing.
 
 ## `WeakMap` and `WeakSet`
 

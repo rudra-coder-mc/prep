@@ -14,7 +14,7 @@ import { readSchedule } from '../db/schedule'
 import { readLearnedTopics, readTierPicks, readTrackTiers } from '../db/progress'
 import { readSetting, writeSetting } from '../db/settings'
 import type { Database } from '../db/sqlite'
-import { enrolLearnedTopics, enrolTopicQuestions } from '../library/learn'
+import { enrolLearnedTopics, enrolTopicQuestions, reconcileEnrolments } from '../library/learn'
 import type {
   ServerClient,
   SyncAttempt,
@@ -94,6 +94,7 @@ export async function syncProgress(
   }
 
   await rebuildSchedules(db, content, [...ingested.questionKeys, ...(await unscheduled(db))])
+  await reconcileEnrolments(db, content, tiers)
   await rebuildLastReviewed(db, ingested.topicSlugs)
   await rebuildActivity(db, ingested.days, now)
 
@@ -356,6 +357,26 @@ async function unscheduled(db: Database): Promise<string[]> {
 }
 
 /**
+ * Replays all questions that have recorded attempts against the given archive.
+ *
+ * Used after installing an updated archive to ensure that any answers recorded
+ * while the device lacked the corresponding questions are stepped to their
+ * rightful ladder rung.
+ */
+export async function replayAttemptedQuestions(
+  db: Database,
+  content: ArchiveContent,
+): Promise<void> {
+  const rows = await db.all<{ question_id: string }>('select distinct question_id from attempts')
+  if (rows.length === 0) return
+  await rebuildSchedules(
+    db,
+    content,
+    rows.map((row) => row.question_id),
+  )
+}
+
+/**
  * Replays each affected question's whole history through the interval ladder.
  *
  * Rebuilding rather than stepping is what makes an attempt from three days ago
@@ -363,7 +384,7 @@ async function unscheduled(db: Database): Promise<string[]> {
  * device holds no copy of has no form to replay against, so its row is left as
  * it stands.
  */
-async function rebuildSchedules(
+export async function rebuildSchedules(
   db: Database,
   content: ArchiveContent,
   questionKeys: string[],

@@ -20,13 +20,15 @@ export const ARCHIVE_FILE = 'archive.zip'
  * The repository root, found by walking up for the lockfile only a workspace
  * root has. The build runs from the root and the app runs from apps/web, and
  * both have to mean the same directory by "the archive".
+ *
+ * See task 39 in TASKS.md.
  */
-export function workspaceRoot(): string {
-  let dir = process.cwd()
+export function workspaceRoot(from = process.cwd()): string {
+  let dir = from
   for (;;) {
     if (existsSync(join(dir, 'package-lock.json'))) return dir
     const parent = dirname(dir)
-    if (parent === dir) return process.cwd()
+    if (parent === dir) throw new Error('no package-lock.json above ' + from)
     dir = parent
   }
 }

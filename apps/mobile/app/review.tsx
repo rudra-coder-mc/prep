@@ -1,8 +1,9 @@
 import { randomUUID } from 'expo-crypto'
 import { Redirect, useRouter } from 'expo-router'
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { RESULT_LABELS, TIER_LABELS, type Result } from '@prep/core'
+import { DAILY_QUEUE_CAP, RESULT_LABELS, TIER_LABELS, type Result } from '@prep/core'
+import type { FileStore } from '../src/archive/files'
 import { readSchedule } from '../src/db/schedule'
 import type { Database } from '../src/db/sqlite'
 import {
@@ -21,19 +22,12 @@ import { Listen } from '../src/ui/listen'
 import { colors, radius, space } from '../src/ui/theme'
 
 /**
- * The day's review, run entirely from what the device holds.
+ * Answering today's questions.
  *
- * Nothing here reaches the network. The queue comes from the archive and the
- * ladder rows beside it, the answer is graded by the same @prep/core functions
- * the server runs, and the attempt waits in SQLite for a sync. See
- * docs/decisions/0033-the-mobile-client-is-offline-first.md.
- *
- * The one part of the web's guarantee that survives offline is the order of
- * events: the answer in full is on this device the whole time, and it is not
- * rendered until the question has been answered.
- *
- * The prompt can be listened to when this track's audio has been downloaded,
- * which is the track screen's job. There is no control at all when it has not.
+ * Runs locally: the queue is built from the schedule in SQLite, the grading
+ * is done on this device, and the next interval is computed and written here.
+ * The session closes by syncing whatever was answered, but it never waits for
+ * a network to do it.
  */
 
 const RESULTS: Result[] = ['passed', 'weak', 'failed']
@@ -45,7 +39,7 @@ const RESULT_COLOURS: Record<Result, string> = {
   failed: colors.fail,
 }
 
-type Tally = Record<Result, number>
+type Tally = { passed: number; weak: number; failed: number }
 
 export default function ReviewScreen() {
   const app = useApp()
@@ -58,7 +52,7 @@ export default function ReviewScreen() {
   const [handedOver, setHandedOver] = useState<number | null>(null)
   const scroller = useRef<ScrollView>(null)
 
-  const { content, db, files, sync } = app
+  const { content, db, files, sync, tiers, defaultTier } = app
   const finished = queue !== null && queue.length > 0 && position >= queue.length
 
   useEffect(() => {
@@ -66,14 +60,21 @@ export default function ReviewScreen() {
     if (!content || !db) return
 
     void (async () => {
-      const { items } = buildReviewQueue(content, await readSchedule(db), new Date())
+      const { items } = buildReviewQueue(
+        content,
+        await readSchedule(db),
+        new Date(),
+        DAILY_QUEUE_CAP,
+        tiers,
+        defaultTier,
+      )
       if (!cancelled) setQueue(items)
     })()
 
     return () => {
       cancelled = true
     }
-  }, [content, db])
+  }, [content, db, tiers, defaultTier])
 
   // The end of a session is the one moment the device certainly has something
   // the server does not, so it is the third thing that starts an exchange.
@@ -118,20 +119,26 @@ export default function ReviewScreen() {
               ? 'Mark a topic learned to put its questions into recall.'
               : describeSession(queue.length, app.syncing, handedOver)}
           </Muted>
+
           {queue.length > 0 ? (
             <View style={styles.tally}>
-              {RESULTS.map((result) => (
-                <View key={result}>
-                  <Text style={styles.tallyLabel}>{RESULT_LABELS[result]}</Text>
-                  <Text style={[styles.tallyCount, { color: RESULT_COLOURS[result] }]}>
-                    {tally[result]}
-                  </Text>
-                </View>
-              ))}
+              <View>
+                <Text style={styles.tallyLabel}>Passed</Text>
+                <Text style={[styles.tallyCount, { color: colors.pass }]}>{tally.passed}</Text>
+              </View>
+              <View>
+                <Text style={styles.tallyLabel}>Weak</Text>
+                <Text style={[styles.tallyCount, { color: colors.weak }]}>{tally.weak}</Text>
+              </View>
+              <View>
+                <Text style={styles.tallyLabel}>Failed</Text>
+                <Text style={[styles.tallyCount, { color: colors.fail }]}>{tally.failed}</Text>
+              </View>
             </View>
           ) : null}
+
           <View style={styles.actions}>
-            <Button label="Done" onPress={() => router.replace('/')} />
+            <Button label="Done" onPress={() => router.push('/')} />
           </View>
         </Card>
       </ScrollView>
@@ -175,6 +182,7 @@ export default function ReviewScreen() {
         key={item.key}
         item={item}
         db={db}
+        files={files}
         onGraded={advance}
         onProblem={setProblem}
         makeId={randomUUID}
@@ -203,12 +211,12 @@ function Question(props: FormProps) {
   const { item } = props
 
   if (item.question.form === 'choice' && item.question.options) {
-    return <ChoiceQuestion {...props} options={item.question.options} />
+    return <ChoiceQuestion key={item.question.id} {...props} options={item.question.options} />
   }
   if (item.question.form === 'ordering' && item.question.items) {
-    return <OrderingQuestion {...props} items={item.question.items} />
+    return <OrderingQuestion key={item.question.id} {...props} items={item.question.items} />
   }
-  return <OpenQuestion {...props} />
+  return <OpenQuestion key={item.question.id} {...props} />
 }
 
 function Chip({ children }: { children: string }) {
@@ -234,8 +242,16 @@ function Hints({ hints, shown, onShow }: { hints: string[]; shown: number; onSho
   )
 }
 
-/** The answer in full, and the explanation when there is one to add. */
-function AnswerCard({ revealed, heading }: { revealed: Revealed; heading: ReactNode }) {
+/** The answer in full, audio playback, and the explanation when there is one to add. */
+function AnswerCard({
+  revealed,
+  heading,
+  files,
+}: {
+  revealed: Revealed
+  heading: ReactNode
+  files: FileStore | null
+}) {
   return (
     <Card>
       {heading}
@@ -245,6 +261,11 @@ function AnswerCard({ revealed, heading }: { revealed: Revealed; heading: ReactN
           <Text style={styles.label}>Worth adding</Text>
           <Text style={styles.explanation}>{revealed.explanation}</Text>
         </>
+      ) : null}
+      {revealed.answerAudioKey ? (
+        <View style={styles.answerAudio}>
+          <Listen files={files} audioKey={revealed.answerAudioKey} label="Listen to explanation" />
+        </View>
       ) : null}
     </Card>
   )
@@ -261,6 +282,7 @@ function Outcome({ correct }: { correct: boolean }) {
 type FormProps = {
   item: QueuedItem
   db: Database
+  files: FileStore | null
   onGraded: (result: Result) => void
   onProblem: (problem: string | null) => void
   makeId: () => string
@@ -271,38 +293,56 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+type ShuffledMobileOption = {
+  option: string
+  originalIndex: number
+}
+
+function shuffleMobileOptions(options: string[]): ShuffledMobileOption[] {
+  const items = options.map((option, originalIndex) => ({ option, originalIndex }))
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const temp = items[i]!
+    items[i] = items[j]!
+    items[j] = temp
+  }
+  return items
+}
+
 /**
  * The choice form: pick one, find out immediately, read the full answer, move
- * on. The correct option is on the device, and nothing renders it until the
- * attempt has been written.
+ * on. Options are randomized in display order each time so learners cannot rely
+ * on rote ABCD memorization, while device SQLite grading evaluates against original indices.
  */
 function ChoiceQuestion({
   item,
   options,
   db,
+  files,
   onGraded,
   onProblem,
   makeId,
 }: FormProps & {
   options: string[]
 }) {
-  const [chosen, setChosen] = useState<number | null>(null)
+  const shuffled = useMemo(() => shuffleMobileOptions(options), [options])
+  const [chosenOriginal, setChosenOriginal] = useState<number | null>(null)
   const [outcome, setOutcome] = useState<ChoiceOutcome | null>(null)
   const [hintsShown, setHintsShown] = useState(0)
   const [busy, setBusy] = useState(false)
 
-  async function choose(index: number) {
+  async function choose(originalIndex: number) {
     if (outcome || busy) return
 
     setBusy(true)
-    setChosen(index)
+    setChosenOriginal(originalIndex)
     onProblem(null)
     try {
-      setOutcome(await answerChoice(db, item, index, { id: makeId(), now: new Date() }))
+      setOutcome(await answerChoice(db, item, originalIndex, { id: makeId(), now: new Date() }))
     } catch (error) {
       // Nothing was recorded, so let the choice be made again rather than
       // leaving an option selected that means nothing.
-      setChosen(null)
+      setChosenOriginal(null)
       onProblem(describe(error))
     } finally {
       setBusy(false)
@@ -320,24 +360,34 @@ function ChoiceQuestion({
       ) : null}
 
       <View style={styles.options} accessibilityLabel="Answer options">
-        {options.map((option, index) => (
+        {shuffled.map((entry, index) => (
           <Pressable
-            key={option}
+            key={`${entry.originalIndex}-${entry.option}`}
             accessibilityRole="button"
-            accessibilityState={{ disabled: outcome !== null || busy, selected: chosen === index }}
+            accessibilityState={{
+              disabled: outcome !== null || busy,
+              selected: chosenOriginal === entry.originalIndex,
+            }}
             disabled={outcome !== null || busy}
-            onPress={() => void choose(index)}
-            style={[styles.option, optionTone(outcome?.correctOption, chosen, index)]}
+            onPress={() => void choose(entry.originalIndex)}
+            style={[
+              styles.option,
+              optionTone(outcome?.correctOption, chosenOriginal, entry.originalIndex),
+            ]}
           >
             <Text style={styles.optionLetter}>{OPTION_LETTERS[index] ?? index + 1}</Text>
-            <Text style={styles.optionText}>{option}</Text>
+            <Text style={styles.optionText}>{entry.option}</Text>
           </Pressable>
         ))}
       </View>
 
       {outcome ? (
         <>
-          <AnswerCard revealed={outcome} heading={<Outcome correct={outcome.correct} />} />
+          <AnswerCard
+            revealed={outcome}
+            heading={<Outcome correct={outcome.correct} />}
+            files={files}
+          />
           <NextQuestion dueAt={outcome.dueAt} onPress={() => onGraded(outcome.result)} />
         </>
       ) : null}
@@ -345,22 +395,28 @@ function ChoiceQuestion({
   )
 }
 
-function optionTone(correctOption: number | undefined, chosen: number | null, index: number) {
-  if (correctOption === undefined) return chosen === index ? styles.optionChosen : undefined
-  if (index === correctOption) return styles.optionRight
-  if (index === chosen) return styles.optionWrong
+function optionTone(
+  correctOption: number | undefined,
+  chosenOriginal: number | null,
+  originalIndex: number,
+) {
+  if (correctOption === undefined) {
+    return chosenOriginal === originalIndex ? styles.optionChosen : undefined
+  }
+  if (originalIndex === correctOption) return styles.optionRight
+  if (originalIndex === chosenOriginal) return styles.optionWrong
   return styles.optionSpent
 }
 
 /**
  * The ordering form: tap the lines in the order the program prints them, and
- * tap one again to take it back out. Nothing says how many of them print, since
- * that is most of the answer on a question about what runs.
+ * tap one again to take it back out.
  */
 function OrderingQuestion({
   item,
   items,
   db,
+  files,
   onGraded,
   onProblem,
   makeId,
@@ -405,10 +461,7 @@ function OrderingQuestion({
         />
       ) : null}
 
-      <Muted>
-        Tap the lines in the order they print. Not everything here prints. Tap one again to take it
-        back out.
-      </Muted>
+      {!outcome ? <Muted>Tap lines in execution order</Muted> : null}
 
       <View style={styles.options} accessibilityLabel="Lines to order">
         {items.map((line, index) => {
@@ -455,7 +508,11 @@ function OrderingQuestion({
               ))}
             </Card>
           ) : null}
-          <AnswerCard revealed={outcome} heading={<Outcome correct={outcome.correct} />} />
+          <AnswerCard
+            revealed={outcome}
+            heading={<Outcome correct={outcome.correct} />}
+            files={files}
+          />
           <NextQuestion dueAt={outcome.dueAt} onPress={() => onGraded(outcome.result)} />
         </>
       )}
@@ -471,10 +528,9 @@ function lineTone(correctOrder: number[] | undefined, chosen: number[], index: n
 }
 
 /**
- * The open form: answer it out loud, reveal, then mark yourself. The only form
- * nothing can grade, so it is the only one that asks.
+ * The open form: answer it out loud, reveal, then self-grade.
  */
-function OpenQuestion({ item, db, onGraded, onProblem, makeId }: FormProps) {
+function OpenQuestion({ item, db, files, onGraded, onProblem, makeId }: FormProps) {
   const [hintsShown, setHintsShown] = useState(0)
   const [revealed, setRevealed] = useState<Revealed | null>(null)
   const [busy, setBusy] = useState(false)
@@ -500,19 +556,19 @@ function OpenQuestion({ item, db, onGraded, onProblem, makeId }: FormProps) {
           shown={hintsShown}
           onShow={() => setHintsShown(hintsShown + 1)}
         />
-        <Muted>
-          Answer it out loud, as you would in the room. Then reveal and mark yourself against what
-          you actually said.
-        </Muted>
-        <Button label="Reveal the answer" onPress={() => setRevealed(revealAnswer(item))} />
+        <Muted>Answer out loud, then reveal to self-grade.</Muted>
+        <Button label="Reveal answer" onPress={() => setRevealed(revealAnswer(item))} />
       </>
     )
   }
 
   return (
     <>
-      <AnswerCard revealed={revealed} heading={<Text style={styles.label}>The answer</Text>} />
-      <Muted>How much of that did you say?</Muted>
+      <AnswerCard
+        revealed={revealed}
+        heading={<Text style={styles.label}>The answer</Text>}
+        files={files}
+      />
       <View style={styles.grades}>
         {RESULTS.map((result) => (
           <Pressable
@@ -617,6 +673,12 @@ const styles = StyleSheet.create({
   label: { color: colors.faint, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.6 },
   answer: { color: colors.fg, fontSize: 15, lineHeight: 23 },
   explanation: { color: colors.muted, fontSize: 14, lineHeight: 21 },
+  answerAudio: {
+    marginTop: space.sm,
+    paddingTop: space.sm,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+  },
   outcome: { fontSize: 16, fontWeight: '600' },
   grades: { flexDirection: 'row', gap: space.sm },
   grade: {

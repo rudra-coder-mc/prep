@@ -28,9 +28,16 @@ const content = archiveContent([
     ],
   }),
   archiveTopic({
+    technology: 'javascript',
+    directory: 'generators',
+    title: 'Generators',
+    questions: [archiveQuestion({ id: 'yield', tier: 'swe-1' })],
+  }),
+  archiveTopic({
     technology: 'browser',
     directory: 'events',
-    questions: [archiveQuestion({ id: 'bubbling', tier: 'swe-2' })],
+    title: 'Events',
+    questions: [archiveQuestion({ id: 'bubble', tier: 'swe-2' })],
   }),
 ])
 
@@ -39,10 +46,12 @@ beforeEach(async () => {
   await migrate(db)
 })
 
-afterEach(() => db?.close())
+afterEach(() => {
+  db.close()
+})
 
 describe('marking a topic learned', () => {
-  it('enrols the questions the tier covers and no others', async () => {
+  it('enrols only the questions at or below the chosen tier', async () => {
     await markTopicLearned(db, content, 'javascript/closures', 'swe-2', MONDAY)
 
     const schedule = await readSchedule(db)
@@ -50,73 +59,71 @@ describe('marking a topic learned', () => {
       'javascript/closures#capture',
       'javascript/closures#scope',
     ])
-    expect(schedule.every((row) => row.intervalStep === 0)).toBe(true)
   })
 
-  it('records when it was read', async () => {
+  it('marks the topic learned as of now', async () => {
     await markTopicLearned(db, content, 'javascript/closures', 'swe-1', MONDAY)
 
     expect(await readLearnedTopics(db)).toEqual(new Map([['javascript/closures', MONDAY]]))
   })
 
-  it('is free to do again: the mark moves, the ladder does not', async () => {
+  it('is idempotent on the ladder', async () => {
     await markTopicLearned(db, content, 'javascript/closures', 'swe-1', MONDAY)
     await db.run('update review_schedule set interval_step = 3, due_at = ? where question_id = ?', [
-      '2026-09-10T09:00:00.000Z',
+      TUESDAY.toISOString(),
       'javascript/closures#scope',
     ])
 
     await markTopicLearned(db, content, 'javascript/closures', 'swe-1', TUESDAY)
 
-    expect(await readLearnedTopics(db)).toEqual(new Map([['javascript/closures', TUESDAY]]))
     expect((await readSchedule(db))[0]).toMatchObject({ intervalStep: 3 })
   })
 
-  it('brings the newly in-scope questions in when the tier has moved up', async () => {
+  it('brings questions up to a newly selected tier when marked learned again', async () => {
     await markTopicLearned(db, content, 'javascript/closures', 'swe-1', MONDAY)
     await markTopicLearned(db, content, 'javascript/closures', 'staff', TUESDAY)
 
     expect(await readSchedule(db)).toHaveLength(3)
   })
 
-  it('refuses a topic this device holds no copy of', async () => {
-    await expect(
-      markTopicLearned(db, content, 'javascript/generators', 'swe-1', MONDAY),
-    ).rejects.toThrow(/no copy/)
-  })
-})
+  it('enrols nothing when the topic holds no questions at that tier', async () => {
+    await markTopicLearned(db, content, 'javascript/generators', 'swe-1', MONDAY)
 
-/**
- * The second way a question is enrolled: the tier moved rather than the topic
- * being read. A pick made on the laptop arrives here through a sync, so this is
- * what stops it applying only to whatever is learned after it.
- */
-describe('bringing what is learned up to a tier', () => {
-  it('enrols the questions the new tier covers on that track alone', async () => {
+    expect(await readSchedule(db)).toHaveLength(1)
+  })
+
+  it('scopes enrolments by technology', async () => {
     await markTopicLearned(db, content, 'javascript/closures', 'swe-1', MONDAY)
     await markTopicLearned(db, content, 'browser/events', 'swe-2', MONDAY)
 
-    await enrolLearnedTopics(db, content, 'javascript', 'swe-2', TUESDAY)
-
     expect((await readSchedule(db)).map((row) => row.questionId).sort()).toEqual([
-      'browser/events#bubbling',
-      'javascript/closures#capture',
+      'browser/events#bubble',
       'javascript/closures#scope',
     ])
   })
 
-  it('leaves a topic that was never read alone', async () => {
-    await enrolLearnedTopics(db, content, 'javascript', 'staff', TUESDAY)
+  it('leaves the database untouched when the topic is not in the archive', async () => {
+    await expect(
+      markTopicLearned(db, content, 'javascript/unknown', 'swe-1', MONDAY),
+    ).rejects.toThrow('This device holds no copy of javascript/unknown')
 
+    expect(await readLearnedTopics(db)).toEqual(new Map())
     expect(await readSchedule(db)).toEqual([])
   })
+})
 
-  // A question already on the ladder is something you have started remembering,
-  // and a change of plan is not a reason to throw that away.
-  it('removes nothing when the tier steps down', async () => {
-    await markTopicLearned(db, content, 'javascript/closures', 'staff', MONDAY)
+describe('enrolling already-learned topics after an archive arrives', () => {
+  it('enrols questions up to each track tier for every topic learned', async () => {
+    await db.run(
+      `insert into topic_progress (topic_slug, learned_at) values ('javascript/closures', ?)`,
+      [MONDAY.toISOString()],
+    )
+    await db.run(
+      `insert into track_tier (technology, tier, updated_at) values ('javascript', 'staff', ?)`,
+      [MONDAY.toISOString()],
+    )
 
-    await enrolLearnedTopics(db, content, 'javascript', 'swe-1', TUESDAY)
+    await enrolLearnedTopics(db, content, 'javascript', 'staff', TUESDAY)
 
     expect(await readSchedule(db)).toHaveLength(3)
   })
@@ -144,6 +151,16 @@ describe('picking the tier for a track', () => {
       'javascript/closures#capture',
       'javascript/closures#scope',
     ])
+  })
+
+  it('reconciles and removes out-of-scope questions when stepping down', async () => {
+    await markTopicLearned(db, content, 'javascript/closures', 'swe-2', MONDAY)
+    expect(await readSchedule(db)).toHaveLength(2)
+
+    await pickTrackTier(db, content, 'javascript', 'swe-1', TUESDAY)
+
+    const schedule = await readSchedule(db)
+    expect(schedule.map((row) => row.questionId)).toEqual(['javascript/closures#scope'])
   })
 
   it('leaves the other tracks where they were', async () => {

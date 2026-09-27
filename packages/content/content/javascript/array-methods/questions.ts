@@ -53,7 +53,7 @@ Unchanged is what you would see if sort returned a copy and the original was pri
     id: 'chain-output-ordering',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const result = [3, 1, 2]
   .filter((n) => {
@@ -97,7 +97,7 @@ A fused pipeline, where each element flows through all three callbacks before th
     id: 'sort-in-place-bug',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A React list component does const sorted = props.items.sort(byName) and renders sorted. After it mounts, a sibling component that renders the same items from the parent shows them in sorted order too, although it never sorts. Why, and what is the fix?',
     options: [
@@ -128,7 +128,7 @@ Passing the same reference to two children is normal and correct; it is how Reac
     id: 'group-by-reduce',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       "Write groupBy(items, key) that returns an object mapping each distinct value of item[key] to the array of items with that value, so groupBy([{ t: 'a' }, { t: 'b' }, { t: 'a' }], 't') gives { a: [...2 items], b: [...1 item] }. Which of these is correct?",
     options: [
@@ -166,7 +166,7 @@ The spread version spreads groups[item[key]] when that group does not yet exist,
     id: 'foreach-async-scenario',
     type: 'scenario',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A script does ids.forEach(async (id) => { await save(id) }) and then logs "done". "done" appears before any save has finished, and the saves all run at once and overload the API. What is happening, and how would you make them run one after another?',
     options: [
@@ -202,7 +202,7 @@ await ids.forEach(...) awaits undefined, which resolves immediately. There is no
     id: 'pick-the-method-interview',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'An interviewer hands you a list of requirements one at a time and asks which array method you would reach for and why: check whether any order is overdue, get the first overdue order, get the ids of all overdue orders, total the value of all orders, and remove one order from the list held in state. Walk through your choices.',
     answerInFull: `Whether any is overdue: some. It returns a boolean, stops at the first match, and reads as the question. filter(...).length > 0 walks the whole array and allocates for a yes or no.
@@ -224,7 +224,7 @@ The thread through all five: pick the method whose name is the answer, and the r
     id: 'includes-vs-indexof-output',
     type: 'output',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const list = [NaN, 0]
 console.log(list.indexOf(NaN), list.includes(NaN), list.includes(-0))`,
@@ -247,7 +247,7 @@ false for includes(NaN) is the === result, and includes does not use ===.`,
     id: 'array-holes-output',
     type: 'output',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const a = Array(3).map(() => 1)
 const b = Array.from({ length: 3 }, () => 1)
@@ -284,7 +284,7 @@ Three undefineds for c is what spreading gives before the map. The map then runs
     id: 'comparator-bug',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       "names.sort((a, b) => a > b) works in one browser and leaves another browser's result unsorted. Why?",
     options: [
@@ -315,7 +315,7 @@ No engine swaps the parameters. The order is what the spec says.`,
     id: 'map-parseint-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `console.log(['1', '2', '3'].map(parseInt))`,
     options: ['[ 1, 2, 3 ]', '[ 1, NaN, NaN ]', '[ NaN, NaN, NaN ]', '[ 1, 2, NaN ]'],

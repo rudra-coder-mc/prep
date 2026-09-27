@@ -1,0 +1,159 @@
+## Why this matters
+
+In classic React client applications, fetching data requires a tangle of boilerplate: an initial render with empty state, a `useEffect` hook that triggers after mounting, a loading spinner state, an error state, and manual cleanup to prevent memory leaks or race conditions.
+
+Next.js App Router eliminates this friction by allowing React Server Components to be standard JavaScript `async` functions. You can directly `await` database queries, ORM calls, or `fetch` requests directly in your component body before any markup is generated.
+
+Furthermore, Next.js layers a multi-level caching system on top of data fetching. Understanding the differences between per-render request memoization, persistent data caching, static versus dynamic rendering, and on-demand revalidation is essential for building high-performance, cost-effective full-stack applications.
+
+## Async Server Components
+
+In the App Router, any Server Component can be declared as `async`:
+
+```tsx
+// app/users/page.tsx
+interface User {
+  id: string
+  name: string
+  email: string
+}
+
+export default async function UsersPage() {
+  const res = await fetch('https://api.example.com/users')
+  const users: User[] = await res.json()
+
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.id}>
+          {user.name} ({user.email})
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+When Next.js renders this component on the server:
+
+1. It executes the async function, pausing until `fetch` resolves.
+2. It renders the component tree with the resolved data into HTML and RSC payload.
+3. The browser receives complete, fully-rendered HTML without waiting for client-side JavaScript execution or waterfall network round-trips.
+
+If multiple fetches are independent of each other, avoid creating an artificial waterfall by awaiting them sequentially. Instead, initiate them concurrently using `Promise.all`:
+
+```tsx
+// Concurrently fetch both resources in parallel
+const [userData, postsData] = await Promise.all([
+  fetch('https://api.example.com/user').then((res) => res.json()),
+  fetch('https://api.example.com/posts').then((res) => res.json()),
+])
+```
+
+## Request memoization
+
+A common React architecture problem is sharing data between sibling or nested components. In traditional React, you either fetch data at the root and drill props down through multiple layers, or reach for a global client state store.
+
+Next.js and React solve this with **Request Memoization**:
+
+If multiple components across your component tree call `fetch` with the identical URL and options during a single server render pass, Next.js automatically dedupes the calls. The network request is executed only once; subsequent calls within the same render pass read directly from an in-memory cache.
+
+```tsx
+// app/layout.tsx
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getUser() // Fetches from API
+  return (
+    <div>
+      <Header user={user} />
+      {children}
+    </div>
+  )
+}
+
+// app/dashboard/page.tsx
+export default async function DashboardPage() {
+  const user = await getUser() // Reads instantly from memoized cache! No 2nd network request!
+  return <div>Welcome back, {user.name}</div>
+}
+
+async function getUser() {
+  const res = await fetch('https://api.example.com/me')
+  return res.json()
+}
+```
+
+Memoization applies only during a single server request lifecycle. Once the response is finished, the in-memory memoization cache is discarded.
+
+## Static versus dynamic rendering
+
+Next.js automatically classifies route segments as either **Statically Rendered** or **Dynamically Rendered**:
+
+### Static Rendering (Default)
+
+Routes are rendered at build time, or in the background following revalidation. The rendered HTML and RSC payload are cached on a Content Delivery Network (CDN). Static rendering is fast, saves server compute costs, and is ideal for blogs, documentation, product catalogs, and marketing pages.
+
+### Dynamic Rendering
+
+Routes are rendered on demand for each user request. Next.js automatically opts a route into dynamic rendering if it encounters:
+
+- **Dynamic Functions**: Accessing `cookies()`, `headers()`, or reading `searchParams` from page props. Because these values vary per incoming HTTP request, the route cannot be pre-computed at build time.
+- **Uncached data requests**: Explicitly disabling caching via `fetch('...', { cache: 'no-store' })` or using `unstable_noStore()`.
+
+```tsx
+import { cookies } from 'next/headers'
+
+export default async function CartPage() {
+  const cookieStore = await cookies()
+  const sessionToken = cookieStore.get('session')?.value
+  // Accessing cookies opts this route segment into dynamic rendering at request time
+  return <div>Session: {sessionToken}</div>
+}
+```
+
+## Cache revalidation strategies
+
+When using cached data, you must choose how and when stale data gets updated. Next.js provides two primary revalidation mechanisms:
+
+### 1. Time-based Revalidation
+
+Data is automatically revalidated after a specific duration of seconds has elapsed:
+
+```tsx
+// Revalidate this request at most once every 60 seconds
+const res = await fetch('https://api.example.com/prices', {
+  next: { revalidate: 60 },
+})
+```
+
+When a user visits after 60 seconds, Next.js initially serves the cached stale data instantly, while triggering a background revalidation. Once the new data finishes fetching, Next.js updates the cache for future visitors (Stale-While-Revalidate).
+
+### 2. On-Demand Revalidation
+
+Data is updated immediately in response to an event, such as a user submitting a form or an external webhook firing:
+
+- **Path revalidation (`revalidatePath`)**: Purges cached data for an entire route path:
+
+  ```tsx
+  import { revalidatePath } from 'next/cache'
+
+  export async function createPost() {
+    'use server'
+    await db.post.create({ ... })
+    revalidatePath('/blog')
+  }
+  ```
+
+- **Tag-based revalidation (`revalidateTag`)**: Purges specific data queries labeled with a tag:
+
+  ```tsx
+  // When fetching:
+  const res = await fetch('https://api.example.com/posts', {
+    next: { tags: ['posts'] },
+  })
+
+  // In an action or webhook:
+  import { revalidateTag } from 'next/cache'
+  revalidateTag('posts')
+  ```
+
+Tag-based revalidation allows fine-grained invalidation without clearing unrelated route data.

@@ -1,13 +1,23 @@
-import { Link, Redirect, useFocusEffect, useRouter } from 'expo-router'
+import { Redirect, Stack, useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { STATUS_LABELS, TIER_LABELS, type Dashboard, type TopicStatus, type Tier } from '@prep/core'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import {
+  DAILY_QUEUE_CAP,
+  STATUS_LABELS,
+  TIER_LABELS,
+  technologyLabel,
+  type Dashboard,
+  type TopicStatus,
+  type Tier,
+} from '@prep/core'
 import { readSchedule } from '../src/db/schedule'
 import { readDashboard } from '../src/library/dashboard'
 import { trackSummaries } from '../src/library/tracks'
 import { buildReviewQueue } from '../src/review/queue'
 import { useApp } from '../src/ui/app-state'
 import { Bar, Button, Card, Heading, Muted, Problem, Waiting } from '../src/ui/components'
+import { TierPicker } from '../src/ui/tier-picker'
 import { statusColour } from '../src/ui/status'
 import { colors, radius, space } from '../src/ui/theme'
 
@@ -23,9 +33,13 @@ import { colors, radius, space } from '../src/ui/theme'
 export default function HomeScreen() {
   const app = useApp()
   const router = useRouter()
+  const insets = useSafeAreaInsets()
+  const [tab, setTab] = useState<'learn' | 'settings'>('learn')
   const [refreshed, setRefreshed] = useState<string | null>(null)
   const [today, setToday] = useState<{ dueToday: number; asking: number } | null>(null)
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
+  const [pickingTier, setPickingTier] = useState(false)
+  const [pickingTrack, setPickingTrack] = useState<string | null>(null)
 
   const { content, db } = app
 
@@ -37,7 +51,14 @@ export default function HomeScreen() {
       if (!content || !db) return
 
       void (async () => {
-        const { items, dueToday } = buildReviewQueue(content, await readSchedule(db), new Date())
+        const { items, dueToday } = buildReviewQueue(
+          content,
+          await readSchedule(db),
+          new Date(),
+          DAILY_QUEUE_CAP,
+          app.tiers,
+          app.defaultTier,
+        )
         const summary = await readDashboard(db, content)
         if (cancelled) return
 
@@ -52,12 +73,12 @@ export default function HomeScreen() {
       // while this screen is open changes the rows behind the counts, and
       // without it they would stand until something else took focus.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [content, db, app.progressRevision]),
+    }, [content, db, app.progressRevision, app.tiers, app.defaultTier]),
   )
 
   const tracks = useMemo(
-    () => (app.content ? trackSummaries(app.content, app.tiers) : []),
-    [app.content, app.tiers],
+    () => (app.content ? trackSummaries(app.content, app.tiers, app.defaultTier) : []),
+    [app.content, app.tiers, app.defaultTier],
   )
 
   if (app.status === 'starting') return <Waiting label="Opening what this device holds" />
@@ -76,126 +97,268 @@ export default function HomeScreen() {
     )
   }
 
+  async function pickDefaultTier(next: Tier) {
+    if (next === app.defaultTier) return
+    setPickingTier(true)
+    try {
+      await app.setDefaultTier(next)
+    } finally {
+      setPickingTier(false)
+    }
+  }
+
+  async function pickTrackTier(technology: string, next: Tier) {
+    const current = app.tiers.get(technology) ?? app.defaultTier
+    if (next === current) return
+    setPickingTrack(technology)
+    try {
+      await app.pickTier(technology, next)
+    } finally {
+      setPickingTrack(null)
+    }
+  }
+
   const readiness = new Map((dashboard?.tracks ?? []).map((track) => [track.id, track]))
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
-      {app.content && today ? (
-        <Card>
-          <View style={styles.todayHead}>
-            <View style={styles.todayText}>
-              <Heading>
-                {today.dueToday > 0 ? `${today.dueToday} due today` : 'Nothing due'}
-              </Heading>
-              <Muted>{describeToday(today)}</Muted>
-            </View>
-            {dashboard ? <Streak streak={dashboard.streak} /> : null}
-          </View>
-          {today.asking > 0 ? (
-            <View style={styles.actions}>
-              <Button label="Start review" onPress={() => router.push('/review')} />
-            </View>
+    <View style={styles.screen}>
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {tab === 'learn' ? (
+        <ScrollView
+          contentContainerStyle={[
+            styles.page,
+            { paddingTop: Math.max(insets.top, space.md) + space.sm },
+          ]}
+        >
+          <Text style={styles.brandTitle}>prep</Text>
+
+          {!app.content ? (
+            <Card>
+              <Text style={styles.cardTitle}>Nothing downloaded yet</Text>
+              <Muted>
+                Download the curriculum once, and every track, lesson and recall exercise runs
+                locally on this device.
+              </Muted>
+              <View style={styles.actions}>
+                <Button
+                  label="Download the curriculum"
+                  onPress={() => void refresh()}
+                  busy={app.refreshing}
+                />
+              </View>
+            </Card>
           ) : null}
-        </Card>
-      ) : null}
 
-      <Card>
-        <Heading>{app.content ? 'Content' : 'Nothing downloaded yet'}</Heading>
-        <Muted>
-          {app.content
-            ? `Version ${app.content.version}. This phone works with the server switched off.`
-            : 'Refresh while the server is reachable, and everything after that works without it.'}
-        </Muted>
-        {refreshed ? <Muted>{refreshed}</Muted> : null}
-        {app.problem ? <Problem>{app.problem}</Problem> : null}
-        <View style={styles.actions}>
-          <Button
-            label={app.content ? 'Refresh' : 'Download the curriculum'}
-            onPress={() => void refresh()}
-            busy={app.refreshing}
-          />
-        </View>
-      </Card>
+          {today ? (
+            <Card>
+              <View style={styles.todayHead}>
+                <View style={styles.todayText}>
+                  <Text style={styles.cardTitle}>
+                    {today.dueToday > 0
+                      ? `${today.dueToday} ${today.dueToday === 1 ? 'question' : 'questions'} due today`
+                      : 'All caught up'}
+                  </Text>
+                  <Muted>{describeToday(today)}</Muted>
+                </View>
+                {dashboard ? <Streak streak={dashboard.streak} /> : null}
+              </View>
+              {today.asking > 0 ? (
+                <View style={styles.actions}>
+                  <Button
+                    label={`Start review (${today.asking})`}
+                    onPress={() => router.push('/review')}
+                  />
+                </View>
+              ) : null}
+            </Card>
+          ) : null}
 
-      {tracks.length > 0 ? (
-        <View style={styles.section}>
-          <Heading>Readiness</Heading>
-          {tracks.map((track) => (
-            <TrackRow
-              key={track.id}
-              id={track.id}
-              label={track.label}
-              tier={track.tier}
-              topics={track.topics}
-              ready={readiness.get(track.id)}
-              onStepUp={(tier) => void app.pickTier(track.id, tier)}
-            />
-          ))}
-        </View>
-      ) : null}
-
-      {dashboard ? (
-        <View style={styles.section}>
-          <Heading>Where it stands</Heading>
-          <Card>
-            {STATUS_ORDER.map((status) => (
-              <Stat
-                key={status}
-                dot={statusColour[status]}
-                label={STATUS_LABELS[status]}
-                value={dashboard.byStatus[status]}
+          <View style={styles.section}>
+            <Heading>Tracks</Heading>
+            {tracks.map((track) => (
+              <TrackRow
+                key={track.id}
+                id={track.id}
+                label={track.label}
+                tier={track.tier}
+                topics={track.topics}
+                ready={readiness.get(track.id)}
+                onStepUp={(tier) => void app.pickTier(track.id, tier)}
               />
             ))}
-          </Card>
-          <Card>
-            <Stat label="Questions answered" value={dashboard.questions.attempted} />
-            <Stat label="Passed" value={dashboard.questions.passed} />
-            <Stat label="Weak" value={dashboard.questions.weak} />
-            <Stat label="Failed" value={dashboard.questions.failed} />
-            <Stat label="Exercises completed" value={dashboard.exercises.completed} />
-            <Stat label="Exercises remaining" value={dashboard.exercises.remaining} />
-          </Card>
-        </View>
-      ) : null}
+          </View>
 
-      {dashboard && dashboard.weakest.length > 0 ? (
-        <View style={styles.section}>
-          <Heading>Slipping</Heading>
-          {dashboard.weakest.map((topic) => (
-            <Link key={topic.slug} href={`/topic/${topic.technology}/${topic.directory}`} asChild>
-              <Pressable
-                accessibilityRole="link"
-                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-              >
-                <View style={styles.rowHead}>
-                  <Text style={styles.rowTitle}>{topic.title}</Text>
-                  <Text style={[styles.status, { color: statusColour[topic.status] }]}>
-                    {STATUS_LABELS[topic.status]}
-                  </Text>
+          {dashboard ? (
+            <View style={styles.section}>
+              <Heading>Where it stands</Heading>
+              <Card>
+                {STATUS_ORDER.map((status) => (
+                  <Stat
+                    key={status}
+                    dot={statusColour[status]}
+                    label={STATUS_LABELS[status]}
+                    value={dashboard.byStatus[status]}
+                  />
+                ))}
+              </Card>
+              <Card>
+                <Stat label="Questions answered" value={dashboard.questions.attempted} />
+                <Stat label="Passed" value={dashboard.questions.passed} />
+                <Stat label="Weak" value={dashboard.questions.weak} />
+                <Stat label="Failed" value={dashboard.questions.failed} />
+                <Stat label="Exercises completed" value={dashboard.exercises.completed} />
+                <Stat label="Exercises remaining" value={dashboard.exercises.remaining} />
+              </Card>
+            </View>
+          ) : null}
+        </ScrollView>
+      ) : (
+        <ScrollView
+          contentContainerStyle={[
+            styles.page,
+            { paddingTop: Math.max(insets.top, space.md) + space.sm },
+          ]}
+        >
+          <Text style={styles.brandTitle}>Settings & Sync</Text>
+
+          <View style={styles.section}>
+            <Heading>Default Interview Level</Heading>
+            <Card>
+              <Muted>
+                Sets your target interview level across all tracks. Topics and questions focus on
+                this level unless overridden per track below.
+              </Muted>
+              <TierPicker
+                label="Default Interview Level"
+                tier={app.defaultTier}
+                busy={pickingTier}
+                onPick={(next) => void pickDefaultTier(next)}
+              />
+            </Card>
+          </View>
+
+          <View style={styles.section}>
+            <Heading>Track Target Levels</Heading>
+            <Muted>
+              Customize interview target levels per track. Each track focuses on questions up to its
+              selected level.
+            </Muted>
+            {app.content ? (
+              app.content.technologies.map((tech) => {
+                const trackTier = app.tiers.get(tech.id) ?? app.defaultTier
+                const isBusy = pickingTrack === tech.id
+                return (
+                  <Card key={tech.id}>
+                    <View style={styles.trackTierHeader}>
+                      <Text style={styles.trackTierTitle}>{technologyLabel(tech.id)}</Text>
+                      <View style={styles.trackTierBadge}>
+                        <Text style={styles.trackTierBadgeText}>{TIER_LABELS[trackTier]}</Text>
+                      </View>
+                    </View>
+                    <TierPicker
+                      label={technologyLabel(tech.id)}
+                      tier={trackTier}
+                      busy={isBusy}
+                      onPick={(next) => void pickTrackTier(tech.id, next)}
+                    />
+                  </Card>
+                )
+              })
+            ) : (
+              <Card>
+                <Muted>Download the curriculum to configure per-track levels.</Muted>
+              </Card>
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <Heading>Curriculum & Resources</Heading>
+            <Card>
+              <Text style={styles.cardTitle}>
+                {app.content ? `Version ${app.content.version}` : 'No archive downloaded'}
+              </Text>
+              <Muted>
+                {app.content
+                  ? 'All tracks, lessons, exercises, and questions run locally on this phone without network.'
+                  : 'Download the curriculum once while connected, and study everywhere offline.'}
+              </Muted>
+              {refreshed ? <Muted>{refreshed}</Muted> : null}
+              {app.problem ? <Problem>{app.problem}</Problem> : null}
+              <View style={styles.actions}>
+                <Button
+                  label={app.content ? 'Check for updates & sync' : 'Download the curriculum'}
+                  onPress={() => void refresh()}
+                  busy={app.refreshing}
+                />
+              </View>
+            </Card>
+          </View>
+
+          <View style={styles.section}>
+            <Heading>Account & Server</Heading>
+            <Card>
+              <View style={styles.settingRow}>
+                <Text style={styles.settingLabel}>User</Text>
+                <Text style={styles.settingValue}>{app.session?.user.email ?? 'Unknown'}</Text>
+              </View>
+              <View style={styles.settingRow}>
+                <Text style={styles.settingLabel}>Server</Text>
+                <Text style={styles.settingValue}>{app.session?.address ?? 'Not configured'}</Text>
+              </View>
+              {app.device ? (
+                <View style={styles.settingRow}>
+                  <Text style={styles.settingLabel}>Device</Text>
+                  <Text style={styles.settingValue}>{app.device.name}</Text>
                 </View>
-                <Bar value={topic.progress} tone="weak" label={`${topic.title} progress`} />
-                <Text style={styles.rowMeta}>{topic.progress}% of its questions passing</Text>
-              </Pressable>
-            </Link>
-          ))}
-        </View>
-      ) : null}
+              ) : null}
+            </Card>
+          </View>
 
-      <View style={styles.footer}>
-        <Muted>
-          {app.session?.user.email}
-          {app.device ? ` · ${app.device.name}` : ''}
-        </Muted>
-        <Muted>{app.session?.address}</Muted>
-        <Button label="Sign out" tone="quiet" onPress={() => void app.signOut()} />
+          <View style={styles.section}>
+            <Heading>Session</Heading>
+            <Card>
+              <Muted>Signing out removes the current session from this device.</Muted>
+              <View style={styles.actions}>
+                <Button label="Sign out" tone="quiet" onPress={() => void app.signOut()} />
+              </View>
+            </Card>
+          </View>
+        </ScrollView>
+      )}
+
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, space.sm) }]}>
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityLabel="Learn tab"
+          accessibilityState={{ selected: tab === 'learn' }}
+          onPress={() => setTab('learn')}
+          style={[styles.tabButton, tab === 'learn' && styles.tabButtonActive]}
+        >
+          <Text style={[styles.tabLabel, tab === 'learn' && styles.tabLabelActive]}>Learn</Text>
+        </Pressable>
+
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityLabel="Settings and resources tab"
+          accessibilityState={{ selected: tab === 'settings' }}
+          onPress={() => setTab('settings')}
+          style={[styles.tabButton, tab === 'settings' && styles.tabButtonActive]}
+        >
+          <Text style={[styles.tabLabel, tab === 'settings' && styles.tabLabelActive]}>
+            Settings & Sync
+          </Text>
+        </Pressable>
       </View>
-    </ScrollView>
+    </View>
   )
 }
 
 const STATUS_ORDER: TopicStatus[] = ['mastered', 'understood', 'learning', 'weak', 'not_started']
 
 function Streak({ streak }: { streak: { current: number; longest: number } }) {
+  if (streak.current === 0) return null
+
   return (
     <View style={styles.streak}>
       <Text style={styles.streakCount}>{streak.current}</Text>
@@ -208,8 +371,6 @@ function Streak({ streak }: { streak: { current: number; longest: number } }) {
 }
 
 /**
- * One track: where it goes, and how ready it is for the tier picked on it.
- *
  * A track with no readiness has no questions the pick covers, so there is
  * nothing to be ready for. It is still listed, because its lessons are still
  * worth reading and its tier is still changeable from the screen behind it.
@@ -229,27 +390,25 @@ function TrackRow({
   ready: Dashboard['tracks'][number] | undefined
   onStepUp: (tier: Tier) => void
 }) {
+  const router = useRouter()
+
   return (
     <View style={styles.track}>
-      <Link href={`/track/${id}`} asChild>
-        <Pressable
-          accessibilityRole="link"
-          style={({ pressed }) => [styles.trackHead, pressed && styles.rowPressed]}
-        >
-          <View style={styles.rowText}>
-            <Text style={styles.rowTitle}>{label}</Text>
-            {/* The readiness line below carries the counts when there is one,
-                so this says the thing that line cannot: that a track with
-                nothing at the pick still has lessons worth reading. */}
-            <Text style={styles.rowMeta}>
-              {ready
-                ? `Preparing for ${TIER_LABELS[tier]}`
-                : `${topics} topics, none asked at ${TIER_LABELS[tier]}`}
-            </Text>
-          </View>
-          <Text style={styles.chevron}>›</Text>
-        </Pressable>
-      </Link>
+      <Pressable
+        accessibilityRole="link"
+        onPress={() => router.push(`/track/${id}`)}
+        style={({ pressed }) => [styles.trackHead, pressed && styles.rowPressed]}
+      >
+        <View style={styles.rowText}>
+          <Text style={styles.rowTitle}>{label}</Text>
+          <Text style={styles.rowMeta}>
+            {ready
+              ? `Preparing for ${TIER_LABELS[tier]}`
+              : `${topics} topics, none asked at ${TIER_LABELS[tier]}`}
+          </Text>
+        </View>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
 
       {ready ? (
         <View style={styles.trackReady}>
@@ -258,8 +417,6 @@ function TrackRow({
             tone="pass"
             label={`${label} readiness for ${TIER_LABELS[tier]}`}
           />
-          {/* The count carries the share, because a tier this bank is thin at
-              would otherwise read as a confident percentage of almost nothing. */}
           <Text style={styles.rowMeta}>
             {ready.readiness.percent}% ready · {ready.readiness.retained} of {ready.readiness.total}{' '}
             questions retained · {ready.started} of {ready.total} topics started
@@ -337,13 +494,26 @@ function describeToday({ dueToday, asking }: { dueToday: number; asking: number 
 }
 
 const styles = StyleSheet.create({
-  page: { padding: space.lg, gap: space.xl },
+  screen: { flex: 1, backgroundColor: colors.bg },
+  page: { padding: space.lg, gap: space.lg, paddingBottom: space.xl * 2 },
+  brandTitle: {
+    color: colors.fg,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  cardTitle: {
+    color: colors.fg,
+    fontSize: 15,
+    fontWeight: '600',
+    lineHeight: 20,
+  },
   section: { gap: space.sm },
   actions: { marginTop: space.sm },
   todayHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space.lg },
-  todayText: { flex: 1, gap: space.sm },
+  todayText: { flex: 1, gap: space.xs },
   streak: { alignItems: 'flex-end' },
-  streakCount: { color: colors.fg, fontSize: 34, fontWeight: '600', lineHeight: 36 },
+  streakCount: { color: colors.fg, fontSize: 26, fontWeight: '600', lineHeight: 28 },
   streakLabel: { color: colors.muted, fontSize: 11 },
   track: {
     backgroundColor: colors.surface,
@@ -368,6 +538,31 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   stepUpLead: { color: colors.pass, fontSize: 14, fontWeight: '600' },
+  trackTierHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: space.sm,
+  },
+  trackTierTitle: {
+    color: colors.fg,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  trackTierBadge: {
+    backgroundColor: colors.raised,
+    borderColor: colors.border,
+    borderWidth: 1,
+    borderRadius: radius.control,
+    paddingHorizontal: space.sm,
+    paddingVertical: 2,
+  },
+  trackTierBadgeText: {
+    color: colors.accent,
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
   row: {
     backgroundColor: colors.surface,
     borderColor: colors.border,
@@ -379,10 +574,10 @@ const styles = StyleSheet.create({
   rowPressed: { backgroundColor: colors.raised },
   rowHead: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   rowText: { flex: 1, gap: 2 },
-  rowTitle: { color: colors.fg, fontSize: 17, fontWeight: '600', flex: 1 },
-  rowMeta: { color: colors.faint, fontSize: 12, lineHeight: 17 },
+  rowTitle: { color: colors.fg, fontSize: 15, fontWeight: '600', flex: 1 },
+  rowMeta: { color: colors.faint, fontSize: 12, lineHeight: 16 },
   status: { fontSize: 12, fontWeight: '600' },
-  chevron: { color: colors.faint, fontSize: 22 },
+  chevron: { color: colors.faint, fontSize: 20 },
   stat: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -391,8 +586,50 @@ const styles = StyleSheet.create({
     paddingVertical: space.xs,
   },
   statLabel: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flex: 1 },
-  statText: { color: colors.muted, fontSize: 14 },
-  statValue: { color: colors.fg, fontSize: 14, fontWeight: '600' },
+  statText: { color: colors.muted, fontSize: 13 },
+  statValue: { color: colors.fg, fontSize: 13, fontWeight: '600' },
   dot: { width: 6, height: 6, borderRadius: 3 },
-  footer: { gap: space.sm, paddingTop: space.lg },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: space.xs,
+  },
+  settingLabel: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  settingValue: {
+    color: colors.fg,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  bottomBar: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    paddingTop: space.sm,
+    paddingHorizontal: space.lg,
+    gap: space.sm,
+  },
+  tabButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: space.sm,
+    borderRadius: radius.control,
+  },
+  tabButtonActive: {
+    backgroundColor: colors.raised,
+  },
+  tabLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.muted,
+  },
+  tabLabelActive: {
+    color: colors.accent,
+    fontWeight: '600',
+  },
 })

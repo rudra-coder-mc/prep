@@ -1,0 +1,95 @@
+## Why this matters
+
+React changed how front-end engineers structure applications by turning the user interface into a pure projection of data. In the traditional DOM, you locate elements, mutate their properties, and manage the event listeners manually. When three different events update the same paragraph, the code quickly tangles because state is scattered across the DOM.
+
+React inverts this. You declare what the interface should look like for a given snapshot of props and state, and React handles mutating the real DOM to match.
+
+The questions that separate junior candidates on this foundation are not about writing a component. They are about the execution model: what JSX actually evaluates to, why components must remain pure functions, why mutating props fails silently or loudly, and what an element descriptor is before it ever touches the browser screen.
+
+## What JSX compiles to
+
+JSX is not HTML, and it is not supported natively by any browser. It is a syntax extension for JavaScript that compilers like Babel or SWC transform into standard function calls.
+
+```jsx
+const element = (
+  <button className="primary" onClick={handleClick}>
+    Submit
+  </button>
+)
+```
+
+Under modern React 17+ JSX transforms, this compiles to a call to `jsx` from the runtime:
+
+```js
+import { jsx as _jsx } from 'react/jsx-runtime'
+
+const element = _jsx('button', {
+  className: 'primary',
+  onClick: handleClick,
+  children: 'Submit',
+})
+```
+
+Because JSX evaluates to a function call, it is an expression. You can assign it to a variable, pass it as an argument, return it from a function, or store it in an array.
+
+Notice two rules that derive directly from this transformation:
+
+**You must return a single root node.** A function call cannot return two separate values simultaneously without wrapping them in an array or container. In JSX, wrapping multiple adjacent tags in `<>...</>` (a Fragment) transforms them into a single call with children, avoiding artificial wrapper `div`s in the DOM.
+
+**Component names must start with a capital letter.** When the tag name begins with a lowercase letter, the compiler treats it as a string representing a built-in HTML tag like `'div'` or `'button'`. When it starts with an uppercase letter, the compiler treats it as an in-scope identifier pointing to a component function or class.
+
+## Components as pure functions
+
+A React component is a JavaScript function that takes props as an argument and returns JSX. For React to reliably reconcile and optimize renders, component rendering must be pure:
+
+**Same inputs, same output.** Given the same props and state, a component should always return the exact same JSX description.
+
+**No side effects during rendering.** Rendering must not mutate external variables, make network calls, write to localStorage, or manipulate the DOM directly.
+
+```jsx
+// Broken: side effect during rendering mutates an external variable
+let guestCount = 0
+function Cup() {
+  guestCount = guestCount + 1
+  return <h2>Tea cup for guest #{guestCount}</h2>
+}
+```
+
+If React renders `Cup` twice (such as in React StrictMode in development, which deliberately invokes component functions twice to uncover side effects), `guestCount` increments twice and the UI shows unpredictable numbering. Side effects belong in event handlers (like `onClick`) or inside `useEffect` after rendering completes.
+
+## Props are read-only snapshots
+
+Props represent the inputs passed from a parent component down to a child. From the child component's perspective, props are strictly immutable:
+
+```jsx
+function PriceDisplay(props) {
+  // Never do this: mutating incoming props
+  props.amount = props.amount * 1.2
+  return <span>${props.amount}</span>
+}
+```
+
+Props are read-only because they belong to the parent component. If a child could mutate `props.amount`, it would alter values other siblings or the parent might be reading, breaking unidirectional data flow and predictability.
+
+When you need data to change over time in response to user interaction, you introduce state with `useState` rather than mutating props. When a parent passes new props, React re-executes the child function with a fresh props object for that render pass.
+
+## Elements are not DOM nodes
+
+Calling a component does not create a DOM element. It returns a plain JavaScript object called a React element:
+
+```js
+{
+  $$typeof: Symbol.for('react.element'),
+  type: 'button',
+  key: null,
+  ref: null,
+  props: {
+    className: 'primary',
+    children: 'Submit'
+  }
+}
+```
+
+This object is lightweight, immutable, and cheap to create. Creating thousands of plain objects in JavaScript takes milliseconds, whereas creating thousands of live DOM nodes is expensive because the browser must track layout geometry, styles, and event listeners.
+
+React compares the new element tree with the previous element tree (a process known as reconciliation or diffing). Only the nodes whose properties or types actually changed are scheduled for mutation on the real browser DOM.

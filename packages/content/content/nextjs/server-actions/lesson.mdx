@@ -1,0 +1,143 @@
+## Why this matters
+
+In traditional single-page React apps, performing a server mutation requires a heavy ceremony: writing an API route handler, manually orchestrating an HTTP `fetch` call with POST headers and JSON serialization, catching network errors, and manually invalidating local component state or cache stores.
+
+Next.js Server Actions drastically streamline this workflow. A Server Action is an asynchronous function that executes directly on the server, but can be invoked seamlessly from client forms, button clicks, or custom hooks without authoring custom REST API endpoints.
+
+Under the hood, Next.js generates an internal RPC endpoint via HTTP POST. For entry-level engineers, understanding how Server Actions interact with the HTML `<form>` element, how progressive enhancement ensures forms submit even before JavaScript loads, and how to track pending states with React hooks is a fundamental full-stack skill.
+
+## The 'use server' directive
+
+You define a Server Action by adding the `'use server'` directive:
+
+- **At the top of an async function**: Inside a Server Component, you can declare an inline Server Action.
+- **At the top of a separate file**: Marking a file with `'use server'` exports async functions that can be imported and called by both Server Components and Client Components.
+
+```tsx
+// app/actions/todos.ts
+'use server'
+
+import db from '@/lib/db'
+import { revalidatePath } from 'next/cache'
+
+export async function createTodo(formData: FormData) {
+  const title = formData.get('title') as string
+  if (!title || title.trim().length === 0) {
+    return { error: 'Title is required' }
+  }
+
+  await db.todo.create({ data: { title } })
+  revalidatePath('/todos')
+}
+```
+
+Because Server Actions execute on the server, they have direct access to backend resources, databases, and environment secrets.
+
+**Security Rule**: Treat Server Actions like public HTTP endpoints. Always authenticate the user and validate all input arguments, because client requests can invoke them directly over the network.
+
+## Form integration and progressive enhancement
+
+Server Actions integrate natively with HTML `<form>` elements via the `action` attribute:
+
+```tsx
+// app/todos/page.tsx (Server Component)
+import { createTodo } from '@/app/actions/todos'
+
+export default function TodoPage() {
+  return (
+    <form action={createTodo}>
+      <input type="text" name="title" placeholder="New todo item" required />
+      <button type="submit">Add Todo</button>
+    </form>
+  )
+}
+```
+
+This pattern provides **progressive enhancement**:
+
+- If the user's internet is slow or client JavaScript has not finished downloading, the browser falls back to a standard HTML form submission. The action executes on the server and reloads the page with fresh data.
+- Once client JavaScript hydrates, React intercepts the form submission, making a fast asynchronous POST request without triggering a full-page reload.
+
+## Managing pending state and feedback
+
+To give users immediate feedback during a mutation (such as disabling the submit button and showing a spinner), React provides specialized hooks.
+
+### Tracking submit state with `useFormStatus`
+
+The `useFormStatus` hook tracks the status of its parent `<form>`:
+
+```tsx
+// app/todos/SubmitButton.tsx
+'use client'
+
+import { useFormStatus } from 'react-dom'
+
+export function SubmitButton() {
+  const { pending } = useFormStatus()
+
+  return (
+    <button type="submit" disabled={pending}>
+      {pending ? 'Saving...' : 'Add Todo'}
+    </button>
+  )
+}
+```
+
+_Note_: `useFormStatus` must be called from a component rendered **inside** the `<form>`, not in the component that defines the `<form>`.
+
+### Managing action state with `useActionState`
+
+When a Server Action returns validation errors or response data, use React's `useActionState` hook (in Client Components):
+
+```tsx
+'use client'
+
+import { useActionState } from 'react'
+import { createTodo } from '@/app/actions/todos'
+
+const initialState = { error: '' }
+
+export function TodoForm() {
+  const [state, formAction, isPending] = useActionState(createTodo, initialState)
+
+  return (
+    <form action={formAction}>
+      <input type="text" name="title" />
+      {state.error && <p className="error">{state.error}</p>}
+      <button type="submit" disabled={isPending}>
+        {isPending ? 'Creating...' : 'Create'}
+      </button>
+    </form>
+  )
+}
+```
+
+## Invalidation and redirects
+
+After completing a mutation on the server, you usually need to update the user's interface to reflect the change.
+
+Next.js provides two core helpers inside Server Actions:
+
+### 1. Cache Invalidation
+
+- `revalidatePath('/todos')`: Invalidates cached data for the specified path, causing Next.js to re-fetch the Server Components on that page and stream the updated UI to the client.
+- `revalidateTag('todos')`: Invalidates all fetch requests tagged with `'todos'`.
+
+### 2. Navigation and Redirects
+
+To redirect the user to a different page after a successful submission, use `redirect()` from `next/navigation`:
+
+```tsx
+'use server'
+
+import { redirect } from 'next/navigation'
+import { revalidatePath } from 'next/cache'
+
+export async function createPost(formData: FormData) {
+  const post = await db.post.create({ ... })
+  revalidatePath('/posts')
+  redirect(`/posts/${post.id}`)
+}
+```
+
+_Note_: `redirect()` works by throwing a special internal Next.js error, so avoid calling `redirect()` inside a generic `try/catch` block that catches and swallows all exceptions.

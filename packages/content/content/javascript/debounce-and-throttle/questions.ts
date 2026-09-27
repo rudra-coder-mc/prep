@@ -34,7 +34,7 @@ Throttling the search box is not catastrophic and it is wasteful: it fires a req
     id: 'debounce-order-ordering',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `function debounce(fn, wait) {
   let timer
@@ -78,7 +78,7 @@ save undefined is there for the misreading where the timer callback loses the ar
     id: 'debounced-return-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print, and why?',
     code: `const price = debounce((qty) => qty * 10, 100)
 
@@ -128,7 +128,7 @@ Nothing prints twice. The timer callback computes 30 and discards it, since no c
     id: 'created-per-call-debugging',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Every keystroke still fires a request. Why is this not debounced?',
     code: `input.addEventListener('input', (event) => {
   const search = debounce((query) => fetchResults(query), 300)
@@ -165,7 +165,7 @@ Reading the value early is correct and deliberate. The event object is pooled or
     id: 'lost-this-debugging',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'This debounce works for plain functions and throws "Cannot read properties of undefined" when used on a method. What is wrong with it?',
     code: `function debounce(fn, wait) {
@@ -224,7 +224,7 @@ Passing the object in would work and would mean writing a different utility for 
     id: 'throttle-implementation-coding',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'You need a throttle that fires immediately on the first call and never drops the final event of a burst. Which implementation does both?',
     options: [
@@ -278,7 +278,7 @@ A debounce is a different behaviour, not a variation on this one: nothing runs a
     id: 'cancel-on-teardown-coding',
     type: 'coding',
     form: 'choice',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'An editor autosaves with a debounced function on a 2 second wait. Closing the editor while a save is pending occasionally writes over a document the user has since opened elsewhere. What do you add?',
     options: [
@@ -323,7 +323,7 @@ Awaiting does not work, because the debounced function returns undefined. Even a
     id: 'stale-response-scenario',
     type: 'scenario',
     form: 'choice',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'A search box debounces at 300ms and still shows results for an older query. The user types "rea", pauses, then types "ct" and pauses again. What is happening, and what fixes it?',
     options: [
@@ -373,7 +373,7 @@ Input events carry the current value. The query is not one behind.`,
     id: 'timer-promises-concept',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does setTimeout(fn, 100) actually guarantee?',
     options: [
       'That fn runs 100ms later, give or take a millisecond of scheduling noise',
@@ -407,7 +407,7 @@ Nothing about the delay excludes blocked time. It is wall clock, measured from w
     id: 'leading-edge-concept',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does the leading edge option on a debounce change?',
     options: [
       'The function runs on the first call and then suppresses further calls until the quiet period has passed',
@@ -443,7 +443,7 @@ Arguments follow the call that actually runs. With a leading edge that is the fi
     id: 'write-debounce-interview',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'Implement debounce, and tell me what a production version has to handle that a ten-line one does not.',
     answerInFull: `- The core is a closure over a timer id. The returned wrapper clears the pending timer and schedules a new one, so only the last call in a burst survives.

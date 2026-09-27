@@ -31,6 +31,7 @@ function queued(question = archiveQuestion()): QueuedItem {
     key: `javascript/closures#${question.id}`,
     topicSlug: 'javascript/closures',
     topicTitle: 'Closures',
+    technology: 'javascript',
     question,
     reason: 'due',
   }

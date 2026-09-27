@@ -59,7 +59,7 @@ export const narration: Narration = [
       details make it production quality. Clear the timer in finally, so an
       early settle does not leave a pending timer keeping a node process alive.
       And remember the race stops your waiting, not the request itself. For
-      that you need abort controller, which has its own topic.
+      that you need an abort controller with an abort signal.
 
       Retries are written around a promise, never by one. A loop that awaits
       the task in a try, sleeps with a growing delay in the catch, and rethrows

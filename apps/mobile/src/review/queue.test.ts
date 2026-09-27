@@ -14,10 +14,21 @@ const NOW = new Date('2026-08-24T09:00:00.000Z')
 
 const content = archiveContent([
   archiveTopic({
+    technology: 'javascript',
+    directory: 'closures',
     questions: [
-      archiveQuestion({ id: 'scope' }),
-      archiveQuestion({ id: 'capture' }),
-      archiveQuestion({ id: 'loops' }),
+      archiveQuestion({ id: 'scope', tier: 'swe-1' }),
+      archiveQuestion({ id: 'capture', tier: 'swe-1' }),
+      archiveQuestion({ id: 'loops', tier: 'swe-1' }),
+      archiveQuestion({ id: 'memory-leak', tier: 'swe-2' }),
+    ],
+  }),
+  archiveTopic({
+    technology: 'browser',
+    directory: 'dom',
+    questions: [
+      archiveQuestion({ id: 'tree-walk', tier: 'swe-1' }),
+      archiveQuestion({ id: 'reflow', tier: 'swe-2' }),
     ],
   }),
 ])
@@ -25,6 +36,14 @@ const content = archiveContent([
 const scheduled = (id: string, dueAt: string): ScheduledQuestion => ({
   questionId: `javascript/closures#${id}`,
   topicSlug: 'javascript/closures',
+  dueAt: new Date(dueAt),
+  intervalStep: 0,
+  lastResult: null,
+})
+
+const scheduledBrowser = (id: string, dueAt: string): ScheduledQuestion => ({
+  questionId: `browser/dom#${id}`,
+  topicSlug: 'browser/dom',
   dueAt: new Date(dueAt),
   intervalStep: 0,
   lastResult: null,
@@ -95,6 +114,54 @@ describe('building the day', () => {
     )
 
     expect(items).toHaveLength(2)
+    expect(dueToday).toBe(3)
+  })
+
+  it('filters out questions exceeding the active tier for SWE-1 user', () => {
+    const rows = [
+      scheduled('scope', '2026-08-24T08:00:00.000Z'),
+      scheduled('memory-leak', '2026-08-24T08:00:00.000Z'), // swe-2
+    ]
+
+    // With defaultTier: 'swe-1' and empty trackTiers
+    const { items, dueToday } = buildReviewQueue(content, rows, NOW, 15, new Map(), 'swe-1')
+
+    expect(items.map((item) => item.question.id)).toEqual(['scope'])
+    expect(dueToday).toBe(1)
+  })
+
+  it('includes SWE-2 questions when track is explicitly set to SWE-2', () => {
+    const rows = [
+      scheduled('scope', '2026-08-24T08:00:00.000Z'),
+      scheduled('memory-leak', '2026-08-24T08:00:00.000Z'), // swe-2
+    ]
+
+    const trackTiers = new Map([['javascript', 'swe-2' as const]])
+    const { items, dueToday } = buildReviewQueue(content, rows, NOW, 15, trackTiers, 'swe-1')
+
+    expect(items.map((item) => item.question.id).sort()).toEqual(['memory-leak', 'scope'])
+    expect(dueToday).toBe(2)
+  })
+
+  it('enforces granular per-track tiers independently across tracks', () => {
+    const rows = [
+      scheduled('scope', '2026-08-24T08:00:00.000Z'), // javascript, swe-1
+      scheduled('memory-leak', '2026-08-24T08:00:00.000Z'), // javascript, swe-2
+      scheduledBrowser('tree-walk', '2026-08-24T08:00:00.000Z'), // browser, swe-1
+      scheduledBrowser('reflow', '2026-08-24T08:00:00.000Z'), // browser, swe-2
+    ]
+
+    // javascript is swe-1, browser is swe-2
+    const trackTiers = new Map([
+      ['javascript', 'swe-1' as const],
+      ['browser', 'swe-2' as const],
+    ])
+
+    const { items, dueToday } = buildReviewQueue(content, rows, NOW, 15, trackTiers, 'swe-1')
+
+    // Should include: javascript/scope (swe-1), browser/tree-walk (swe-1), browser/reflow (swe-2)
+    // Should NOT include: javascript/memory-leak (swe-2)
+    expect(items.map((item) => item.question.id).sort()).toEqual(['reflow', 'scope', 'tree-walk'])
     expect(dueToday).toBe(3)
   })
 })

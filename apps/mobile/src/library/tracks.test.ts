@@ -71,6 +71,13 @@ describe('the tracks a device holds', () => {
     expect(javascript).toMatchObject({ tier: 'senior', questions: 3 })
   })
 
+  it('respects a custom default tier when set', async () => {
+    const [javascript, browser] = trackSummaries(CONTENT, new Map(), 'swe-2')
+
+    expect(javascript).toMatchObject({ tier: 'swe-2', questions: 2 })
+    expect(browser).toMatchObject({ tier: 'swe-2', questions: 1 })
+  })
+
   it('spells the technology the way the platform spells it', async () => {
     expect(trackSummaries(CONTENT, new Map()).map((track) => track.label)).toEqual([
       'JavaScript',
@@ -91,6 +98,20 @@ describe('the topics in a track', () => {
 
     expect(closures?.status).toBe('learning')
     expect(scope?.status).toBe('not_started')
+    expect(closures?.inScope).toBe(true)
+    expect(scope?.inScope).toBe(true)
+  })
+
+  it('marks topics out of scope if they have no questions at or below the tier', async () => {
+    const [theDom] = topicSummaries(CONTENT, 'browser', {
+      tier: 'swe-1',
+      learned: new Map(),
+      attempts: new Map(),
+    })
+
+    // the-dom only has a swe-2 question, so for swe-1 it has 0 questions and is out of scope.
+    expect(theDom?.questions).toBe(0)
+    expect(theDom?.inScope).toBe(false)
   })
 
   it('says when it was marked learned, since that is what enrolled its questions', async () => {

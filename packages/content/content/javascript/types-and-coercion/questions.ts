@@ -36,7 +36,7 @@ The last option has the boolean case and misses the rest. Numbers and strings ar
     id: 'plus-and-minus-order',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `console.log(1 + '2')
 console.log('3' - 1)
@@ -66,7 +66,7 @@ NaN is [] + {} converted to numbers: [] is 0, {} is NaN, and 0 + NaN is NaN. Tha
     id: 'null-comparisons-output',
     type: 'output',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `console.log(null == 0)
 console.log(null >= 0)
@@ -95,7 +95,7 @@ true, false, false is the real rule mirrored: == converting and the relational o
     id: 'falsy-default-bug',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A user who sets their display count to 0 sees 10 items instead, and a user with an empty bio sees the placeholder text they deleted. What is the bug, and what is the fix?',
     code: `function settings(input) {
@@ -137,7 +137,7 @@ The second option knows the bug and not the fix. ?? does not look at truthiness 
     id: 'is-empty',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'Write isEmpty(value) that is true for null, undefined, an empty string, an empty array and an object with no own keys, and false for 0, false and NaN. Which of these is correct?',
     options: [
@@ -172,7 +172,7 @@ The one line version looks right for every value in the list, until Object.keys(
     id: 'string-ids-from-api',
     type: 'scenario',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'An API returns ids as strings, and the codebase compares them with numeric ids using ==. It works today. What would you change, and what would you worry about?',
     answerInFull: `== works here only because the string is numeric and the conversion happens to be right. It stops being right the moment an id is '0012', ' 42 ', an empty string, or larger than Number.MAX_SAFE_INTEGER, and it silently makes '' == 0 true.
@@ -191,7 +191,7 @@ The precision point matters in practice. Ids from a database bigint column excee
     id: 'when-is-loose-equality-ok',
     type: 'interview',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Is there ever a good reason to use == instead of ===?',
     options: [
       'No. == always converts, so the result depends on a table nobody remembers, and every linter bans it outright',
@@ -251,7 +251,7 @@ value == false does not do what it says. '' == false and 0 == false are true, bu
     id: 'empty-array-equals-false-choice',
     type: 'output',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt: 'What is the value of [] == false?',
     options: ['true', 'false', 'It throws a TypeError', 'undefined'],
     correctOption: 0,
@@ -265,7 +265,7 @@ value == false does not do what it says. '' == false and 0 == false are true, bu
     id: 'nan-comparison-choice',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Which of these evaluates to true?',
     options: ['NaN === NaN', 'NaN == NaN', 'Object.is(NaN, NaN)', '[NaN].indexOf(NaN) > -1'],
     correctOption: 2,
@@ -362,7 +362,7 @@ NaN, NaN, 42, NaN is parseInt held to Number's standard, which would leave it wi
     id: 'empty-field-passes-validation',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A required quantity field is submitted empty and this validator accepts it, so the order is created with a quantity of 0. What is wrong?',
     code: `function validQuantity(input) {

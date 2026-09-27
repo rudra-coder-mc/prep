@@ -27,7 +27,30 @@ export default function LoginPage() {
     setPending(true)
     setError(null)
 
-    const { error: signInError } = await signIn.email({ email, password })
+    const raw = email.trim()
+    let primaryEmail = raw
+    let fallbackEmail: string | null = null
+
+    if (raw.toLowerCase() === 'dev') {
+      primaryEmail = 'dev@prep.test'
+      fallbackEmail = 'dev@prep.in'
+    } else if (raw.toLowerCase() === 'dev@prep.test') {
+      fallbackEmail = 'dev@prep.in'
+    } else if (raw.toLowerCase() === 'dev@prep.in') {
+      fallbackEmail = 'dev@prep.test'
+    } else if (raw.toLowerCase() === 'atul') {
+      primaryEmail = 'atul@prep.in'
+    } else if (!raw.includes('@')) {
+      primaryEmail = `${raw}@prep.in`
+    }
+
+    let { error: signInError } = await signIn.email({ email: primaryEmail, password })
+
+    if (signInError && fallbackEmail) {
+      const fallbackResult = await signIn.email({ email: fallbackEmail, password })
+      signInError = fallbackResult.error
+    }
+
     if (signInError) {
       setError('Those credentials were not accepted.')
       setPending(false)
@@ -70,13 +93,15 @@ export default function LoginPage() {
             </label>
             <input
               id="email"
-              type="email"
+              type="text"
               required
               autoFocus
               autoComplete="username"
+              inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={FIELD}
+              placeholder="e.g. dev or atul@prep.in"
             />
           </div>
 
@@ -109,6 +134,18 @@ export default function LoginPage() {
           <Button type="submit" variant="primary" disabled={pending} className="mt-6 w-full">
             {pending ? 'Signing in...' : 'Sign in'}
           </Button>
+
+          <div className="mt-4 rounded-lg border border-border/40 bg-surface/50 p-2.5 text-xs text-muted">
+            <div className="font-medium text-fg mb-1">Testing accounts:</div>
+            <div className="space-y-0.5 font-mono text-[11px]">
+              <div>
+                • dev / dev <span className="text-faint">(or dev@prep.test)</span>
+              </div>
+              <div>
+                • atul / atul <span className="text-faint">(or atul@prep.in)</span>
+              </div>
+            </div>
+          </div>
         </form>
       </motion.div>
     </main>

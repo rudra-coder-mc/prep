@@ -301,8 +301,7 @@ type OrderingVerdict = {
 /**
  * The ordering form: tap the lines in the order the program prints them, and
  * tap one again to take it back out. Nothing says how many of them print, since
- * that is most of the answer on a question about what runs.
- */
+ * that is most of the answer on a question about what runs.\n */
 function OrderingQuestion({
   question,
   items,
@@ -461,10 +460,26 @@ type Verdict = {
   answerAudioKey: string
 }
 
+type ShuffledOption = {
+  text: string
+  originalIndex: number
+}
+
+function shuffleOptions(options: string[]): ShuffledOption[] {
+  const items = options.map((text, originalIndex) => ({ text, originalIndex }))
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const temp = items[i]!
+    items[i] = items[j]!
+    items[j] = temp
+  }
+  return items
+}
+
 /**
  * The choice form: pick one, find out immediately, read the full answer, move
- * on. Grading happens on the server, which is also the only place that knows
- * which option is right.
+ * on. Options are randomized in display order each time so learners cannot rely
+ * on rote ABCD memorization, while server grading evaluates against original indices.
  */
 function ChoiceQuestion({
   question,
@@ -477,31 +492,32 @@ function ChoiceQuestion({
   onGraded: (result: Result) => Promise<void>
   reducedMotion: boolean
 }) {
-  const [chosen, setChosen] = useState<number | null>(null)
+  const [shuffled] = useState<ShuffledOption[]>(() => shuffleOptions(options))
+  const [chosenOriginal, setChosenOriginal] = useState<number | null>(null)
   const [verdict, setVerdict] = useState<Verdict | null>(null)
   const [hintsShown, setHintsShown] = useState(0)
   const [busy, setBusy] = useState(false)
 
-  async function choose(index: number) {
+  async function choose(originalIndex: number) {
     if (verdict !== null || busy) return
     setBusy(true)
-    setChosen(index)
+    setChosenOriginal(originalIndex)
     try {
-      setVerdict(await answerChoiceAction(question.topicSlug, question.id, index))
+      setVerdict(await answerChoiceAction(question.topicSlug, question.id, originalIndex))
     } catch (error) {
       // The choice was not recorded, so let it be made again rather than
       // leaving a selected option that means nothing.
-      setChosen(null)
+      setChosenOriginal(null)
       throw error
     } finally {
       setBusy(false)
     }
   }
 
-  function toneFor(index: number): string {
+  function toneFor(originalIndex: number): string {
     if (!verdict) return 'border-border hover:border-edge hover:bg-raised'
-    if (index === verdict.correctOption) return 'border-pass bg-pass/10 text-pass'
-    if (index === chosen) return 'border-fail bg-fail/10 text-fail'
+    if (originalIndex === verdict.correctOption) return 'border-pass bg-pass/10 text-pass'
+    if (originalIndex === chosenOriginal) return 'border-fail bg-fail/10 text-fail'
     return 'border-border opacity-60'
   }
 
@@ -517,22 +533,22 @@ function ChoiceQuestion({
       ) : null}
 
       <ul aria-label="Answer options" className="mt-6 space-y-2">
-        {options.map((option, index) => (
-          <li key={option}>
+        {shuffled.map((item, index) => (
+          <li key={`${item.originalIndex}-${item.text}`}>
             <button
               type="button"
               disabled={verdict !== null || busy}
-              onClick={() => choose(index)}
+              onClick={() => choose(item.originalIndex)}
               className={cx(
                 'flex w-full items-start gap-3 rounded-card border p-3.5 text-left text-sm transition-colors',
                 'disabled:cursor-default',
-                toneFor(index),
+                toneFor(item.originalIndex),
               )}
             >
               <span className="grid size-6 shrink-0 place-items-center rounded-md border border-current/30 text-xs font-semibold">
                 {OPTION_LETTERS[index] ?? index + 1}
               </span>
-              <span className="font-mono leading-6 whitespace-pre-wrap">{option}</span>
+              <span className="font-mono leading-6 whitespace-pre-wrap">{item.text}</span>
             </button>
           </li>
         ))}
@@ -678,6 +694,7 @@ export function QuestionSession({
 
           {question.form === 'choice' && question.options ? (
             <ChoiceQuestion
+              key={question.id}
               question={question}
               options={question.options}
               onGraded={advance}
@@ -685,13 +702,19 @@ export function QuestionSession({
             />
           ) : question.form === 'ordering' && question.items ? (
             <OrderingQuestion
+              key={question.id}
               question={question}
               items={question.items}
               onGraded={advance}
               reducedMotion={reducedMotion}
             />
           ) : (
-            <OpenQuestion question={question} onGraded={advance} reducedMotion={reducedMotion} />
+            <OpenQuestion
+              key={question.id}
+              question={question}
+              onGraded={advance}
+              reducedMotion={reducedMotion}
+            />
           )}
         </motion.div>
       </AnimatePresence>

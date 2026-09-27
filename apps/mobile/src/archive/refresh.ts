@@ -2,6 +2,10 @@ import type { Database } from '../db/sqlite'
 import type { ServerClient } from '../server/client'
 import type { FileStore } from './files'
 import { installArchive, installedVersion } from './install'
+import { readArchiveContent } from './content'
+import { enrolAllLearned } from '../library/learn'
+import { replayAttemptedQuestions } from '../sync/sync'
+import { pruneAudioLibrary } from '../audio/library'
 
 /**
  * A refresh: replacing the curriculum the device holds with the one the server
@@ -36,6 +40,11 @@ export async function refreshArchive({
   // rebuild in between hands over a different archive, and that archive is still
   // one whole build, so it is installed as what it is.
   const version = await installArchive({ db, files, bytes: await client.downloadArchive() })
+
+  const content = await readArchiveContent(db, files)
+  await enrolAllLearned(db, content)
+  await replayAttemptedQuestions(db, content)
+  await pruneAudioLibrary(files, content)
 
   return { kind: 'installed', version, previous: held }
 }

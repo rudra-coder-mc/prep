@@ -62,6 +62,23 @@ export function trackAudioKeys(content: ArchiveContent, technology: string): str
   return keys
 }
 
+/**
+ * All audio keys named anywhere in the archive across all tracks and topics.
+ */
+export function archiveAudioKeys(content: ArchiveContent): Set<string> {
+  const keys = new Set<string>()
+  for (const topic of content.topics) {
+    for (const section of topic.narration ?? []) {
+      if (section.audioKey) keys.add(section.audioKey)
+    }
+    for (const question of topic.questions) {
+      if (question.promptAudioKey) keys.add(question.promptAudioKey)
+      if (question.answerAudioKey) keys.add(question.answerAudioKey)
+    }
+  }
+  return keys
+}
+
 /** The keys this device holds a recording for, out of the ones asked about. */
 export async function heldRecordings(files: FileStore, keys: string[]): Promise<Set<string>> {
   // One directory listing rather than one existence check per key, because a
@@ -80,4 +97,39 @@ export async function heldBytes(files: FileStore, keys: Iterable<string>): Promi
   let bytes = 0
   for (const key of keys) bytes += (await files.size(recordingPath(key))) ?? 0
   return bytes
+}
+
+/**
+ * Drops recordings from the phone's audio library that are not referenced in the current archive.
+ *
+ * Recordings survive across archive refreshes so that unchanged tracks do not need
+ * to be re-downloaded. Over time, edits to narration scripts or removed questions leave
+ * old recordings behind on the device. Pruning drops files in the audio store whose
+ * keys are no longer referenced in the current archive.
+ * See task 40 in TASKS.md.
+ */
+export async function pruneAudioLibrary(
+  files: FileStore,
+  content: ArchiveContent,
+): Promise<{ deleted: string[]; kept: number }> {
+  const current = archiveAudioKeys(content)
+  const deleted: string[] = []
+  let kept = 0
+
+  const entries = await files.list(AUDIO_ROOT)
+  for (const name of entries) {
+    if (!name.endsWith(EXTENSION)) continue
+    const key = name.slice(0, -EXTENSION.length)
+    if (!KEY.test(key)) continue
+
+    if (current.has(key)) {
+      kept += 1
+      continue
+    }
+
+    await files.remove(recordingPath(key))
+    deleted.push(key)
+  }
+
+  return { deleted, kept }
 }

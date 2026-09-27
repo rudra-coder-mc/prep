@@ -113,7 +113,7 @@ The version of this worth trying by hand is moving let count = 0 above makeCount
     id: 'shared-scope',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `function make() {
   let value = 0
@@ -145,7 +145,7 @@ That is the practical difference between closure based privacy and methods that 
     id: 'loop-capture-fix-output',
     type: 'output',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What does this print?',
     code: `const fns = []
 for (let i = 0; i < 3; i++) {
@@ -171,7 +171,7 @@ The reason matters more than the result. It is not that let is block scoped in t
     id: 'loop-timer-order',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `for (let i = 0; i < 2; i++) {
   setTimeout(() => console.log('timer ' + i), 0)
@@ -197,7 +197,7 @@ Nothing about the delay is involved. A zero millisecond timer is not "as soon as
     id: 'var-in-loop',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'This is meant to print 0, 1, 2. It prints 3, 3, 3. Which change fixes it, for the right reason?',
     code: `for (var i = 0; i < 3; i++) {
@@ -238,7 +238,7 @@ Hoisting the arrow above the loop changes nothing, and it is worth knowing why: 
     id: 'private-state',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'You are writing once(fn). It returns a wrapper that calls fn at most one time and returns that first result on every later call. fn is allowed to return undefined. Which design does that?',
     options: [
@@ -281,7 +281,7 @@ Hanging the result off the wrapper works and gives the state away. Anything hold
     id: 'memory-retention',
     type: 'scenario',
     form: 'choice',
-    tier: 'staff',
+    tier: 'swe-1',
     prompt:
       'A page slowly grows in memory. Event handlers are attached from inside a function that also builds a large array, and the handlers never touch that array. Which explanation fits?',
     options: [
@@ -311,7 +311,7 @@ Unremoved handlers are a real leak and are worth checking anyway, but a handful 
     id: 'module-pattern',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt:
       'How do closures give you private state, and how does that compare with private class fields?',
     answerInFull: `A closure makes state private by construction: the variable lives in a scope nobody outside can name, so there is no syntax that reaches it. This is the module pattern: return an object of functions that all close over the same variables.
@@ -402,7 +402,7 @@ The last option is an invented rule, and it is worth naming because it would mak
     id: 'let-outside-the-loop-bug',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'Every handler this returns gives the last row id. The loop uses let, which is meant to be the fix for exactly this. What is wrong?',
     code: `function makeHandlers(rows) {

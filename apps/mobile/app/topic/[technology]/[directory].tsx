@@ -3,7 +3,7 @@ import { DEFAULT_TIER, questionsUpTo, TIER_LABELS } from '@prep/core'
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router'
 import { openURL } from 'expo-linking'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { InteractionManager, Pressable, StyleSheet, Text, View } from 'react-native'
 import { WebView } from 'react-native-webview'
 import { heldRecordings } from '../../../src/audio/library'
 import { readLearnedTopics } from '../../../src/db/progress'
@@ -15,9 +15,10 @@ import { lessonTheme } from '../../../src/lesson/theme'
 import { findTopic } from '../../../src/library/tracks'
 import { markTopicLearned } from '../../../src/library/learn'
 import { useApp } from '../../../src/ui/app-state'
-import { Button, Muted, Problem, Waiting } from '../../../src/ui/components'
+import { Button, Muted, Problem } from '../../../src/ui/components'
 import { Narration } from '../../../src/ui/narration'
-import { colors, space } from '../../../src/ui/theme'
+import { TopicSkeleton } from '../../../src/ui/skeletons'
+import { colors, radius, space } from '../../../src/ui/theme'
 
 /**
  * A lesson: the page the archive carries, in a WebView, with the player, the
@@ -50,6 +51,32 @@ export default function TopicScreen() {
   const [learnedAt, setLearnedAt] = useState<Date | null>(null)
   const [marking, setMarking] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
+  const [footerMinimized, setFooterMinimized] = useState(false)
+  const [showFooterInfo, setShowFooterInfo] = useState(false)
+  const [interactionsDone, setInteractionsDone] = useState(false)
+
+  // Allow native push transition to complete smoothly before mounting heavy WebView
+  useEffect(() => {
+    let finished = false
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (!finished) {
+        finished = true
+        setInteractionsDone(true)
+      }
+    })
+    const timer = setTimeout(() => {
+      if (!finished) {
+        finished = true
+        setInteractionsDone(true)
+      }
+    }, 250)
+
+    return () => {
+      finished = true
+      task.cancel()
+      clearTimeout(timer)
+    }
+  }, [])
 
   const { content, db, files } = app
   const topic =
@@ -106,13 +133,14 @@ export default function TopicScreen() {
   }
 
   async function markLearned() {
-    if (!content || !db || !topic) return
+    if (!db || !content || !topic) return
 
     setMarking(true)
     setProblem(null)
     try {
-      await markTopicLearned(db, content, topic.slug, tier, new Date())
-      setLearnedAt(new Date())
+      const now = new Date()
+      await markTopicLearned(db, content, topic.slug, tier, now)
+      setLearnedAt(now)
     } catch (error) {
       setProblem(error instanceof Error ? error.message : String(error))
     } finally {
@@ -120,10 +148,8 @@ export default function TopicScreen() {
     }
   }
 
-  if (app.status === 'starting') return <Waiting label="Opening what this device holds" />
+  if (app.status === 'starting') return <TopicSkeleton />
   if (app.status === 'signed-out') return <Redirect href="/sign-in" />
-  if (!content) return <Redirect href="/" />
-
   if (!topic) {
     return (
       <View style={styles.empty}>
@@ -152,7 +178,7 @@ export default function TopicScreen() {
             The archive on this device holds no page for this topic. Refresh the curriculum.
           </Problem>
         </View>
-      ) : uri ? (
+      ) : uri && interactionsDone ? (
         <WebView
           ref={page}
           source={{ uri }}
@@ -171,42 +197,177 @@ export default function TopicScreen() {
           style={styles.page}
         />
       ) : (
-        <Waiting label="Opening the lesson" />
+        <TopicSkeleton />
       )}
 
-      <View style={styles.footer}>
-        <Muted>
-          {enrolling > 0
-            ? `Marking it learned puts its ${enrolling} questions at ${TIER_LABELS[tier]} or below into recall.`
-            : `This topic is asked above ${TIER_LABELS[tier]}, so marking it learned enrols nothing yet.`}
-        </Muted>
-        <Button
-          label={learnedAt ? 'Read again, and re-enrol' : 'Mark learned'}
-          onPress={() => void markLearned()}
-          busy={marking}
-        />
-        {topic.exercises.length > 0 ? (
-          <Button
-            label={`${topic.exercises.length} exercises`}
-            tone="quiet"
-            onPress={() => router.push(`/topic/${technology}/${directory}/exercises`)}
-          />
-        ) : null}
-      </View>
+      {footerMinimized ? (
+        <View style={styles.floatingFooter} pointerEvents="box-none">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Expand lesson actions"
+            onPress={() => setFooterMinimized(false)}
+            style={({ pressed }) => [
+              styles.floatingPill,
+              learnedAt ? styles.floatingPillLearned : null,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Text style={styles.floatingPillText}>
+              {learnedAt ? '✓ Learned' : '⚡ Mark learned'}
+              {topic.exercises.length > 0 ? ` · ${topic.exercises.length} ex` : ''}
+            </Text>
+            <Text style={styles.floatingPillChevron}>▲</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={styles.footer}>
+          {showFooterInfo ? (
+            <View style={styles.footerInfo}>
+              <Muted>
+                {enrolling > 0
+                  ? `Marking it learned puts its ${enrolling} questions at ${TIER_LABELS[tier]} or below into recall.`
+                  : `This topic is asked above ${TIER_LABELS[tier]}, so marking it learned enrols nothing yet.`}
+              </Muted>
+            </View>
+          ) : null}
+
+          <View style={styles.footerRow}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Minimize action bar to read in full screen"
+              onPress={() => setFooterMinimized(true)}
+              style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+            >
+              <Text style={styles.chevronIcon}>▼</Text>
+            </Pressable>
+
+            <View style={styles.footerActions}>
+              <View style={styles.actionBtnWrapper}>
+                <Button
+                  compact
+                  label={learnedAt ? 'Read again' : 'Mark learned'}
+                  onPress={() => void markLearned()}
+                  busy={marking}
+                />
+              </View>
+              {topic.exercises.length > 0 ? (
+                <View style={styles.actionBtnWrapper}>
+                  <Button
+                    compact
+                    label={`${topic.exercises.length} exercises`}
+                    tone="quiet"
+                    onPress={() => router.push(`/topic/${technology}/${directory}/exercises`)}
+                  />
+                </View>
+              ) : null}
+            </View>
+
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={showFooterInfo ? 'Hide details' : 'Show details'}
+              onPress={() => setShowFooterInfo((prev) => !prev)}
+              style={({ pressed }) => [
+                styles.iconBtn,
+                showFooterInfo && styles.iconBtnActive,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.infoIcon, showFooterInfo && styles.infoIconActive]}>ⓘ</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  // The WebView paints white until the page does, and the page is dark.
+  empty: { flex: 1, justifyContent: 'center', padding: space.lg },
+  notice: { paddingHorizontal: space.lg, paddingTop: space.sm },
   page: { flex: 1, backgroundColor: colors.bg },
-  empty: { flex: 1, padding: space.lg },
-  notice: { padding: space.lg, paddingBottom: 0 },
   footer: {
-    gap: space.sm,
-    padding: space.lg,
-    borderTopColor: colors.border,
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
     borderTopWidth: 1,
+    padding: space.md,
+    gap: space.sm,
+  },
+  footerInfo: {
+    paddingBottom: space.xs,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+  },
+  footerActions: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: space.sm,
+  },
+  actionBtnWrapper: {
+    flex: 1,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.control,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.raised,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  iconBtnActive: {
+    backgroundColor: colors.border,
+  },
+  chevronIcon: {
+    fontSize: 12,
+    color: colors.fg,
+  },
+  infoIcon: {
+    fontSize: 14,
+    color: colors.muted,
+  },
+  infoIconActive: {
+    color: colors.fg,
+  },
+  floatingFooter: {
+    position: 'absolute',
+    bottom: space.lg,
+    right: space.lg,
+    zIndex: 10,
+  },
+  floatingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  floatingPillLearned: {
+    borderColor: colors.pass,
+  },
+  floatingPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.fg,
+  },
+  floatingPillChevron: {
+    fontSize: 10,
+    color: colors.muted,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 })

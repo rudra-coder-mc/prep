@@ -67,8 +67,7 @@ export const narration: Narration = [
 
       And cancel is not optional in real code. A pending timer holds its
       callback, its arguments and everything they close over, so an uncancelled
-      debounce is both a stale write and one of the leak shapes from two topics
-      ago.`,
+      debounce is both a stale write and a classic closure memory leak.`,
   },
   {
     title: 'Both edges of a throttle',

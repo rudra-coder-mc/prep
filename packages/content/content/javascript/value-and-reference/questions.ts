@@ -5,7 +5,7 @@ export const questions: Question[] = [
     id: 'pass-by-value-or-reference',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Is JavaScript pass by value or pass by reference?',
     options: [
       'Pass by value for primitives and pass by reference for objects, which is why a function can change an object it was given but not a number',
@@ -66,7 +66,7 @@ The TypeError comes from reading o = ... as a write to the const. box is const; 
     id: 'copy-depth-order',
     type: 'output',
     form: 'ordering',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'Put the lines this prints in the order it prints them.',
     code: `const user = { name: 'Ada', tags: ['admin'] }
 const copy = { ...user }
@@ -115,7 +115,7 @@ shared false is the same misreading as tags 1, asked directly. Anyone who answer
     id: 'shallow-copy-bug',
     type: 'debugging',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'Every request after the first one uses a 50ms timeout, even though the defaults say 1000. What is the bug, and what is the fix?',
     code: `const defaults = { retries: 3, timeout: { ms: 1000 } }
@@ -158,7 +158,7 @@ The const story confuses the binding with the object. const stops config being r
     id: 'deep-freeze',
     type: 'coding',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'Write deepFreeze(value) that freezes an object and everything reachable from it, and survives a structure that contains a cycle. Which of these is correct?',
     options: [
@@ -200,7 +200,7 @@ The Object.keys version freezes the object and skips its symbol-keyed and non-en
     id: 'state-not-updating',
     type: 'scenario',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt:
       'A list component does not re-render after items are added, even though the array clearly has more entries. The code does items.push(next) and then sets state to items. What is happening?',
     options: [
@@ -229,7 +229,7 @@ Index keys produce the wrong rows, not no rows. A list whose state reference cha
     id: 'object-equality-interview',
     type: 'interview',
     form: 'open',
-    tier: 'senior',
+    tier: 'swe-1',
     prompt: 'How would you check whether two objects are equal?',
     answerInFull: `First I would ask what equal means for this data, because the language only gives identity: === is true only when both names point at the same object.
 
@@ -263,7 +263,7 @@ The performance angle is the other half. Deep comparison is O(size) on every cal
     id: 'json-round-trip-choice',
     type: 'concept',
     form: 'choice',
-    tier: 'swe-2',
+    tier: 'swe-1',
     prompt: 'What survives JSON.parse(JSON.stringify(value)) unchanged?',
     options: [
       'A Date, which comes back as a Date',

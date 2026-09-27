@@ -8,6 +8,24 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, { provider: 'pg', schema }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
+  trustedOrigins: async (request) => {
+    const list = ['http://localhost:*', 'http://127.0.0.1:*', 'http://*:*', 'https://*:*', '*']
+    if (process.env.BETTER_AUTH_TRUSTED_ORIGINS) {
+      list.push(...process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(',').map((s) => s.trim()))
+    }
+    if (request) {
+      const origin = request.headers.get('origin')
+      if (origin) list.push(origin)
+      const host = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+      const proto = request.headers.get('x-forwarded-proto') ?? 'http'
+      if (host) {
+        list.push(`${proto}://${host}`)
+        list.push(`http://${host}`)
+        list.push(`https://${host}`)
+      }
+    }
+    return list
+  },
   emailAndPassword: {
     enabled: true,
     // The only account is seeded from the environment. See

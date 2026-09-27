@@ -1,5 +1,5 @@
 import type { ArchiveContent } from '@prep/content/archive/types'
-import type { Tier } from '@prep/core'
+import { DEFAULT_TIER, TIERS, type Tier } from '@prep/core'
 import {
   createContext,
   useCallback,
@@ -19,10 +19,11 @@ import { refreshArchive, type RefreshResult } from '../archive/refresh'
 import { openDatabase } from '../db/expo'
 import { migrate } from '../db/migrate'
 import { readTrackTiers } from '../db/progress'
+import { readSetting, writeSetting } from '../db/settings'
 import type { Database } from '../db/sqlite'
 import { readDeviceIdentity } from '../device/expo'
 import type { DeviceIdentity } from '../device/identity'
-import { pickTrackTier } from '../library/learn'
+import { pickTrackTier, reconcileEnrolments } from '../library/learn'
 import { createServerClient, type ServerClient } from '../server/client'
 import { createSecretStore } from '../session/expo'
 import { restoreSession, signIn, signOut, type StoredSession } from '../session/session'
@@ -38,16 +39,19 @@ import { syncProgress, type SyncOutcome } from '../sync/sync'
  * docs/decisions/0033-the-mobile-client-is-offline-first.md.
  */
 
-type Stores = { db: Database; files: FileStore }
+type Stores = {
+  db: Database
+  files: FileStore
+}
 
 export type AppState = {
-  /** `starting` until the local stores are open, and never longer than that. */
   status: 'starting' | 'signed-out' | 'ready'
   session: StoredSession | null
   device: DeviceIdentity | null
-  /** The curriculum this device holds, or null until a refresh has brought one. */
   content: ArchiveContent | null
   tiers: Map<string, Tier>
+  /** The target interview tier across tracks (defaulting to SWE-1). */
+  defaultTier: Tier
   db: Database | null
   /** The device's storage, which holds the archive and the audio library. */
   files: FileStore | null
@@ -74,6 +78,10 @@ export type AppState = {
    * that offers it because every screen reads the pick out of `tiers`.
    */
   pickTier(technology: string, tier: Tier): Promise<void>
+  /**
+   * Sets the target interview tier across tracks and updates all existing tracks.
+   */
+  setDefaultTier(tier: Tier): Promise<void>
 }
 
 const AppStateContext = createContext<AppState | null>(null)
@@ -93,6 +101,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [device, setDevice] = useState<DeviceIdentity | null>(null)
   const [content, setContent] = useState<ArchiveContent | null>(null)
   const [tiers, setTiers] = useState<Map<string, Tier>>(new Map())
+  const [defaultTier, setDefaultTierState] = useState<Tier>(DEFAULT_TIER)
   const [refreshing, setRefreshing] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [progressRevision, setProgressRevision] = useState(0)
@@ -108,7 +117,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
    * state rather than a failure: it is what the first run looks like.
    */
   const loadLocal = useCallback(async ({ db, files }: Stores) => {
-    setTiers(await readTrackTiers(db))
+    const currentTiers = await readTrackTiers(db)
+    setTiers(currentTiers)
+    const savedTier = await readSetting(db, 'default-tier')
+    let activeDefaultTier: Tier = DEFAULT_TIER
+    if (savedTier && (TIERS as readonly string[]).includes(savedTier)) {
+      activeDefaultTier = savedTier as Tier
+      setDefaultTierState(activeDefaultTier)
+    }
 
     if (!(await installedVersion(db))) {
       setContent(null)
@@ -116,7 +132,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      setContent(await readArchiveContent(db, files))
+      const loaded = await readArchiveContent(db, files)
+      setContent(loaded)
+      await reconcileEnrolments(db, loaded, currentTiers, activeDefaultTier)
     } catch (error) {
       // The version says an archive is installed and it cannot be read, which
       // is a device that needs a refresh rather than one that should not start.
@@ -217,7 +235,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [ready, sync])
 
   // And on coming back to it, which is the moment a phone carried around all day
-  // is most likely to be on the tailnet again.
+  // is most likely to be back on the local Wi-Fi network again.
   useEffect(() => {
     const subscription = NativeAppState.addEventListener('change', (next) => {
       if (next === 'active') void sync()
@@ -233,6 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       device,
       content,
       tiers,
+      defaultTier,
       db: stores?.db ?? null,
       files: stores?.files ?? null,
       client,
@@ -277,6 +296,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setProgressRevision((revision) => revision + 1)
       },
 
+      async setDefaultTier(tier) {
+        if (!stores) return
+
+        setProblem(null)
+        await writeSetting(stores.db, 'default-tier', tier)
+        setDefaultTierState(tier)
+        if (content) {
+          const now = new Date()
+          for (const tech of content.technologies) {
+            await pickTrackTier(stores.db, content, tech.id, tier, now)
+          }
+          const updatedTiers = await readTrackTiers(stores.db)
+          setTiers(updatedTiers)
+          await reconcileEnrolments(stores.db, content, updatedTiers, tier)
+        }
+        setProgressRevision((revision) => revision + 1)
+      },
+
       async refresh() {
         if (!stores || !client) return null
 
@@ -300,6 +337,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       device,
       content,
       tiers,
+      defaultTier,
       refreshing,
       syncing,
       progressRevision,

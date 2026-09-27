@@ -103,8 +103,7 @@ still served their responses somewhere.
 Abandoned promises still finish, their side effects still happen, and an
 unhandled rejection from one can surface long after you believed the failure
 was dealt with. If abandoned work must actually stop, cancellation has to be
-built beside the promises — that is `AbortController`, covered in its own
-topic.
+built beside the promises — typically using an `AbortController` signal.
 
 ## Retrying without hammering
 

@@ -3,9 +3,12 @@ import {
   buildDailyQueue,
   countDueToday,
   DAILY_QUEUE_CAP,
+  DEFAULT_TIER,
   questionKey,
+  tiersUpTo,
   type QueueReason,
   type ScheduledQuestion,
+  type Tier,
 } from '@prep/core'
 
 /**
@@ -14,6 +17,9 @@ import {
  * What to ask and in what order is @prep/core's, so the phone and the laptop
  * offer the same questions in the same order for the same schedule. This file
  * only decides which of the rows can be asked at all.
+ *
+ * Scoped to active track tiers so that questions above a user's chosen interview
+ * tier are never queued or counted towards due today.
  *
  * A queued question carries its answer, because a device with the server
  * switched off has nothing to ask what the right answer is. Keeping it out of
@@ -27,6 +33,7 @@ export type QueuedItem = {
   key: string
   topicSlug: string
   topicTitle: string
+  technology: string
   question: ArchiveQuestion
   reason: QueueReason
 }
@@ -38,7 +45,12 @@ export type ReviewQueue = {
   cap: number
 }
 
-type Known = { topicSlug: string; topicTitle: string; question: ArchiveQuestion }
+type Known = {
+  topicSlug: string
+  topicTitle: string
+  technology: string
+  question: ArchiveQuestion
+}
 
 function questionsByKey(content: ArchiveContent): Map<string, Known> {
   const index = new Map<string, Known>()
@@ -48,6 +60,7 @@ function questionsByKey(content: ArchiveContent): Map<string, Known> {
       index.set(questionKey(topic.slug, question.id), {
         topicSlug: topic.slug,
         topicTitle: topic.title,
+        technology: topic.technology,
         question,
       })
     }
@@ -61,13 +74,20 @@ export function buildReviewQueue(
   schedule: ScheduledQuestion[],
   now: Date,
   cap: number = DAILY_QUEUE_CAP,
+  trackTiers?: Map<string, Tier>,
+  defaultTier: Tier = DEFAULT_TIER,
 ): ReviewQueue {
   const index = questionsByKey(content)
 
   // An archive is replaced whole and can lag behind a sync, so a row can name a
-  // question this device holds no copy of. Both the queue and the count are
-  // taken from what is left, or the screen promises a question it cannot ask.
-  const askable = schedule.filter((row) => index.has(row.questionId))
+  // question this device holds no copy of. Furthermore, questions exceeding the
+  // user's active tier for a track must not be asked or counted.
+  const askable = schedule.filter((row) => {
+    const known = index.get(row.questionId)
+    if (!known) return false
+    const activeTier = trackTiers?.get(known.technology) ?? defaultTier
+    return tiersUpTo(activeTier).includes(known.question.tier)
+  })
 
   const items = buildDailyQueue(askable, now, cap).flatMap((entry): QueuedItem[] => {
     const known = index.get(entry.questionId)

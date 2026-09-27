@@ -1,0 +1,82 @@
+## Why this matters
+
+The `useEffect` hook is one of the most misused features in React. Beginners frequently view it as a catch-all lifecycle bucket—treating it like `componentDidMount`, `componentDidUpdate`, and `componentWillUnmount` combined. This mental model often leads to infinite re-render loops, race conditions in network requests, and desynchronized user interfaces.
+
+In modern React, **an effect is not a lifecycle hook; it is a mechanism to synchronize a component with an external system**.
+
+An external system is anything not controlled by React: the browser DOM (e.g. manipulating document title or focusing an element), a WebSocket connection, a canvas API, an interval timer, or a third-party non-React library.
+
+## Effects synchronize external systems
+
+Component rendering is pure calculation: it maps props and state to a tree of React elements. Side effects do not belong in rendering.
+
+Most side effects belong in **event handlers** (like `onClick` or `onSubmit`) because they are triggered directly by user interaction.
+
+When an operation must happen _because the component was displayed to the user_, regardless of which user interaction brought it there, you declare an effect:
+
+```jsx
+import { useEffect } from 'react'
+
+function VideoPlayer({ isPlaying, src }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (isPlaying) {
+      ref.current.play()
+    } else {
+      ref.current.pause()
+    }
+  }, [isPlaying]) // Re-run effect whenever isPlaying changes
+
+  return <video ref={ref} src={src} />
+}
+```
+
+The effect synchronizes the imperative HTML5 video DOM API with React's declarative `isPlaying` prop.
+
+## The lifecycle of an effect
+
+While components mount, update, and unmount, effects have a simpler lifecycle: **they start synchronizing, and later they stop synchronizing**.
+
+The dependency array tells React when to re-synchronize:
+
+- **No dependency array (`useEffect(fn)`)**: Runs after _every single render_. Rarely what you want.
+- **Empty dependency array (`useEffect(fn, [])`)**: Runs once after the _initial mount_ and cleans up on _unmount_.
+- **With dependencies (`useEffect(fn, [roomId, serverUrl])`)**: Runs after the initial mount, and re-runs after any render where at least one dependency value has changed compared to the previous render (using `Object.is` equality).
+
+Every reactive value read inside the effect (props, state, and variables derived from them) **must** be declared in the dependency array. If you omit a dependency to stop an effect from re-running, you create stale closure bugs.
+
+## Why cleanup functions are crucial
+
+Whenever an effect establishes an ongoing connection, subscribes to an event, or sets a timer, it must return a **cleanup function**:
+
+```jsx
+useEffect(() => {
+  const connection = createConnection(roomId)
+  connection.connect()
+
+  return () => {
+    connection.disconnect() // Cleanup!
+  }
+}, [roomId])
+```
+
+React runs the cleanup function in two situations:
+
+1. **Before the effect runs again** with new dependencies (stopping synchronization with the old `roomId` before starting with the new one).
+2. **When the component unmounts** from the screen.
+
+In development mode with React StrictMode enabled, React mounts and unmounts the component once immediately to verify that your cleanup function properly tears down the effect. If your effect opens a WebSocket and has no cleanup, you will see two open connections in development.
+
+## You might not need an effect
+
+Before writing `useEffect`, ask if an effect is truly necessary. In many common situations, using an effect is an anti-pattern:
+
+**Do not use effects to transform data for rendering.**
+If you have a list of products and a search query, do not run `useEffect` to filter the list and call `setFilteredProducts`. Filter the list directly at the top level of your component during render. It runs faster, requires less code, and prevents an extra render cycle.
+
+**Do not use effects to handle user interactions.**
+If you want to send an analytics event or submit a form when the user clicks a button, put that code directly in the button's `onClick` event handler, not in an effect triggered by a state change.
+
+**Do not use effects to reset state when props change.**
+If you want a profile form to reset when navigating to a different user, pass a unique `key` prop (like `<ProfileForm key={userId} />`) to the component. Changing the key tells React to unmount the old instance and mount a fresh instance with reset state automatically.

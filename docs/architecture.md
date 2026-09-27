@@ -22,8 +22,8 @@ The repository is an npm workspace: `apps/web`, `apps/mobile`, and the
 `packages/core` and `packages/content` that both of them read. The web half is
 one Next.js application (App Router) talking to one Postgres database. No
 separate API service. Server Components read data directly, Server Actions write
-it. For a single-user tool, a network hop between a frontend and a backend we
-also own buys nothing and costs two deployments.
+it. For a single-user tool, a network hop between a frontend and a backend
+buys nothing and adds unnecessary service complexity.
 
 ```
 packages/core/       the interval ladder, tiers, readiness, the daily queue,
@@ -360,7 +360,7 @@ speech:prune` deletes every recording no current script hashes to, which is what
 stops the orphans accumulating. `npm run speech:transcode` converts a cache made
 before recordings were compressed, and is a migration rather than a routine: run
 prune first, or the engine is spent on recordings nothing points at. None is a
-build step, and a deploy carries no recordings: the cache is a cache, so losing
+build step, and restarting carries no recordings: the cache is a cache, so losing
 it costs latency rather than correctness.
 
 **`GET /api/speech/<key>` plays a recording, and makes it first if nobody has
@@ -610,7 +610,7 @@ the archive and the server hands it over; nothing is assembled per request, so
 the version a device is told about and the bytes it downloads come out of one
 build. The archive directory is a bind mount named by `CONTENT_ARCHIVE_DIR`, the
 way the recording cache is, so rebuilding the archive rebuilds nothing else.
-`npm run deploy` builds it before it copies. See
+`npm run content:archive` builds it on the host. See
 `docs/decisions/0041-a-device-reads-the-archive-the-build-wrote.md`.
 
 `GET /api/device/archive/version` is what a device asks on launch: the version,

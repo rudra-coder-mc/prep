@@ -20,6 +20,8 @@ export type SettingKey =
   | 'account-id'
   | 'account-email'
   | 'account-name'
+  /** The default target interview level across tracks (e.g. 'swe-1'). */
+  | 'default-tier'
 
 export async function readSetting(db: Database, key: SettingKey): Promise<string | null> {
   const rows = await db.all<{ value: string }>('select value from settings where key = ?', [key])

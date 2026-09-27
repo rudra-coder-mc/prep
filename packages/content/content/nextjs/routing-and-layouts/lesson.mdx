@@ -1,0 +1,87 @@
+## Why this matters
+
+In traditional single-page React apps built with libraries like React Router, you define your routes imperatively in code, managing route configurations, code-splitting bundles, and layout nesting by hand.
+
+Next.js fundamentally simplifies this by making the file system the single source of truth for routing. With the introduction of the App Router (the `app` directory), folders define route segments and special file conventions define the UI behavior for each segment.
+
+For an entry-level engineer, mastering the App Router means knowing not just where to place a `page.tsx` file, but understanding how nested layouts work, why layouts preserve state across page transitions, how templates differ from layouts, and how Next.js handles client-side transitions and route prefetching.
+
+## File-system conventions
+
+In Next.js, URL paths are mapped directly to folder hierarchies inside the `app/` directory:
+
+- An `app/dashboard/settings/page.tsx` file becomes the route `/dashboard/settings`.
+- Only folders containing a `page.tsx` file are publicly accessible as routes. If a folder contains helper utilities or UI components without a `page.tsx`, it remains private to the project.
+
+Within any route segment folder, Next.js recognizes a set of reserved file names that handle common UI concerns:
+
+- `layout.tsx`: Shared UI that wraps child pages and child layouts.
+- `page.tsx`: The unique UI content for that specific route.
+- `loading.tsx`: An instant loading state built on React Suspense that shows while page content streams in.
+- `error.tsx`: An error boundary that isolates crashes in the current segment and renders a fallback.
+- `not-found.tsx`: The UI rendered when the `notFound()` function is invoked.
+
+The root folder `app/layout.tsx` is mandatory. It defines the global HTML shell (`<html>` and `<body>` tags) for the entire application.
+
+## Layouts preserve state
+
+A layout is a component that wraps child segments via its `children` prop:
+
+```tsx
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="dashboard-shell">
+      <Sidebar />
+      <main>{children}</main>
+    </div>
+  )
+}
+```
+
+The critical behavioral characteristic of a Next.js `layout.tsx` is that **layouts do not re-render or unmount on navigation**.
+
+When a user navigates between `/dashboard/analytics` and `/dashboard/settings`, the `DashboardLayout` remains mounted. Any client-side state inside `DashboardLayout`—such as an open sidebar drawer, a search query typed into a header input, or an audio playback widget—persists without resetting. Only the child route segment inside the layout changes.
+
+This makes page transitions significantly faster and eliminates the flickering and state resets common in older routing architectures.
+
+## Templates versus Layouts
+
+Sometimes you explicitly want state to reset and effects to re-run when the user navigates between sibling pages. For example, you might want to track page view analytics on every route change or trigger an entrance animation.
+
+Next.js provides `template.tsx` for this purpose.
+
+A `template.tsx` file accepts `children` just like a layout, but with one crucial difference: **on navigation, Next.js creates a fresh instance of the template**.
+
+- In a layout, the DOM is retained, client state is preserved, and `useEffect` callbacks do not re-fire when switching sibling pages.
+- In a template, a new component instance is mounted on each route transition. State resets to initial values, and `useEffect` runs again.
+
+```
+app/
+  dashboard/
+    layout.tsx      <- Persists state, never re-mounts on child route change
+    template.tsx    <- Mounts fresh instance on every navigation
+    analytics/
+      page.tsx
+    settings/
+      page.tsx
+```
+
+## Navigation and prefetching
+
+In Next.js, client-side navigation between routes is performed using the `<Link>` component from `next/link`:
+
+```tsx
+import Link from 'next/link'
+
+export function Navigation() {
+  return <Link href="/dashboard/settings">Settings</Link>
+}
+```
+
+Using `<Link>` rather than a standard HTML `<a>` tag has two primary advantages:
+
+**No hard page reloads.** Clicking a `<Link>` intercepts the browser navigation, downloads only the JSON payload and client bundle for the destination segment, and swaps the UI client-side without re-requesting the whole document.
+
+**Automatic viewport prefetching.** In production, whenever a `<Link>` component enters the user's browser viewport, Next.js automatically prefetches the route payload in the background. By the time the user clicks the link, the destination data is already cached locally, making transitions appear nearly instantaneous.
+
+For programmatic navigation (such as redirecting after a form submission), Next.js provides the `useRouter()` hook from `next/navigation` on the client, and `redirect()` on the server.

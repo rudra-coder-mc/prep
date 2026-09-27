@@ -1,24 +1,11 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
 import { access, mkdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
-import { dirname, isAbsolute, join } from 'node:path'
+import { isAbsolute, join } from 'node:path'
 import type { Audio } from './audio'
 import { normaliseScript } from '@prep/core'
+import { workspaceRoot } from '@prep/content/archive/location'
 
-/**
- * The repository root, found by walking up for the lockfile only a workspace
- * root has. The app runs from apps/web and the scripts run from the root, and
- * both have to reach the same recordings.
- */
-export function workspaceRoot(): string {
-  let dir = process.cwd()
-  for (;;) {
-    if (existsSync(join(dir, 'package-lock.json'))) return dir
-    const parent = dirname(dir)
-    if (parent === dir) return process.cwd()
-    dir = parent
-  }
-}
+export { workspaceRoot }
 
 /**
  * Synthesis is the expensive part, about a second of CPU for every three and a

@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted.
+Superseded by `0049-local-workstation-and-offline-mobile-sync.md`.
+
+> [!NOTE]
+> Remote machine hosting and Tailscale Funnel / deploy scripts have been completely removed.
+> The stack runs strictly on the local workstation via Docker, and the mobile app syncs over
+> local Wi-Fi to provide an offline-first learning loop.
 
 ## Context
 

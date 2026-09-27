@@ -5,7 +5,7 @@ export const meta: TopicMeta = {
   title: 'Event loop and microtasks',
   summary:
     'Why a promise callback always beats a zero-millisecond timer, and what "non-blocking" actually means.',
-  order: 330,
+  order: 90,
   tags: ['event-loop', 'async', 'promise'],
   prerequisites: ['javascript/closures'],
 }

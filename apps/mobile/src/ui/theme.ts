@@ -23,4 +23,4 @@ export const colors = {
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const
 
-export const radius = { card: 14, control: 10 } as const
+export const radius = { card: 14, control: 10, pill: 9999 } as const
